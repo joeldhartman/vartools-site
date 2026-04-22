@@ -1,0 +1,58 @@
+/* Site-specific overrides for VARTOOLS docs.
+ *
+ * Theme palette already sets the banner to black (primary) + orange accent.
+ * These rules refine the header/tab text colours so the site name and
+ * active navigation items stand out in orange against the black bar, and
+ * everything else in the header stays white. */
+
+:root {
+  --vt-orange: #ff8c1a;    /* brand accent — crisp at both font weights */
+  --vt-white:  #ffffff;
+}
+
+/* Banner (top header bar) -------------------------------------------------- */
+
+.md-header {
+  background-color: #000000;
+  color: var(--vt-white);
+}
+
+/* Site-name / logo text → orange. */
+.md-header__title,
+.md-header__topic,
+.md-header__ellipsis,
+.md-header-nav__title {
+  color: var(--vt-orange) !important;
+}
+
+/* Header-bar icons and helper buttons → white.
+ * Do NOT override .md-search__input text colour here — the expanded search
+ * pane has a white background, and a forced-white input text would be
+ * invisible.  Let Material's default handling (dark text on light bg,
+ * light text on dark bg) take care of the input itself.
+ *
+ * .md-icon is scoped to the header and tabs row; an unqualified
+ * `.md-icon` selector would also hit the "Back to top" button
+ * (which carries .md-icon too), making its text white-on-white. */
+.md-header__button,
+.md-header .md-icon,
+.md-tabs .md-icon {
+  color: var(--vt-white) !important;
+}
+
+/* Tabs bar (the row of CLI Reference / Python API / Cookbook links) -------- */
+
+.md-tabs {
+  background-color: #000000;
+}
+
+.md-tabs__link {
+  color: var(--vt-white);
+  opacity: 0.85;
+}
+
+.md-tabs__link:hover,
+.md-tabs__link--active {
+  color: var(--vt-orange);
+  opacity: 1;
+}

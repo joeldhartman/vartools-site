@@ -1,0 +1,24 @@
+# MkDocs build output — rebuilt locally with `mkdocs build` and pushed to the
+# Princeton web space via rsync, not committed.
+/site/
+
+# Editor / IDE leftovers
+*~
+\#*\#
+.#*
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Python caches that sometimes appear during doc-block execution
+__pycache__/
+*.pyc
+
+# Scratch / temporary files — adapt as needed
+*.tmp
+*.bak

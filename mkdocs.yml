@@ -1,0 +1,120 @@
+site_name: VARTOOLS
+site_description: Light curve analysis for astronomers — command-line C program and Python API
+site_author: Joel D. Hartman
+site_url: http://www.astro.princeton.edu/~jhartman/vartools_new/
+
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+  palette:
+    - scheme: default
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/joeldhartman/vartools
+repo_name: joeldhartman/vartools
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/joeldhartman/vartools
+  version:
+    provider: mike
+
+nav:
+  - Home: index.md
+  - Installation: install.md
+  - Getting Started: getting-started.md
+  - Command Index: commands.md
+  - CLI Reference:
+    - Overview: cli/index.md
+    - Light Curve Manipulation: cli/manipulation.md
+    - Period Finding: cli/period-finding.md
+    - Statistics: cli/statistics.md
+    - Model Fitting: cli/model-fitting.md
+    - Filtering & Detrending: cli/filtering.md
+    - Light Curve Simulation: cli/simulation.md
+    - Control Data Flow: cli/control-flow.md
+    - Miscellaneous: cli/misc.md
+    - Calling Python or R: cli/python-r.md
+    - Input / Output Options: cli/options.md
+    - Analytic Expressions: cli/expressions.md
+    - Extension Commands: cli/extensions.md
+  - Python API:
+    - Overview: python/index.md
+    - LightCurve: python/lightcurve.md
+    - Method Chaining API: python/chaining.md
+    - Pipeline: python/pipeline.md
+    - Results: python/results.md
+    - Commands:
+      - Overview: python/commands/index.md
+      - Light Curve Manipulation: python/commands/manipulation.md
+      - Period Finding: python/commands/period-finding.md
+      - Statistics: python/commands/statistics.md
+      - Model Fitting: python/commands/model-fitting.md
+      - Filtering & Detrending: python/commands/filtering.md
+      - Light Curve Simulation: python/commands/simulation.md
+      - Control Data Flow: python/commands/control-flow.md
+      - Miscellaneous: python/commands/misc.md
+      - Calling Python or R: python/commands/python-r.md
+      - Extension Commands: python/commands/extensions.md
+  - Examples:
+    - Overview: examples/index.md
+    - Polynomial detrending: examples/polynomial-detrending.md
+    - Period finding: examples/period-finding.md
+    - Transit injection: examples/transit-injection.md
+    - Transit search & fit: examples/transit-search-and-fit.md
+    - RR Lyrae recovery: examples/rrlyrae-recovery.md
+    - Batch variability: examples/batch-variability.md
+    - Kepler FITS: examples/kepler-fits.md
+  - Extending VARTOOLS:
+    - Overview: extensions/index.md
+    - User Commands: extensions/user-commands.md
+    - User Analytic Functions: extensions/user-functions.md
+  - History: history.md
