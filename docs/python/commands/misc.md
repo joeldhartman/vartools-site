@@ -35,10 +35,7 @@ By default, vartools appends a 0-based command-index suffix to output variable n
 
 ```python
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-pipe = vt.Pipeline([
-    cmd.columnsuffix("ls"),
-    cmd.LS(0.5, 10.0, 1e-3),
-])
+pipe = vt.Pipeline().columnsuffix("ls").LS(0.5, 10.0, 1e-3)
 result = pipe.run(lc)
 period = float(result.vars["LS_Period_1_ls"])
 ```
@@ -47,12 +44,11 @@ If your pipeline contains multiple period-search commands with different suffixe
 
 ```python
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-pipe = vt.Pipeline([
-    cmd.columnsuffix("ls"),
-    cmd.LS(0.5, 10.0, 1e-3),
-    cmd.columnsuffix("aov"),
-    cmd.aov(0.5, 10.0, 1e-3, 4.0),
-])
+pipe = (vt.Pipeline()
+        .columnsuffix("ls")
+        .LS(0.5, 10.0, 1e-3)
+        .columnsuffix("aov")
+        .aov(0.5, 10.0, 1e-3, 4.0))
 result = pipe.run(lc)
 ls_period  = float(result.vars["LS_Period_1_ls"])
 aov_period = float(result.vars["Period_1_aov"])

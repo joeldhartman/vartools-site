@@ -126,10 +126,7 @@ define an analysis procedure once and run it over a large collection of files:
 import pyvartools as vt
 from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.clip(sigclip=5.0),
-    cmd.LS(0.5, 10.0, 0.1),
-])
+pipe = vt.Pipeline().clip(sigclip=5.0).LS(0.5, 10.0, 0.1)
 
 # Run on a single light curve
 lc = vt.LightCurve.from_file("EXAMPLES/2")
@@ -239,12 +236,11 @@ When constructing commands in a `Pipeline` object, you can produce human-readabl
 ```python
 from pyvartools.commands import columnsuffix, LS
 
-pipe = vt.Pipeline([
-    columnsuffix("short"),
-    LS(minp=0.5, maxp=5.0, subsample=0.1),
-    columnsuffix("long"),
-    LS(minp=5.0, maxp=50.0, subsample=0.1),
-])
+pipe = (vt.Pipeline()
+        .columnsuffix("short")
+        .LS(minp=0.5, maxp=5.0, subsample=0.1)
+        .columnsuffix("long")
+        .LS(minp=5.0, maxp=50.0, subsample=0.1))
 result = pipe.run(lc)
 print(result.vars["LS_Period_1_short"])
 print(result.vars["LS_Period_1_long"])

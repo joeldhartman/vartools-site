@@ -74,11 +74,7 @@ invocation may be faster:
 ```python
 from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.clip(sigclip=5.0),
-    cmd.LS(0.5, 10.0, 0.1),
-    cmd.rms(),
-])
+pipe = vt.Pipeline().clip(sigclip=5.0).LS(0.5, 10.0, 0.1).rms()
 result = pipe.run(lc)
 ```
 
@@ -170,12 +166,11 @@ Use `Pipeline` when you need these commands:
 ```python
 from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.columnsuffix("short"),
-    cmd.LS(0.5, 5.0, 0.01),
-    cmd.columnsuffix("long"),
-    cmd.LS(5.0, 50.0, 0.1),
-])
+pipe = (vt.Pipeline()
+        .columnsuffix("short")
+        .LS(0.5, 5.0, 0.01)
+        .columnsuffix("long")
+        .LS(5.0, 50.0, 0.1))
 result = pipe.run(lc)
 print(result.vars["LS_Period_1_short"])
 print(result.vars["LS_Period_1_long"])

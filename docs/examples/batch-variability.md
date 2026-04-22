@@ -47,27 +47,26 @@ from pyvartools import commands as cmd
 
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 
-pipeline = vt.Pipeline([
-    cmd.savelc(),
-    cmd.clip(5.0, iterative=True),
-    cmd.savelc(),
-    cmd.LS(0.1, 100.0, 0.1, npeaks=3, save_periodogram=False,
-           clip=5.0, clipiter=1),
-    cmd.aov(minp=0.1, maxp=100.0, subsample=0.1, finetune=0.01,
-            npeaks=1, save_periodogram=False, clip=5.0, clipiter=1),
-    cmd.aov_harm(nharm=1, minp=0.1, maxp=100.0, subsample=0.1,
+pipeline = (vt.Pipeline()
+        .savelc()
+        .clip(5.0, iterative=True)
+        .savelc()
+        .LS(0.1, 100.0, 0.1, npeaks=3, save_periodogram=False,
+           clip=5.0, clipiter=1)
+        .aov(minp=0.1, maxp=100.0, subsample=0.1, finetune=0.01,
+            npeaks=1, save_periodogram=False, clip=5.0, clipiter=1)
+        .aov_harm(nharm=1, minp=0.1, maxp=100.0, subsample=0.1,
                  finetune=0.01, npeaks=1, save_periodogram=False,
-                 clip=5.0, clipiter=1),
-    cmd.restorelc(1),
-    cmd.clip(10.0, iterative=True),
-    cmd.BLS(qmin=0.01, qmax=0.1, minper=0.1, maxper=20.0,
+                 clip=5.0, clipiter=1)
+        .restorelc(1)
+        .clip(10.0, iterative=True)
+        .BLS(qmin=0.01, qmax=0.1, minper=0.1, maxper=20.0,
             nfreq=10000, nbins=200, timezone=7, npeaks=2,
-            save_periodogram=False),
-    cmd.restorelc(2),
-    cmd.changeerror(),
-    cmd.autocorrelation(start=0.0, stop=30.0, step=0.1,
-                        save_result="EXAMPLES/OUTDIR1/"),
-])
+            save_periodogram=False)
+        .restorelc(2)
+        .changeerror()
+        .autocorrelation(start=0.0, stop=30.0, step=0.1,
+                        save_result="EXAMPLES/OUTDIR1/"))
 
 batch = pipeline.run_batch(lcs, nthreads=4)
 

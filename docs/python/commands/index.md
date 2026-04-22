@@ -23,7 +23,7 @@ result = lc.LS(1.0, 2.0, 0.01).rms()
 
 # 3. Pipeline — the canonical form, underlies both above
 from pyvartools import commands as cmd
-pipe = vt.Pipeline([cmd.clip(5.0), cmd.LS(0.1, 10.0, 0.1)])
+pipe = vt.Pipeline().clip(5.0).LS(0.1, 10.0, 0.1)
 result = pipe.run_file("EXAMPLES/2")
 ```
 
@@ -64,28 +64,21 @@ from pyvartools import commands as cmd, Output
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Mode 1 (default True): temp dir, captured into result.files
-result = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 1e-3, save_periodogram=True),
-]).run(lc)
+result = vt.Pipeline().LS(0.1, 10.0, 1e-3, save_periodogram=True).run(lc)
 pgram = result.files["LS_periodogram_0"]   # pd.DataFrame
 
 # Mode 3: written to EXAMPLES/OUTDIR1, NOT in result.files
-result = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 1e-3, save_periodogram="EXAMPLES/OUTDIR1"),
-]).run(lc)
+result = vt.Pipeline().LS(0.1, 10.0, 1e-3, save_periodogram="EXAMPLES/OUTDIR1").run(lc)
 # EXAMPLES/OUTDIR1/stdin.ls written; result.files has no "LS_periodogram_0"
 
 # Mode 2: written to EXAMPLES/OUTDIR1 AND captured
-result = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 1e-3,
-           save_periodogram=Output("EXAMPLES/OUTDIR1", capture=True)),
-]).run(lc)
+result = (vt.Pipeline()
+        .LS(0.1, 10.0, 1e-3,
+           save_periodogram=Output("EXAMPLES/OUTDIR1", capture=True))).run(lc)
 pgram = result.files["LS_periodogram_0"]   # captured from EXAMPLES/OUTDIR1/stdin.ls
 
 # Mode 4 (default False): nothing written, nothing captured
-result = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 1e-3, save_periodogram=False),
-]).run(lc)
+result = vt.Pipeline().LS(0.1, 10.0, 1e-3, save_periodogram=False).run(lc)
 # result.files has no "LS_periodogram_0"
 ```
 

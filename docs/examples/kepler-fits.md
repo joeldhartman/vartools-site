@@ -54,11 +54,10 @@ lc = vt.LightCurve.from_file(
     "EXAMPLES/kplr000757076-2009166043257_llc.fits",
     t_col="barytime", mag_col="ap_raw_flux", err_col="ap_raw_err",
 )
-result = vt.Pipeline([
-    cmd.fluxtomag(25.0),
-    cmd.rms(),
-    cmd.LS(0.1, 30.0, 0.1, npeaks=4, save_periodogram=False),
-]).run(lc)
+result = (vt.Pipeline()
+        .fluxtomag(25.0)
+        .rms()
+        .LS(0.1, 30.0, 0.1, npeaks=4, save_periodogram=False)).run(lc)
 print(result.vars)
 ```
 

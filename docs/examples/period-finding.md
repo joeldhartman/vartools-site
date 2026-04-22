@@ -34,10 +34,9 @@ from pyvartools import commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
-result = vt.Pipeline([
-    cmd.LS(1.0, 2.0, 0.01, npeaks=1, save_periodogram=False),
-    cmd.Killharm(period="ls", nharm=0, nsubharm=0),
-]).run(lc)
+result = (vt.Pipeline()
+        .LS(1.0, 2.0, 0.01, npeaks=1, save_periodogram=False)
+        .Killharm(period="ls", nharm=0, nsubharm=0)).run(lc)
 
 print(result.vars)
 ```
@@ -213,20 +212,19 @@ from pyvartools import commands as cmd
 lc = vt.LightCurve.from_file("EXAMPLES/4")
 T0 = float(lc.t.min())
 
-result = vt.Pipeline([
-    cmd.jktebop(
-        "inject",
-        Period=1.7345, T0=T0,
-        r1_r2=0.125, r2_r1=0.8, M2_M1=0.8, J2_J1=0.25,
-        bimpact=0.0, esinomega=0.0, ecosomega=0.0,
-        LD1_law="quad", LD1_coeffs=(0.6, 0.2),
-        LD2_law="quad", LD2_coeffs=(0.6, 0.2),
-    ),
-    cmd.LS(0.5, 10.0, 0.0005, npeaks=1),
-    cmd.aov(0.5, 10.0, 0.1, finetune=0.001, nbin=100, npeaks=1),
-    cmd.aov_harm(nharm=50, minp=0.5, maxp=10.0, subsample=0.1,
-                 finetune=0.001, npeaks=1),
-]).run(lc)
+result = (vt.Pipeline()
+        .jktebop(
+            "inject",
+            Period=1.7345, T0=T0,
+            r1_r2=0.125, r2_r1=0.8, M2_M1=0.8, J2_J1=0.25,
+            bimpact=0.0, esinomega=0.0, ecosomega=0.0,
+            LD1_law="quad", LD1_coeffs=(0.6, 0.2),
+            LD2_law="quad", LD2_coeffs=(0.6, 0.2),
+        )
+        .LS(0.5, 10.0, 0.0005, npeaks=1)
+        .aov(0.5, 10.0, 0.1, finetune=0.001, nbin=100, npeaks=1)
+        .aov_harm(nharm=50, minp=0.5, maxp=10.0, subsample=0.1,
+                 finetune=0.001, npeaks=1)).run(lc)
 
 print(f"injected : 1.73450 d (P/2 = 0.86725 d)")
 print(f"LS       : P={result.vars['LS_Period_1_1']:.5f} d   "
@@ -279,23 +277,22 @@ from pyvartools import commands as cmd
 lc = vt.LightCurve.from_file("EXAMPLES/4")
 T0 = float(lc.t.min())
 
-result = vt.Pipeline([
-    cmd.jktebop(
-        "inject",
-        Period=1.7345, T0=T0,
-        r1_r2=0.125, r2_r1=0.8, M2_M1=0.8, J2_J1=0.25,
-        bimpact=0.0, esinomega=0.0, ecosomega=0.0,
-        LD1_law="quad", LD1_coeffs=(0.6, 0.2),
-        LD2_law="quad", LD2_coeffs=(0.6, 0.2),
-    ),
-    cmd.aov(0.5, 10.0, 0.1, finetune=0.001, nbin=100, npeaks=1),
-    cmd.expr(f"myT0={T0}", vartype="listvar"),
-    cmd.Phase(period="aov",
+result = (vt.Pipeline()
+        .jktebop(
+            "inject",
+            Period=1.7345, T0=T0,
+            r1_r2=0.125, r2_r1=0.8, M2_M1=0.8, J2_J1=0.25,
+            bimpact=0.0, esinomega=0.0, ecosomega=0.0,
+            LD1_law="quad", LD1_coeffs=(0.6, 0.2),
+            LD2_law="quad", LD2_coeffs=(0.6, 0.2),
+        )
+        .aov(0.5, 10.0, 0.1, finetune=0.001, nbin=100, npeaks=1)
+        .expr(f"myT0={T0}", vartype="listvar")
+        .Phase(period="aov",
               T0="expr myT0+0.25*Period_1_1",
               phasevar="ph",
-              startphase=-0.5),
-    cmd.o(capture=True, key="folded"),
-]).run(lc)
+              startphase=-0.5)
+        .o(capture=True, key="folded")).run(lc)
 
 P_aov = float(result.varobjs.aov.Period_1)
 df = result.files["folded"].to_dataframe()

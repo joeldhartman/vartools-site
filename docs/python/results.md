@@ -16,10 +16,7 @@ from pyvartools import commands as cmd
 
 lc  = vt.LightCurve.from_file("EXAMPLES/2")
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 10)]
-pipe = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 1e-3),
-    cmd.Killharm(period="ls", nharm=2),
-])
+pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).Killharm(period="ls", nharm=2)
 ```
 
 ---
@@ -113,9 +110,7 @@ where `idx` is the zero-based position of the command in the pipeline
 ```python
 from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 0.01, save_periodogram=True),
-])
+pipe = vt.Pipeline().LS(0.5, 10.0, 0.01, save_periodogram=True)
 result = pipe.run(lc)
 
 pgram = result.files["LS_periodogram_0"]   # pd.DataFrame with frequency/power cols
@@ -320,10 +315,7 @@ import pyvartools as vt
 from pyvartools import commands as cmd
 
 # Build pipeline
-pipe = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 1e-3),
-    cmd.Killharm(period="ls", nharm=2),
-])
+pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).Killharm(period="ls", nharm=2)
 
 # --- Single LC ---
 lc = vt.LightCurve.from_file("EXAMPLES/2")

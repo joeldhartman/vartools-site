@@ -31,14 +31,13 @@ cmd.Killharm(period="ls", nharm=3, nsubharm=0, save_model=False,
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Run LS, fit and subtract the best sinusoid, compare chi2 before/after
-pipe = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),          # index 0
-    cmd.rms(),                                   # index 1
-    cmd.chi2(),                                  # index 2
-    cmd.Killharm("ls", nharm=1, nsubharm=0, save_model=True),  # index 3
-    cmd.rms(),                                   # index 4
-    cmd.chi2(),                                  # index 5
-])
+pipe = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .rms()
+        .chi2()
+        .Killharm("ls", nharm=1, nsubharm=0, save_model=True)
+        .rms()
+        .chi2())
 result = pipe.run(lc)
 print(result.vars["Chi2_2"])         # before: 1709.50
 print(result.vars["Chi2_5"])         # after:    6.51
@@ -75,11 +74,10 @@ Fit a linear combination of analytic basis functions. `function` is a vartools e
 lc = vt.LightCurve.from_file("EXAMPLES/1")
 
 # Fit a quadratic polynomial, using minimum time as reference epoch
-pipe = vt.Pipeline([
-    cmd.stats("t", ["min"]),
-    cmd.expr("t0=STATS_t_MIN_0"),
-    cmd.linfit("a*(t-t0)^2+b*(t-t0)+c", "a,b,c"),
-])
+pipe = (vt.Pipeline()
+        .stats("t", ["min"])
+        .expr("t0=STATS_t_MIN_0")
+        .linfit("a*(t-t0)^2+b*(t-t0)+c", "a,b,c"))
 result = pipe.run(lc)
 print(result.vars["Linfit_a_2"])   # quadratic coefficient
 print(result.vars["Linfit_b_2"])   # linear coefficient
@@ -177,12 +175,11 @@ Decorrelates the light curve against external trend vectors (polynomial fit). `g
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 
 # Decorrelate against the time column using a quadratic polynomial
-pipe = vt.Pipeline([
-    cmd.rms(),
-    cmd.decorr(correct_lc=True, zeropointterm=1, subtractfirstterm=1,
-               lc_columns=[(1, 2)]),   # column 1 (JD), order 2
-    cmd.rms(),
-])
+pipe = (vt.Pipeline()
+        .rms()
+        .decorr(correct_lc=True, zeropointterm=1, subtractfirstterm=1,
+               lc_columns=[(1, 2)])
+        .rms())
 batch = pipe.run_batch(lcs)
 print(batch.vars[["Name", "RMS_0", "RMS_2"]])
 ```
@@ -282,13 +279,12 @@ Fits a softened trapezoid transit model. `init_params` can be `"bls"` or `"blsfi
 ```python
 lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
 
-pipe = vt.Pipeline([
-    cmd.BLS(0.5, 5.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=20000, npeaks=1),
-    cmd.SoftenedTransit(init_params="bls",
+pipe = (vt.Pipeline()
+        .BLS(0.5, 5.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=20000, npeaks=1)
+        .SoftenedTransit(init_params="bls",
                         fitephem=1, fiteta=1, fitcval=1,
                         fitdelta=1, fitmconst=1,
-                        correct_lc=False, save_model=True),
-])
+                        correct_lc=False, save_model=True))
 result = pipe.run(lc)
 print(result.vars["SoftenedTransit_Period_1"])     # 2.12322112
 print(result.vars["SoftenedTransit_chi2perdof_1"])
@@ -329,18 +325,17 @@ Fits a Dorren (1987) two-spot model to photometric variability.
 lc = vt.LightCurve.from_file("EXAMPLES/3.starspot")
 
 # Determine rotation period with AOV then fit Dorren starspot model
-pipe = vt.Pipeline([
-    cmd.aov(0.1, 10.0, 0.1, 0.01, npeaks=5, nbin=20),
-    cmd.Starspot(
-        period="aov",
-        a0=0.0298, b0=0.08745, alpha0=20.0, i0=85.0,
-        chi0=30.0, psi00=0.0, mconst0=-1.0,
-        fit_period=1, fit_a=1, fit_b=1, fit_alpha=1,
-        fit_i=1, fit_chi=1, fit_psi=1, fit_mconst=1,
-        correct_lc=False,
-        save_model=True,
-    ),
-])
+pipe = (vt.Pipeline()
+        .aov(0.1, 10.0, 0.1, 0.01, npeaks=5, nbin=20)
+        .Starspot(
+            period="aov",
+            a0=0.0298, b0=0.08745, alpha0=20.0, i0=85.0,
+            chi0=30.0, psi00=0.0, mconst0=-1.0,
+            fit_period=1, fit_a=1, fit_b=1, fit_alpha=1,
+            fit_i=1, fit_chi=1, fit_psi=1, fit_mconst=1,
+            correct_lc=False,
+            save_model=True,
+        ))
 result = pipe.run(lc)
 print(result.vars["Starspot_Period_1"])
 print(result.vars["Starspot_chi2perdof_1"])

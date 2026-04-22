@@ -77,13 +77,12 @@ lc = vt.LightCurve.from_file("EXAMPLES/3")
 # `logrand`, `amplogrand`, and `phaserand` are vartools-side random draws that
 # create scalar variables on the LC — we use a single Pipeline so those
 # variables stay in the same invocation as the recovery step.
-result = vt.Pipeline([
-    cmd.Injectharm(period="logrand 1.0 5.0",
+result = (vt.Pipeline()
+        .Injectharm(period="logrand 1.0 5.0",
                    amplitude="amplogrand 0.001 0.1",
                    nharm=0, phase="phaserand",
-                   save_model=True),
-    cmd.LS(0.5, 10.0, 0.1, npeaks=1),
-]).run(lc)
+                   save_model=True)
+        .LS(0.5, 10.0, 0.1, npeaks=1)).run(lc)
 print(result.vars["Injectharm_Period_0"])   # injected period
 print(result.vars["LS_Period_1_1"])         # recovered period
 ```
@@ -126,21 +125,20 @@ lc = vt.LightCurve.from_file("EXAMPLES/4")
 # As with Injectharm, the per-LC random draws (`Plogrand`, `phaserand`, …) are
 # scalar-variables produced inside vartools, so we run inject + recover in a
 # single Pipeline invocation.
-result = vt.Pipeline([
-    cmd.Injecttransit(
-        period="Plogrand 0.2 2.0",
-        Rp="Rpfix 0.1",     # Rp/R*
-        Mp="Mpfix 0.001",   # M_sun
-        phase="phaserand",
-        sini="sinirand",
-        Mstar="Mstarfix 1.0",
-        Rstar="Rstarfix 1.0",
-        ld_type="quad",
-        ld_coeffs=[0.3471, 0.3180],
-        save_model=True,
-    ),
-    cmd.BLS(0.1, 5.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=20000, npeaks=1),
-]).run(lc)
+result = (vt.Pipeline()
+        .Injecttransit(
+            period="Plogrand 0.2 2.0",
+            Rp="Rpfix 0.1",     # Rp/R*
+            Mp="Mpfix 0.001",   # M_sun
+            phase="phaserand",
+            sini="sinirand",
+            Mstar="Mstarfix 1.0",
+            Rstar="Rstarfix 1.0",
+            ld_type="quad",
+            ld_coeffs=[0.3471, 0.3180],
+            save_model=True,
+        )
+        .BLS(0.1, 5.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=20000, npeaks=1)).run(lc)
 print(result.vars["Injecttransit_Period_0"])   # injected period
 print(result.vars["BLS_Period_1_1"])           # recovered period
 ```
@@ -162,12 +160,11 @@ downstream pipeline.
 
 ```python
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-pipe_bs = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-    cmd.copylc(100),
-    cmd.expr("mag=err*gauss()"),
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-])
+pipe_bs = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .copylc(100)
+        .expr("mag=err*gauss()")
+        .LS(0.1, 10.0, 0.1, npeaks=1))
 batch_bs = pipe_bs.run_batch([lc])
 ```
 

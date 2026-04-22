@@ -52,15 +52,14 @@ Apply a sliding-window median (or mean) filter with window width `time`. `replac
 lc = vt.LightCurve.from_file("EXAMPLES/1")
 
 # High-pass and low-pass median filter: save LC, process both ways
-pipe = vt.Pipeline([
-    cmd.chi2(),
-    cmd.savelc(),
-    cmd.medianfilter(0.05),           # residuals (high-pass output)
-    cmd.chi2(),
-    cmd.restorelc(savenumber=1),
-    cmd.medianfilter(0.05, replace=True),   # smoothed LC (low-pass)
-    cmd.chi2(),
-])
+pipe = (vt.Pipeline()
+        .chi2()
+        .savelc()
+        .medianfilter(0.05)
+        .chi2()
+        .restorelc(savenumber=1)
+        .medianfilter(0.05, replace=True)
+        .chi2())
 result = pipe.run(lc)
 print(result.vars["Chi2_0"])   # original
 print(result.vars["Chi2_3"])   # after high-pass filter
@@ -88,23 +87,21 @@ Modes: `"JDrange"` (min/max), `"JDlist"` (file of times), `"expr"` (boolean expr
 lc = vt.LightCurve.from_file("EXAMPLES/3")
 
 # Restrict to a JD window, compute stats, then restore
-pipe = vt.Pipeline([
-    cmd.stats("t", ["min", "max"]),
-    cmd.restricttimes(mode="JDrange", minJD=53740, maxJD=53750),
-    cmd.stats("t", ["min", "max"]),
-    cmd.restoretimes(prior_command=1),
-    cmd.stats("t", ["min", "max"]),
-])
+pipe = (vt.Pipeline()
+        .stats("t", ["min", "max"])
+        .restricttimes(mode="JDrange", minJD=53740, maxJD=53750)
+        .stats("t", ["min", "max"])
+        .restoretimes(prior_command=1)
+        .stats("t", ["min", "max"]))
 result = pipe.run(lc)
 print(result.vars["STATS_t_MIN_0"])   # original time range
 print(result.vars["STATS_t_MIN_2"])   # restricted range
 print(result.vars["STATS_t_MIN_4"])   # restored (original again)
 
 # Restrict using a boolean expression on magnitude
-pipe2 = vt.Pipeline([
-    cmd.restricttimes(mode="expr",
-                      expression="(mag>10.16311)&&(mag<10.17027)"),
-])
+pipe2 = (vt.Pipeline()
+        .restricttimes(mode="expr",
+                      expression="(mag>10.16311)&&(mag<10.17027)"))
 result2 = pipe2.run(lc, capture_lc=True)
 ```
 

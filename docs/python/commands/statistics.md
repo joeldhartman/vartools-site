@@ -17,13 +17,13 @@ Computes the RMS and weighted RMS of the light curve. Output statistics: `Mean_M
 ```python
 # Single light curve
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-result = vt.Pipeline([cmd.rms()]).run(lc)
+result = vt.Pipeline().rms().run(lc)
 print(result.vars["Mean_Mag_0"])
 print(result.vars["RMS_0"])
 
 # Batch: compute RMS for all 10 example light curves
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([cmd.rms()]).run_batch(lcs)
+batch = vt.Pipeline().rms().run_batch(lcs)
 print(batch.vars[["Name", "Mean_Mag_0", "RMS_0", "Expected_RMS_0"]])
 ```
 
@@ -46,9 +46,7 @@ lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 # (vartools internally truncates bin times for column-naming,
 # so pick values that are well separated.)
 bintimes_days = [0.01, 0.05, 0.1, 1.0, 10.0]
-batch = vt.Pipeline([
-    cmd.rmsbin(5, bintimes_days),
-]).run_batch(lcs)
+batch = vt.Pipeline().rmsbin(5, bintimes_days).run_batch(lcs)
 print(batch.vars)
 ```
 
@@ -67,7 +65,7 @@ Computes the chi-squared statistic of the light curve. Output: `Chi2_N`, `Chi2_p
 ```python
 # Batch: chi-squared for all example light curves
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([cmd.chi2()]).run_batch(lcs)
+batch = vt.Pipeline().chi2().run_batch(lcs)
 print(batch.vars[["Name", "Chi2_0", "Weighted_Mean_Mag_0"]])
 ```
 
@@ -86,9 +84,7 @@ Same as `rmsbin` but computes chi-squared instead of RMS at each timescale.
 ```python
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 bintimes_days = [0.01, 0.05, 0.1, 1.0, 10.0]
-batch = vt.Pipeline([
-    cmd.chi2bin(5, bintimes_days),
-]).run_batch(lcs)
+batch = vt.Pipeline().chi2bin(5, bintimes_days).run_batch(lcs)
 print(batch.vars)
 ```
 
@@ -116,14 +112,13 @@ cmd.stats(["mag", "err"], ["mean", "stddev"])
 lc = vt.LightCurve.from_file("EXAMPLES/3")
 
 # Compute percentile and distribution statistics after adding Gaussian noise
-pipe = vt.Pipeline([
-    cmd.expr("mag2=mag+0.01*gauss()"),
-    cmd.stats(
-        ["mag", "mag2"],
-        ["mean", "weightedmean", "median", "stddev", "MAD",
-         "kurtosis", "skewness", "pct10", "pct90", "max", "min"],
-    ),
-])
+pipe = (vt.Pipeline()
+        .expr("mag2=mag+0.01*gauss()")
+        .stats(
+            ["mag", "mag2"],
+            ["mean", "weightedmean", "median", "stddev", "MAD",
+             "kurtosis", "skewness", "pct10", "pct90", "max", "min"],
+        ))
 result = pipe.run(lc)
 print(result.vars["STATS_mag_MEAN_1"])
 print(result.vars["STATS_mag_MEDIAN_1"])
@@ -155,30 +150,23 @@ Computes the discrete autocorrelation function of the magnitude series.
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Default (save_result=True): ACF captured into result.files
-result = vt.Pipeline([
-    cmd.autocorrelation(0.0, 10.0, 0.05),
-]).run(lc)
+result = vt.Pipeline().autocorrelation(0.0, 10.0, 0.05).run(lc)
 acf = result.files["autocorrelation_result_0"]   # pd.DataFrame: time-lag vs autocorrelation
 
 # save_result=False: file written to temp dir but not captured
-result = vt.Pipeline([
-    cmd.autocorrelation(0.0, 10.0, 0.05, save_result=False),
-]).run(lc)
+result = vt.Pipeline().autocorrelation(0.0, 10.0, 0.05, save_result=False).run(lc)
 # result.files has no "autocorrelation_result_0"
 
 # Write to a specific directory and capture (Mode 2)
 from pyvartools import Output
-result = vt.Pipeline([
-    cmd.autocorrelation(0.0, 10.0, 0.05,
-                        save_result=Output("EXAMPLES/OUTDIR1", capture=True)),
-]).run(lc)
+result = (vt.Pipeline()
+        .autocorrelation(0.0, 10.0, 0.05,
+                        save_result=Output("EXAMPLES/OUTDIR1", capture=True))).run(lc)
 acf = result.files["autocorrelation_result_0"]   # from EXAMPLES/OUTDIR1/
 
 # Batch — result.files["autocorrelation_result_0"] is a list of DataFrames
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
-batch = vt.Pipeline([
-    cmd.autocorrelation(0.0, 10.0, 0.05),
-]).run_batch(lcs)
+batch = vt.Pipeline().autocorrelation(0.0, 10.0, 0.05).run_batch(lcs)
 acfs = batch.files["autocorrelation_result_0"]   # list of DataFrames, one per LC
 ```
 
@@ -196,9 +184,7 @@ Computes the J variability index (Stetson 1996). Requires a dates file listing o
 
 ```python
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([
-    cmd.Jstet(0.5, "EXAMPLES/dates_tfa"),
-]).run_batch(lcs)
+batch = vt.Pipeline().Jstet(0.5, "EXAMPLES/dates_tfa").run_batch(lcs)
 print(batch.vars[["Name", "Jstet_0", "Kurtosis_0", "Lstet_0"]])
 ```
 

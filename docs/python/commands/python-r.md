@@ -20,10 +20,9 @@ Execute inline R code or an R script on each light curve. `vars` specifies varia
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
 
 # Compute standard deviation via R for each light curve
-batch = vt.Pipeline([
-    cmd.R("b <- sd(mag)", invars="mag", outvars="b",
-          outputcolumns="b"),
-]).run_batch(lcs)
+batch = (vt.Pipeline()
+        .R("b <- sd(mag)", invars="mag", outvars="b",
+          outputcolumns="b")).run_batch(lcs)
 print(batch.vars[["Name", "R_b_0"]])
 
 # `process_all_lcs=True` sends every LC's `mag` array into R as a list

@@ -42,11 +42,10 @@ binned_lc = result.lc
 # Phase-fold then bin into 100 phase bins.  `cmd.Phase(period="ls")`
 # back-references the prior LS and works both in a single Pipeline and
 # across chain steps.
-pipe = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-    cmd.Phase(period="ls"),
-    cmd.binlc(method="median", nbins=100),
-])
+pipe = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .Phase(period="ls")
+        .binlc(method="median", nbins=100))
 result = pipe.run(lc, capture_lc=True)
 phase_binned_lc = result.lc
 ```
@@ -168,26 +167,23 @@ result = lc.expr("mag=sqrt(mag+5)")
 # Compute per-star mean magnitude using an aggregate function.
 # `avg` is a `listvar` variable created inside vartools — it must be visible
 # to the next `-expr` step, so these three commands share one Pipeline.
-pipe = vt.Pipeline([
-    cmd.expr("avg=mean(mag)", vartype="listvar"),
-    cmd.expr("dmag=mag-avg"),
-    cmd.rms(),
-])
+pipe = (vt.Pipeline()
+        .expr("avg=mean(mag)", vartype="listvar")
+        .expr("dmag=mag-avg")
+        .rms())
 result = pipe.run(lc)
 
 # Define a global constant and use it
-pipe = vt.Pipeline([
-    cmd.expr("zp=25.0", vartype="const"),
-    cmd.expr("flux=10^(-0.4*(mag-zp))"),
-])
+pipe = (vt.Pipeline()
+        .expr("zp=25.0", vartype="const")
+        .expr("flux=10^(-0.4*(mag-zp))"))
 
 # Convert to flux, normalise by median, then compute statistics
-pipe = vt.Pipeline([
-    cmd.expr("flux=10^(-0.4*(mag-25.0))"),
-    cmd.stats("flux", ["median"]),
-    cmd.expr("flux=flux/STATS_flux_MEDIAN_1"),
-    cmd.stats(["flux", "mag"], ["median", "stddev"]),
-])
+pipe = (vt.Pipeline()
+        .expr("flux=10^(-0.4*(mag-25.0))")
+        .stats("flux", ["median"])
+        .expr("flux=flux/STATS_flux_MEDIAN_1")
+        .stats(["flux", "mag"], ["median", "stddev"]))
 result = pipe.run(lc)
 print(result.vars["STATS_flux_MEDIAN_1"])   # original median flux
 print(result.vars["STATS_flux_MEDIAN_3"])   # ≈ 1.0 after normalisation
@@ -210,14 +206,12 @@ Compute the FFT or inverse FFT of two variables (real and imaginary parts). Resu
 lc = vt.LightCurve.from_file("EXAMPLES/11")
 
 # High-pass Fourier filter on a uniformly sampled light curve
-pipe = vt.Pipeline([
-    cmd.FFT("mag", "NULL", "fftreal", "fftimag"),
-    cmd.rms(),
-    # Zero low-frequency components (below 1/500 of full spectrum)
-    cmd.expr("fftreal=(NR>(Npoints_1/500.0))*(NR<(Npoints_1*499.0/500.0))*fftreal"),
-    cmd.expr("fftimag=(NR>(Npoints_1/500.0))*(NR<(Npoints_1*499.0/500.0))*fftimag"),
-    cmd.IFFT("fftreal", "fftimag", "mag_filter", "NULL"),
-])
+pipe = (vt.Pipeline()
+        .FFT("mag", "NULL", "fftreal", "fftimag")
+        .rms()
+        .expr("fftreal=(NR>(Npoints_1/500.0))*(NR<(Npoints_1*499.0/500.0))*fftreal")
+        .expr("fftimag=(NR>(Npoints_1/500.0))*(NR<(Npoints_1*499.0/500.0))*fftimag")
+        .IFFT("fftreal", "fftimag", "mag_filter", "NULL"))
 result = pipe.run(lc, capture_lc=True)
 ```
 

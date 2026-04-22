@@ -531,7 +531,7 @@ import pyvartools as vt
 from pyvartools import commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-result = vt.Pipeline([cmd.rms()]).run(lc)
+result = vt.Pipeline().rms().run(lc)
 print(result.vars)
 ```
 

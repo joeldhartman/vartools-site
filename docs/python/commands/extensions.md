@@ -31,10 +31,9 @@ from pyvartools.commands import fastchi2, stitch
 r = vt.fastchi2("EXAMPLES/2", Nharm=2, freqmax=24.0, freqmin=0.1)
 
 # Explicit lib_path for an uninstalled extension (development tree)
-pipe = vt.Pipeline([
-    fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
-             lib_path="USERLIBS/src/.libs/fastchi2.so"),
-])
+pipe = (vt.Pipeline()
+        .fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
+             lib_path="USERLIBS/src/.libs/fastchi2.so"))
 ```
 
 All typed-wrapper pipelines automatically run in **subprocess mode** (library/in-process mode does not support dynamically loaded extensions).
@@ -43,8 +42,8 @@ All typed-wrapper pipelines automatically run in **subprocess mode** (library/in
 
 ```python
 from pyvartools.commands import magadd
-pipe = vt.Pipeline([magadd(5.0)])                      # fix 5.0
-pipe = vt.Pipeline([magadd("fixcolumn MeanMag_0")])    # from prior stats column
+pipe = vt.Pipeline().magadd(5.0)                      # fix 5.0
+pipe = vt.Pipeline().magadd("fixcolumn MeanMag_0")    # from prior stats column
 ```
 
 | Parameter | Type | Description |
@@ -56,10 +55,9 @@ pipe = vt.Pipeline([magadd("fixcolumn MeanMag_0")])    # from prior stats column
 
 ```python
 from pyvartools.commands import hatpiflag
-pipe = vt.Pipeline([
-    hatpiflag("fiphot_flag", "rejbadframe_mask",
-              "tfa_outlier_mask", "pointing_outlier_flag", "quality_flag"),
-])
+pipe = (vt.Pipeline()
+        .hatpiflag("fiphot_flag", "rejbadframe_mask",
+              "tfa_outlier_mask", "pointing_outlier_flag", "quality_flag"))
 ```
 
 Combines four per-observation inputs (fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag) into a single binary flag written to a new output variable.
@@ -68,10 +66,9 @@ Combines four per-observation inputs (fiphot string flag, reject-bad-frame mask,
 
 ```python
 from pyvartools.commands import fastchi2
-pipe = vt.Pipeline([
-    fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
-             oversample=4, Npeak=3, save_per=True),
-])
+pipe = (vt.Pipeline()
+        .fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
+             oversample=4, Npeak=3, save_per=True))
 ```
 
 | Parameter | Type | Description |
@@ -92,10 +89,9 @@ pipe = vt.Pipeline([
 
 ```python
 from pyvartools.commands import splinedetrend
-pipe = vt.Pipeline([
-    splinedetrend(["t:spline:0.1:3", "x:poly:2", "y:poly:2"],
-                  sigmaclip=4.0, save_model=True),
-])
+pipe = (vt.Pipeline()
+        .splinedetrend(["t:spline:0.1:3", "x:poly:2", "y:poly:2"],
+                  sigmaclip=4.0, save_model=True))
 ```
 
 | Parameter | Type | Description |
@@ -111,15 +107,12 @@ pipe = vt.Pipeline([
 from pyvartools.commands import ftuneven
 
 # Write the FT into four light-curve variables
-pipe = vt.Pipeline([
-    ftuneven(output_vectors=("freq", "ft_real", "ft_imag", "periodogram"),
-             freqrange=(0.01, 10.0, 0.001)),
-])
+pipe = (vt.Pipeline()
+        .ftuneven(output_vectors=("freq", "ft_real", "ft_imag", "periodogram"),
+             freqrange=(0.01, 10.0, 0.001)))
 
 # Write the FT to a per-LC file using an automatic frequency grid
-pipe = vt.Pipeline([
-    ftuneven(output_file=True, freqauto=True),
-])
+pipe = vt.Pipeline().ftuneven(output_file=True, freqauto=True)
 ```
 
 Exactly one output mode (`output_vectors`, `output_file`, or both via the `outputvectorsandfile` path) and one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. `freqrange` is a `(min, max, step)` tuple of value-specs.
@@ -128,16 +121,14 @@ Exactly one output mode (`output_vectors`, `output_file`, or both via the `outpu
 
 ```python
 from pyvartools.commands import stitch
-pipe = vt.Pipeline([
-    stitch("mag", "err", "mask", "lcnum", method="median",
-           groupbytime=30.0, save_fitted_parameters=True),
-])
+pipe = (vt.Pipeline()
+        .stitch("mag", "err", "mask", "lcnum", method="median",
+           groupbytime=30.0, save_fitted_parameters=True))
 
 # Multiple magnitude/uncertainty/mask variables
-pipe = vt.Pipeline([
-    stitch(["mag_ap1", "mag_ap2"], ["err_ap1", "err_ap2"],
-           ["mask_ap1", "mask_ap2"], "lcnum", method="poly 3"),
-])
+pipe = (vt.Pipeline()
+        .stitch(["mag_ap1", "mag_ap2"], ["err_ap1", "err_ap2"],
+           ["mask_ap1", "mask_ap2"], "lcnum", method="poly 3"))
 ```
 
 `method` is one of `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. See the constructor docstring for the full list of optional keywords (`refnum_var`, `fitonly`, `add_stitchparams_fitsheader`, `shifts_file`, etc.).
@@ -146,8 +137,8 @@ pipe = vt.Pipeline([
 
 ```python
 from pyvartools.commands import jktebop
-pipe = vt.Pipeline([
-    jktebop("fit",
+pipe = (vt.Pipeline()
+        .jktebop("fit",
             Period=2.5,     vary_Period=True,
             T0=0.0,         vary_T0=True,
             r1_r2=0.3, r2_r1=0.5, M2_M1=1.0, J2_J1=1.0,
@@ -155,8 +146,7 @@ pipe = vt.Pipeline([
             esinomega=0.0, ecosomega=0.0,
             LD1_law="quad", LD1_coeffs=(0.3, 0.3),
             LD2_law="lockLD1",
-            correctlc=True, save_model=True),
-])
+            correctlc=True, save_model=True))
 ```
 
 Every mandatory parameter (`Period`, `T0`, `r1_r2`, `r2_r1`, `M2_M1`, `J2_J1`, `i` **or** `bimpact`, `esinomega`, `ecosomega`) is a value-spec; pass the corresponding `vary_*=True` to free that parameter in the fit. Optional parameters: `gravdark1/2`, `reflection1/2`, `L3`, `tidallag`. `save_curve`, `curve_xaxis="jd"|"phase"` and `curve_step` emit a dense model curve.
@@ -165,8 +155,8 @@ Every mandatory parameter (`Period`, `T0`, `r1_r2`, `r2_r1`, `M2_M1`, `J2_J1`, `
 
 ```python
 from pyvartools.commands import macula
-pipe = vt.Pipeline([
-    macula("fit lm",
+pipe = (vt.Pipeline()
+        .macula("fit lm",
            Prot=10.0, vary_Prot=True,
            istar=1.4, kappa2=0.0, kappa4=0.0,
            c1=0.2, c2=0.1, c3=0.0, c4=0.0,
@@ -177,8 +167,7 @@ pipe = vt.Pipeline([
                "fspot": 0.1, "tmax": 0.0, "life": 1000.0,
                "ingress": 0.1, "egress": 0.1,
            }],
-           save_model=True),
-])
+           save_model=True))
 ```
 
 `mode` is `"inject"` or `"fit amoeba"` / `"fit lm"`. Each of the 13 global parameters (`Prot`, `istar`, `kappa2`, `kappa4`, `c1–c4`, `d1–d4`, `blend`) is a keyword-argument value-spec with a matching `vary_<name>` flag. `spots` is a list of dicts, one per active spot, each providing value-specs for the eight per-spot parameters (`Lambda0`, `Phi0`, `alphamax`, `fspot`, `tmax`, `life`, `ingress`, `egress`). Individual spot parameters can be marked free by passing a `(value, True)` tuple (or a `"vary_<name>": True` entry in the dict).
@@ -200,24 +189,22 @@ from pyvartools import commands as cmd
 # lcnum (assigned by run_combinelcs with `lcnumvar=...`).
 groups = [["EXAMPLES/1", "EXAMPLES/2"], ["EXAMPLES/3", "EXAMPLES/4"]]
 
-pipe = vt.Pipeline([
-    cmd.expr("mask=0"),
-    vt.UserCommand(
+pipe = (vt.Pipeline()
+        .expr("mask=0")
+        .add(vt.UserCommand(
         "USERLIBS/src/.libs/stitch.so",   # path to .so
         "stitch",                          # command name
         "mag err mask lcnum median",       # raw args (str or list)
-    )
-])
+    )))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
 When the library is installed and auto-loaded, omit the path:
 
 ```python
-pipe = vt.Pipeline([
-    cmd.expr("mask=0"),
-    vt.UserCommand(None, "stitch", "mag err mask lcnum median")
-])
+pipe = (vt.Pipeline()
+        .expr("mask=0")
+        .add(vt.UserCommand(None, "stitch", "mag err mask lcnum median")))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
@@ -242,11 +229,12 @@ vt.UserCommand("USERLIBS/src/stitch.so", "stitch").help()
 ```python
 Stitch = vt.load_userlib("USERLIBS/src/.libs/stitch.so")
 
-# Instantiate like any other command class
-pipe = vt.Pipeline([
-    cmd.expr("mask=0"),
-    Stitch("mag err mask lcnum median"),
-])
+# Pipeline builder methods are generated at import time for the built-in
+# command classes, so user classes created at runtime (like this one) are
+# added with `.add(instance)`:
+pipe = (vt.Pipeline()
+        .expr("mask=0")
+        .add(Stitch("mag err mask lcnum median")))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
@@ -277,10 +265,9 @@ print(cmds)                            # {} — nothing installed globally
 cmds = vt.discover_userlibs(search_paths=["USERLIBS/src/.libs"])
 print(sorted(cmds))                    # ['fastchi2', 'jktebop', ..., 'stitch']
 
-pipe = vt.Pipeline([
-    cmd.expr("mask=0"),
-    cmds["stitch"]("mag err mask lcnum median"),
-])
+pipe = (vt.Pipeline()
+        .expr("mask=0")
+        .add(cmds["stitch"]("mag err mask lcnum median")))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
@@ -306,9 +293,10 @@ class Stitch(vt.UserCommand):
             f"{variables} {errors} {masks} {lcnum_var} {method}",
         )
 
-pipe = vt.Pipeline([
-    Stitch("mag", "err", "mask", "lcnum", method="weightedmean"),
-])
+# User-defined classes aren't attached as Pipeline builder methods, so
+# add them with `.add(...)`:
+pipe = (vt.Pipeline()
+        .add(Stitch("mag", "err", "mask", "lcnum", method="weightedmean")))
 ```
 
 Alternatively, build the base class from the factory for a one-line definition:

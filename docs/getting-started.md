@@ -114,7 +114,7 @@ VARTOOLS is designed to process large sets of light curves efficiently. Pass a l
     import glob
 
     lcs = [vt.LightCurve.from_file(f) for f in glob.glob("EXAMPLES/[0-9]")]
-    pipeline = vt.Pipeline([cmd.rms(), cmd.clip(sigclip=5.0), cmd.rms()])
+    pipeline = vt.Pipeline().rms().clip(sigclip=5.0).rms()
     batch = pipeline.run_batch(lcs)
     print(batch.vars)
 
@@ -122,7 +122,7 @@ VARTOOLS is designed to process large sets of light curves efficiently. Pass a l
     batch = pipeline.run_filelist("EXAMPLES/lc_list")
     ```
  
-    For efficient batch processing in Python, construct a 'Pipeline' object that stores a list of commands to run in order.
+    For efficient batch processing in Python, construct a `Pipeline` object — chain the commands you want to run as method calls on `vt.Pipeline()` (each returns the pipeline itself, so they read left-to-right), then pass it a list of light curves via `run_batch` or a list of paths via `run_filelist`.
 
     `run_filelist` passes the file list directly to the vartools binary, which can be faster for large sets because Python does not load each light curve into memory.
 

@@ -40,23 +40,52 @@ output. Both paths produce identical results.
 
 ## Construction
 
-Pass a list of command objects to the constructor:
+The canonical form is the **builder API** — every vartools command is a
+method on `Pipeline` that appends the command and returns the pipeline
+itself, so calls can be chained:
 
 ```python
 import pyvartools as vt
-from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.clip(5.0),
-    cmd.LS(0.5, 10.0, 1e-3),
-])
+pipe = vt.Pipeline().clip(5.0).LS(0.5, 10.0, 1e-3).rms()
 ```
 
-Commands are appended with `add()`, which returns the pipeline itself so calls can be chained:
+Each method forwards its positional and keyword arguments to the
+matching `cmd.X(...)` constructor, so the builder form is equivalent to
+the list form below — whichever reads better for the situation at hand.
+
+### Extending an existing pipeline
+
+The builder methods return `self`, so any follow-up call continues the
+chain on the same pipeline object:
 
 ```python
-pipe = vt.Pipeline([cmd.clip(5.0)])
-pipe.add(cmd.LS(0.5, 10.0, 1e-3)).add(cmd.rms())
+pipe = vt.Pipeline().clip(5.0)
+pipe = pipe.LS(0.5, 10.0, 1e-3).rms()
+```
+
+### Alternative: list form and `add()`
+
+You can also pass a pre-built list of `cmd.X(...)` instances to the
+constructor, which is convenient when commands are assembled
+programmatically:
+
+```python
+from pyvartools import commands as cmd
+
+pipe = vt.Pipeline([cmd.clip(5.0), cmd.LS(0.5, 10.0, 1e-3), cmd.rms()])
+```
+
+For commands that don't have a direct builder method (e.g.
+[`UserCommand`](../extensions/user-commands.md) for a generic extension
+library), use `add(command)`, which appends a `VartoolsCommand` instance
+and returns the pipeline:
+
+```python
+pipe = (vt.Pipeline()
+        .clip(5.0)
+        .add(vt.UserCommand("USERLIBS/src/mylib.so", "mylib", "fix 1.0"))
+        .rms())
 ```
 
 ---
@@ -198,14 +227,14 @@ groups = [
     ["EXAMPLES/3", "EXAMPLES/4"],
 ]
 
-batch = vt.Pipeline([cmd.rms()]).run_combinelcs(groups)
+batch = vt.Pipeline().rms().run_combinelcs(groups)
 print(batch.vars)   # one row per group
 ```
 
 #### Example — track which file each point came from
 
 ```python
-batch = vt.Pipeline([cmd.rms()]).run_combinelcs(
+batch = vt.Pipeline().rms().run_combinelcs(
     groups,
     lcnumvar="lcnum",   # vartools creates an integer variable "lcnum" per observation
 )
@@ -216,14 +245,11 @@ batch = vt.Pipeline([cmd.rms()]).run_combinelcs(
 ```python
 from pyvartools.commands import stitch
 
-batch = vt.Pipeline([
-    # Create a trivial all-zero mask variable so -stitch has something to
-    # read; real usage would supply an actual quality-flag variable.
-    cmd.expr("mask=0"),
-    stitch("mag", "err", "mask", "lcnum", method="median",
-           lib_path="USERLIBS/src/.libs/stitch.so"),
-    cmd.LS(0.5, 10.0, 1e-3, npeaks=1),
-]).run_combinelcs(groups, lcnumvar="lcnum", nthreads=2)
+batch = (vt.Pipeline()
+        .expr("mask=0")
+        .stitch("mag", "err", "mask", "lcnum", method="median",
+           lib_path="USERLIBS/src/.libs/stitch.so")
+        .LS(0.5, 10.0, 1e-3, npeaks=1)).run_combinelcs(groups, lcnumvar="lcnum", nthreads=2)
 
 print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)
 ```
@@ -239,7 +265,7 @@ import pyvartools as vt
 from pyvartools import commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-pipe = vt.Pipeline([cmd.clip(5.0), cmd.LS(0.5, 10.0, 1e-3)])
+pipe = vt.Pipeline().clip(5.0).LS(0.5, 10.0, 1e-3)
 
 result = pipe.run(lc)
 print(result.vars["LS_Period_1_1"])
@@ -359,11 +385,11 @@ airmass = 1.0 + 0.5 * np.abs(np.sin(np.pi * t / 15.0))
 # Extra column
 lc = vt.LightCurve.from_arrays(t, mag, err, aux={"airmass": airmass})
 # → -inputlcformat t:1,mag:2,err:3,airmass:4  (auto-generated)
-result = vt.Pipeline([cmd.rms()]).run(lc)
+result = vt.Pipeline().rms().run(lc)
 
 # Only t and mag — vartools receives -inputlcformat t:1,mag:2
 lc2 = vt.LightCurve.from_arrays(t=t, mag=mag)
-result2 = vt.Pipeline([cmd.rms()]).run(lc2)
+result2 = vt.Pipeline().rms().run(lc2)
 
 # No standard columns at all — only custom vectors
 phase_arr = (t % 2.3) / 2.3
@@ -412,7 +438,7 @@ from pyvartools import LCVar, commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
-result = vt.Pipeline([cmd.rms()]).run(
+result = vt.Pipeline().rms().run(
     lc,
     init_lc_vars={"mymask": LCVar(type="int", init="0")},
 )
@@ -422,7 +448,7 @@ print(result.vars["RMS_0"])
 **Index each observation (0-based) using `NR`:**
 
 ```python
-result = vt.Pipeline([cmd.rms()]).run(
+result = vt.Pipeline().rms().run(
     lc,
     init_lc_vars={"obs_idx": LCVar(type="double", init="NR")},
 )
@@ -431,10 +457,7 @@ result = vt.Pipeline([cmd.rms()]).run(
 **Use a per-observation flag to inflate errors for early observations (t < 10):**
 
 ```python
-result = vt.Pipeline([
-    cmd.expr("err = err * (1 + 9*early_mask)"),   # inflate errors 10× for t<10
-    cmd.rms(),
-]).run(
+result = vt.Pipeline().expr("err = err * (1 + 9*early_mask)").rms().run(
     lc,
     init_lc_vars={"early_mask": LCVar(type="int", init="t<10")},
 )
@@ -486,9 +509,7 @@ EXAMPLES/3 1.891
 import pyvartools as vt
 from pyvartools import ListVar, commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.LS("myperiod", 100.0, 0.1),
-])
+pipe = vt.Pipeline().LS("myperiod", 100.0, 0.1)
 batch = pipe.run_filelist(
     "EXAMPLES/lc_list_periods",
     inlistvars={"myperiod": ListVar(col=2)},
@@ -611,14 +632,13 @@ from pyvartools import commands as cmd
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in [2, 3, 4, 5, 6]]
 
 # Each star gets its own [minp, maxp] bounds
-result = vt.Pipeline([
-    cmd.LS(
-        minp=np.array([0.1, 0.5, 0.1, 0.2, 0.3]),
-        maxp=np.array([5.0, 10.0, 8.0, 6.0, 7.0]),
-        subsample=0.001,
-        npeaks=1,
-    )
-]).run_batch(lcs, nthreads=4)
+result = (vt.Pipeline()
+        .LS(
+            minp=np.array([0.1, 0.5, 0.1, 0.2, 0.3]),
+            maxp=np.array([5.0, 10.0, 8.0, 6.0, 7.0]),
+            subsample=0.001,
+            npeaks=1,
+        )).run_batch(lcs, nthreads=4)
 
 print(result.vars[["Name", "LS_Period_1_0"]])
 ```
@@ -628,15 +648,14 @@ print(result.vars[["Name", "LS_Period_1_0"]])
 ```python
 from pyvartools import PerLC, commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.aov(
-        minp=PerLC([0.1, 0.5, 0.1, 0.2, 0.3]),
-        maxp=10.0,               # scalar: same for all LCs
-        subsample=0.001,
-        finetune=2,
-        npeaks=1,
-    )
-])
+pipe = (vt.Pipeline()
+        .aov(
+            minp=PerLC([0.1, 0.5, 0.1, 0.2, 0.3]),
+            maxp=10.0,               # scalar: same for all LCs
+            subsample=0.001,
+            finetune=2,
+            npeaks=1,
+        ))
 result = pipe.run_batch(lcs)
 print(result.vars[["Name", "Period_1_0", "AOV_1_0"]])
 ```
@@ -644,17 +663,16 @@ print(result.vars[["Name", "Period_1_0", "AOV_1_0"]])
 **BLS with per-LC period bounds:**
 
 ```python
-result = vt.Pipeline([
-    cmd.BLS(
-        minper=np.array([0.1, 0.5, 0.1, 0.2, 0.3]),
-        maxper=np.array([5.0, 10.0, 8.0, 6.0, 7.0]),
-        rmin=0.01,
-        rmax=0.5,
-        nbins=200,
-        nfreq=5000,
-        npeaks=1,
-    )
-]).run_batch(lcs)
+result = (vt.Pipeline()
+        .BLS(
+            minper=np.array([0.1, 0.5, 0.1, 0.2, 0.3]),
+            maxper=np.array([5.0, 10.0, 8.0, 6.0, 7.0]),
+            rmin=0.01,
+            rmax=0.5,
+            nbins=200,
+            nfreq=5000,
+            npeaks=1,
+        )).run_batch(lcs)
 print(result.vars[["Name", "BLS_Period_1_0", "BLS_SDE_1_0"]])
 ```
 
@@ -662,26 +680,24 @@ print(result.vars[["Name", "BLS_Period_1_0", "BLS_SDE_1_0"]])
 
 ```python
 # minp varies per LC; maxp and subsample are fixed for all
-pipe = vt.Pipeline([
-    cmd.LS(
-        minp=PerLC([0.1, 0.3, 0.05]),
-        maxp=20.0,
-        subsample=0.001,
-    )
-])
+pipe = (vt.Pipeline()
+        .LS(
+            minp=PerLC([0.1, 0.3, 0.05]),
+            maxp=20.0,
+            subsample=0.001,
+        ))
 ```
 
 **Multiple per-LC parameters** — multiple parameters can vary simultaneously:
 
 ```python
 # Both minp and maxp differ per LC
-pipe = vt.Pipeline([
-    cmd.LS(
-        minp=np.array([0.1, 0.5, 0.1]),
-        maxp=np.array([5.0, 20.0, 10.0]),
-        subsample=np.array([0.001, 0.0005, 0.001]),
-    )
-])
+pipe = (vt.Pipeline()
+        .LS(
+            minp=np.array([0.1, 0.5, 0.1]),
+            maxp=np.array([5.0, 20.0, 10.0]),
+            subsample=np.array([0.001, 0.0005, 0.001]),
+        ))
 ```
 
 ---
@@ -703,25 +719,20 @@ from pyvartools import Output, commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
-pipe = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 1e-3, save_periodogram=True),   # Mode 1: temp dir, capture
-])
+pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3, save_periodogram=True)
 result = pipe.run(lc)
 pgram = result.files["LS_periodogram_0"]   # pd.DataFrame
 pgram.to_csv("EXAMPLES/periodogram.csv", index=False)
 
 # Mode 3: write to EXAMPLES/OUTDIR1/, do NOT capture into Python
-pipe3 = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 1e-3, save_periodogram="EXAMPLES/OUTDIR1"),
-])
+pipe3 = vt.Pipeline().LS(0.5, 10.0, 1e-3, save_periodogram="EXAMPLES/OUTDIR1")
 result3 = pipe3.run(lc)
 # EXAMPLES/OUTDIR1/stdin.ls is on disk; result3.files has no "LS_periodogram_0"
 
 # Mode 2: write to EXAMPLES/OUTDIR1/ AND capture into Python
-pipe2 = vt.Pipeline([
-    cmd.LS(0.5, 10.0, 1e-3,
-           save_periodogram=Output("EXAMPLES/OUTDIR1", capture=True)),
-])
+pipe2 = (vt.Pipeline()
+        .LS(0.5, 10.0, 1e-3,
+           save_periodogram=Output("EXAMPLES/OUTDIR1", capture=True)))
 result2 = pipe2.run(lc)
 pgram2 = result2.files["LS_periodogram_0"]   # read from EXAMPLES/OUTDIR1/stdin.ls
 ```
@@ -847,7 +858,7 @@ from pyvartools import commands as cmd
 import numpy as np
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
-pipe = vt.Pipeline([cmd.rms()])
+pipe = vt.Pipeline().rms()
 
 # First call: initialises the in-process pipeline (~same cost as subprocess)
 result = pipe.run(lc)
@@ -857,7 +868,7 @@ for lc in [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(3, 8)]:
     result = pipe.run(lc)
 
 # capture_lc=True also uses library mode (no subprocess needed)
-pipe2 = vt.Pipeline([cmd.clip(3.0)])
+pipe2 = vt.Pipeline().clip(3.0)
 result2 = pipe2.run(lc, capture_lc=True)
 print(len(result2.lc.t))  # modified LC returned directly from C memory
 ```

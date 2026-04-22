@@ -21,18 +21,17 @@ on the same underlying data without re-reading the file.
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 
 # Run LS and BLS with different clipping levels; restore between them
-pipe = vt.Pipeline([
-    cmd.savelc(),
-    cmd.clip(5.0),
-    cmd.savelc(),
-    cmd.LS(0.1, 100.0, 0.1, npeaks=3, clip=5.0, clipiter=1),
-    cmd.aov(0.1, 100.0, 0.1, 0.01, npeaks=1, clip=5.0, clipiter=1),
-    cmd.restorelc(savenumber=1),   # back to pre-5σ-clip state
-    cmd.clip(10.0),
-    cmd.BLS(0.1, 20.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=10000, npeaks=1),
-    cmd.restorelc(savenumber=2),   # back to 5σ-clipped state
-    cmd.changeerror(),
-])
+pipe = (vt.Pipeline()
+        .savelc()
+        .clip(5.0)
+        .savelc()
+        .LS(0.1, 100.0, 0.1, npeaks=3, clip=5.0, clipiter=1)
+        .aov(0.1, 100.0, 0.1, 0.01, npeaks=1, clip=5.0, clipiter=1)
+        .restorelc(savenumber=1)
+        .clip(10.0)
+        .BLS(0.1, 20.0, rmin=0.01, rmax=0.1, nbins=200, nfreq=10000, npeaks=1)
+        .restorelc(savenumber=2)
+        .changeerror())
 batch = pipe.run_batch(lcs, nthreads=4)
 print(batch.vars)
 ```
@@ -81,54 +80,49 @@ from pyvartools import commands as cmd
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Capture the intermediate light curve state (no file left on disk)
-pipe = vt.Pipeline([
-    cmd.clip(5.0),
-    cmd.o(capture=True, key="clipped"),   # captured, no disk file
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-])
+pipe = (vt.Pipeline()
+        .clip(5.0)
+        .o(capture=True, key="clipped")
+        .LS(0.1, 10.0, 0.1, npeaks=1))
 result = pipe.run(lc)
 clipped_lc = result.files["clipped"]     # LightCurve after sigma-clipping
 print(result.vars["LS_Period_1_2"])     # clip=0, o=1, LS=2
 
 # Write to disk AND capture
-result2 = vt.Pipeline([
-    cmd.clip(5.0),
-    cmd.o(filename="EXAMPLES/OUTDIR1/2.clipped", capture=True, key="clipped"),
-]).run(lc)
+result2 = (vt.Pipeline()
+        .clip(5.0)
+        .o(filename="EXAMPLES/OUTDIR1/2.clipped", capture=True, key="clipped")).run(lc)
 # File written to disk and also available as result2.files["clipped"]
 
 # Multiple intermediate snapshots
-pipe3 = vt.Pipeline([
-    cmd.clip(5.0),
-    cmd.o(capture=True, key="after_clip"),
-    cmd.medianfilter(0.05),
-    cmd.o(capture=True, key="after_filter"),
-])
+pipe3 = (vt.Pipeline()
+        .clip(5.0)
+        .o(capture=True, key="after_clip")
+        .medianfilter(0.05)
+        .o(capture=True, key="after_filter"))
 result3 = pipe3.run(lc)
 after_clip   = result3.files["after_clip"]
 after_filter = result3.files["after_filter"]
 
 # Batch: result.files["o"] is a list of LightCurves, one per input LC
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([
-    cmd.LS(0.1, 100.0, 0.1, npeaks=1),
-    cmd.expr("phase=t"),
-    cmd.changevariable("t", "phase"),
-    cmd.Phase(period="ls"),
-    cmd.o(capture=True, key="phased"),
-]).run_batch(lcs)
+batch = (vt.Pipeline()
+        .LS(0.1, 100.0, 0.1, npeaks=1)
+        .expr("phase=t")
+        .changevariable("t", "phase")
+        .Phase(period="ls")
+        .o(capture=True, key="phased")).run_batch(lcs)
 phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
 
 # Write to a named directory with a custom nameformat.  Disk-backed outputs
 # (-o directory ... nameformat) require on-disk input filenames, so use
 # run_filelist rather than run_batch here.
-vt.Pipeline([
-    cmd.LS(0.1, 100.0, 0.1, npeaks=1),
-    cmd.Phase(period="ls"),
-    cmd.o("EXAMPLES/OUTDIR1",
+(vt.Pipeline()
+        .LS(0.1, 100.0, 0.1, npeaks=1)
+        .Phase(period="ls")
+        .o("EXAMPLES/OUTDIR1",
           nameformat="file_%s_%05d_simout.txt",
-          columnformat="t:%11.5f,mag:%7.4f,err:%7.4f"),
-]).run_filelist([f"EXAMPLES/{i}" for i in range(1, 11)])
+          columnformat="t:%11.5f,mag:%7.4f,err:%7.4f")).run_filelist([f"EXAMPLES/{i}" for i in range(1, 11)])
 ```
 
 ---
@@ -151,13 +145,12 @@ Include the values of one or more user-computed variables (e.g. results of `-exp
 
 ```python
 # Print a vartools output column along with a derived expression
-pipe = vt.Pipeline([
-    cmd.LS(0.5, 20.0, 4.0, npeaks=1),
-    cmd.expr("doubled=2*LS_Period_1_0"),
-    cmd.print_cols("LS_Period_1_0,doubled",
+pipe = (vt.Pipeline()
+        .LS(0.5, 20.0, 4.0, npeaks=1)
+        .expr("doubled=2*LS_Period_1_0")
+        .print_cols("LS_Period_1_0,doubled",
               columnnames="Period,Doubled",
-              fmt="%.6f,%.6f"),
-])
+              fmt="%.6f,%.6f"))
 batch = pipe.run_batch(lcs)
 print(batch.vars[["Period_2", "Doubled_2"]])
 ```
@@ -189,13 +182,12 @@ to a derived variable such as phase.
 **Example**
 
 ```python
-pipe = vt.Pipeline([
-    cmd.LS(0.1, 100.0, 0.1, npeaks=1),
-    cmd.expr("phase=t"),
-    cmd.changevariable("t", "phase"),
-    cmd.Phase(period="ls"),
-    cmd.changevariable("t", "t"),  # revert so output sorts by time
-])
+pipe = (vt.Pipeline()
+        .LS(0.1, 100.0, 0.1, npeaks=1)
+        .expr("phase=t")
+        .changevariable("t", "phase")
+        .Phase(period="ls")
+        .changevariable("t", "t"))
 ```
 
 ---
@@ -221,16 +213,15 @@ lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 # Run different statistics depending on variability level.  Each branch
 # runs in the same vartools invocation, so output-column suffixes keep
 # their positional indices across branches.
-pipe = vt.Pipeline([
-    cmd.rms(),
-    cmd.ifcmd("RMS_0>10*Expected_RMS_0"),
-        cmd.stats("mag", "stddev"),
-    cmd.elifcmd("Npoints_0>3000"),
-        cmd.stats("mag", "kurtosis"),
-    cmd.elsecmd(),
-        cmd.rms(),
-    cmd.ficmd(),
-])
+pipe = (vt.Pipeline()
+        .rms()
+        .ifcmd("RMS_0>10*Expected_RMS_0")
+        .stats("mag", "stddev")
+        .elifcmd("Npoints_0>3000")
+        .stats("mag", "kurtosis")
+        .elsecmd()
+        .rms()
+        .ficmd())
 batch = pipe.run_batch(lcs)
 print(batch.vars.columns.tolist())
 ```

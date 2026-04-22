@@ -74,16 +74,15 @@ import pandas as pd
 
 # Step 1: fit a Fourier series to the template RR Lyrae light curve
 tmpl = vt.LightCurve.from_file("EXAMPLES/M3.V006.lc")
-fit = vt.Pipeline([
-    cmd.Killharm(
-        period=0.514333,
-        nharm=10,
-        nsubharm=0,
-        save_model=True,
-        fitonly=True,
-        output_format="outRphi",
-    ),
-]).run(tmpl)
+fit = (vt.Pipeline()
+        .Killharm(
+            period=0.514333,
+            nharm=10,
+            nsubharm=0,
+            save_model=True,
+            fitonly=True,
+            output_format="outRphi",
+        )).run(tmpl)
 
 # Pull the R_k1 and phi_k1 coefficients from the fit
 row = fit.vars
@@ -108,12 +107,11 @@ for i in range(10):
     inject_args += ["0", "0"]  # no sub-harmonics, no model output
 
     lc = vt.LightCurve.from_file("EXAMPLES/4")
-    result = vt.Pipeline([
-        cmd.Raw(inject_args),
-        cmd.LS(0.1, 10.0, 0.01, npeaks=2, save_periodogram=False),
-        cmd.aov_harm(nharm=2, minp=0.1, maxp=10.0, subsample=0.1,
-                     finetune=0.01, npeaks=2, save_periodogram=False),
-    ]).run(lc)
+    result = (vt.Pipeline()
+            .Raw(inject_args)
+            .LS(0.1, 10.0, 0.01, npeaks=2, save_periodogram=False)
+            .aov_harm(nharm=2, minp=0.1, maxp=10.0, subsample=0.1,
+                     finetune=0.01, npeaks=2, save_periodogram=False)).run(lc)
 
     rows.append({
         "inj_amp": amp,

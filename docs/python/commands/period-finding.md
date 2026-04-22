@@ -89,10 +89,9 @@ from pyvartools import commands as cmd
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Fixed values — search periods 0.1–10 days, report top 5 peaks with whitening
-result = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=5, whiten=True, clip=5.0, clipiter=1,
-           save_periodogram=True),
-]).run(lc)
+result = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=5, whiten=True, clip=5.0, clipiter=1,
+           save_periodogram=True)).run(lc)
 print(result.vars["LS_Period_1_0"])       # 1.23440877
 print(result.vars["Log10_LS_Prob_1_0"])   # -4000.59209
 pgram = result.files["LS_periodogram_0"]   # pd.DataFrame: frequency vs power
@@ -100,11 +99,10 @@ pgram = result.files["LS_periodogram_0"]   # pd.DataFrame: frequency vs power
 # Expression form — set period range relative to the time baseline of each LC.
 # First compute min/max time with cmd.stats, then define tspan with cmd.expr,
 # then pass expressions to LS.  LS is at pipeline index 2, so keys end in "_2".
-result = vt.Pipeline([
-    cmd.stats("t", "min,max"),                              # → STATS_t_MIN_0, STATS_t_MAX_0
-    cmd.expr("tspan=STATS_t_MAX_0-STATS_t_MIN_0"),          # → tspan
-    cmd.LS("tspan/200", "tspan/2", 1e-3, npeaks=1),         # expr tspan/200, expr tspan/2
-]).run(lc)
+result = (vt.Pipeline()
+        .stats("t", "min,max")
+        .expr("tspan=STATS_t_MAX_0-STATS_t_MIN_0")
+        .LS("tspan/200", "tspan/2", 1e-3, npeaks=1)).run(lc)
 print(result.vars["LS_Period_1_2"])       # 1.23534018
 
 # Variable form — minp and maxp are per-star variables read from a list file.
@@ -113,35 +111,32 @@ print(result.vars["LS_Period_1_2"])       # 1.23534018
 
 # Batch: run on many light curves in parallel
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([cmd.LS(0.1, 10.0, 0.1, npeaks=1)]).run_batch(lcs, nthreads=4)
+batch = vt.Pipeline().LS(0.1, 10.0, 0.1, npeaks=1).run_batch(lcs, nthreads=4)
 print(batch.vars[["Name", "LS_Period_1_0", "Log10_LS_Prob_1_0"]])
 
 # fixperiod_snr — evaluate LS at a known period
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Fixed number form: evaluate at period = 1.234
-r = vt.Pipeline([cmd.LS(0.1, 10.0, 0.1, fixperiod_snr=1.234)]).run(lc)
+r = vt.Pipeline().LS(0.1, 10.0, 0.1, fixperiod_snr=1.234).run(lc)
 print(r.vars["LS_SNR_PeriodFix_0"])            # SNR at period 1.234
 
 # "ls" form: evaluate at the best peak from a prior LS search
-r = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-    cmd.LS(0.1, 10.0, 0.1, fixperiod_snr="ls"),
-]).run(lc)
+r = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .LS(0.1, 10.0, 0.1, fixperiod_snr="ls")).run(lc)
 print(r.vars["LS_SNR_PeriodFix_1"])            # SNR at period found by first LS
 
 # "aov" form: evaluate LS at the best period from a prior AOV search
-r = vt.Pipeline([
-    cmd.aov(0.1, 10.0, 0.1, 0.01, npeaks=1),
-    cmd.LS(0.1, 10.0, 0.1, fixperiod_snr="aov"),
-]).run(lc)
+r = (vt.Pipeline()
+        .aov(0.1, 10.0, 0.1, 0.01, npeaks=1)
+        .LS(0.1, 10.0, 0.1, fixperiod_snr="aov")).run(lc)
 print(r.vars["LS_SNR_PeriodFix_1"])
 
 # "fixcolumn" form: read the period from a named per-star column
-r = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-    cmd.LS(0.1, 10.0, 0.1, fixperiod_snr="fixcolumn LS_Period_1_0"),
-]).run(lc)
+r = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .LS(0.1, 10.0, 0.1, fixperiod_snr="fixcolumn LS_Period_1_0")).run(lc)
 print(r.vars["LS_PeriodFix_1"])
 print(r.vars["Log10_LS_Prob_PeriodFix_1"])
 ```
@@ -185,10 +180,9 @@ pgram = result.files["aov_periodogram_0"]   # pd.DataFrame: frequency vs AOV sta
 # fixperiod_snr — evaluate AOV at a known period.
 # `fixperiod_snr="aov"` back-references the prior -aov call, so both steps
 # must share one vartools invocation — use Pipeline here.
-result = vt.Pipeline([
-    cmd.aov(0.1, 10.0, 0.1, 0.01, npeaks=1),
-    cmd.aov(0.1, 10.0, 0.1, 0.01, fixperiod_snr="aov"),
-]).run(lc)
+result = (vt.Pipeline()
+        .aov(0.1, 10.0, 0.1, 0.01, npeaks=1)
+        .aov(0.1, 10.0, 0.1, 0.01, fixperiod_snr="aov")).run(lc)
 print(result.vars["AOV_SNR_PeriodFix_1"])
 ```
 
@@ -576,11 +570,10 @@ Estimates the signal amplitude required to achieve a given detection threshold. 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 # Run LS, fit harmonic (fitonly), then compute minimum detectable amplitude
-pipe = vt.Pipeline([
-    cmd.LS(0.1, 10.0, 0.1, npeaks=1),
-    cmd.Killharm("ls", nharm=0, nsubharm=0, fitonly=True),
-    cmd.GetLSAmpThresh("ls", minp=0.1, thresh=-100.0, nharm=0, nsubharm=0),
-])
+pipe = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1, npeaks=1)
+        .Killharm("ls", nharm=0, nsubharm=0, fitonly=True)
+        .GetLSAmpThresh("ls", minp=0.1, thresh=-100.0, nharm=0, nsubharm=0))
 result = pipe.run(lc)
 print(result.vars["LS_Period_1_0"])           # 1.23440877
 print(result.vars["LS_MinimumAmplitude_2"])   # 0.00248 mag

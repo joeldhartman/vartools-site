@@ -35,16 +35,15 @@ import pyvartools as vt
 from pyvartools import commands as cmd
 
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline([
-    cmd.rms(),
-    cmd.expr("tzero=median(t)", vartype="listvar"),
-    cmd.linfit(
-        function="a*(t-tzero)*(t-tzero)+b*(t-tzero)+c",
-        paramlist="a,b,c",
-        correct_lc=True,
-    ),
-    cmd.rms(),
-]).run_batch(lcs)
+batch = (vt.Pipeline()
+        .rms()
+        .expr("tzero=median(t)", vartype="listvar")
+        .linfit(
+            function="a*(t-tzero)*(t-tzero)+b*(t-tzero)+c",
+            paramlist="a,b,c",
+            correct_lc=True,
+        )
+        .rms()).run_batch(lcs)
 print(batch.vars[["Name", "RMS_0", "Linfit_a_2", "Linfit_b_2",
                   "Linfit_c_2", "RMS_3"]])
 ```

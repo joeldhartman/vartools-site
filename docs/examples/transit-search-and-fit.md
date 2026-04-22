@@ -44,31 +44,30 @@ RMS_3                        =   0.00405
 import pyvartools as vt
 from pyvartools import commands as cmd
 
-pipe = vt.Pipeline([
-    cmd.rms(),
-    cmd.TFA(
-        trendlist="EXAMPLES/trendlist_tfa",
-        dates_file="EXAMPLES/dates_tfa",
-        pixelsep=25.0,
-        correct_lc=True,
-        save_coeffs=False,
-        save_model=False,
-    ),
-    cmd.BLS(
-        density_mode=True,
-        stellar_density=1.41,        # solar density, g/cm³
-        min_exp_dur_frac=0.5,
-        max_exp_dur_frac=2.0,
-        minper=0.5, maxper=5.0,
-        subsample=0.1,               # oversampling for "optimal" grid
-        nbins=200,
-        timezone=7, npeaks=2,
-        save_periodogram=False,
-        correct_lc=True,
-        fittrap=True,
-    ),
-    cmd.rms(),
-])
+pipe = (vt.Pipeline()
+        .rms()
+        .TFA(
+            trendlist="EXAMPLES/trendlist_tfa",
+            dates_file="EXAMPLES/dates_tfa",
+            pixelsep=25.0,
+            correct_lc=True,
+            save_coeffs=False,
+            save_model=False,
+        )
+        .BLS(
+            density_mode=True,
+            stellar_density=1.41,        # solar density, g/cm³
+            min_exp_dur_frac=0.5,
+            max_exp_dur_frac=2.0,
+            minper=0.5, maxper=5.0,
+            subsample=0.1,               # oversampling for "optimal" grid
+            nbins=200,
+            timezone=7, npeaks=2,
+            save_periodogram=False,
+            correct_lc=True,
+            fittrap=True,
+        )
+        .rms())
 
 result = pipe.run_filelist("EXAMPLES/lc_list_tfa")
 
@@ -194,36 +193,35 @@ from pyvartools import commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
 
-result = vt.Pipeline([
-    cmd.BLS(
-        density_mode=True, stellar_density=1.41,
-        min_exp_dur_frac=0.5, max_exp_dur_frac=2.0,
-        minper=0.5, maxper=5.0,
-        subsample=0.1, nbins=200,
-        timezone=7, npeaks=1,
-        save_periodogram=False, correct_lc=False, fittrap=True,
-    ),
-    cmd.MandelAgolTransit(
-        P0="expr BLS_Period_1_0",
-        T00="expr BLS_Tc_1_0",
-        r0="expr sqrt(BLS_Depth_1_0)",
-        a0="expr 1.0/(BLS_Qtran_1_0*pi)",
-        bimpact=0.1,
-        mconst0=-1,                  # let vartools estimate the baseline
-        ld_coeffs=[0.3, 0.3],
-        fitephem=1, fitr=1, fita=1, fitinclterm=1,
-        fite=0, fitomega=0, fitmconst=1, fitldcoeffs=[0, 0],
-        save_phcurve=True,
-        ophcurve_phmin=-0.5, ophcurve_phmax=0.5, ophcurve_phstep=0.001,
-    ),
-    cmd.Phase(
-        period="fixcolumn MandelAgolTransit_Period_1",
-        T0="fixcolumn MandelAgolTransit_T0_1",
-        phasevar="ph_obs",
-        startphase=-0.5,
-    ),
-    cmd.o(capture=True, key="folded"),
-]).run(lc)
+result = (vt.Pipeline()
+        .BLS(
+            density_mode=True, stellar_density=1.41,
+            min_exp_dur_frac=0.5, max_exp_dur_frac=2.0,
+            minper=0.5, maxper=5.0,
+            subsample=0.1, nbins=200,
+            timezone=7, npeaks=1,
+            save_periodogram=False, correct_lc=False, fittrap=True,
+        )
+        .MandelAgolTransit(
+            P0="expr BLS_Period_1_0",
+            T00="expr BLS_Tc_1_0",
+            r0="expr sqrt(BLS_Depth_1_0)",
+            a0="expr 1.0/(BLS_Qtran_1_0*pi)",
+            bimpact=0.1,
+            mconst0=-1,                  # let vartools estimate the baseline
+            ld_coeffs=[0.3, 0.3],
+            fitephem=1, fitr=1, fita=1, fitinclterm=1,
+            fite=0, fitomega=0, fitmconst=1, fitldcoeffs=[0, 0],
+            save_phcurve=True,
+            ophcurve_phmin=-0.5, ophcurve_phmax=0.5, ophcurve_phstep=0.001,
+        )
+        .Phase(
+            period="fixcolumn MandelAgolTransit_Period_1",
+            T0="fixcolumn MandelAgolTransit_T0_1",
+            phasevar="ph_obs",
+            startphase=-0.5,
+        )
+        .o(capture=True, key="folded")).run(lc)
 
 fit    = result.varobjs.MandelAgolTransit
 folded = result.files["folded"].to_dataframe()

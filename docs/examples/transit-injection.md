@@ -37,17 +37,16 @@ from pyvartools import commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/3")
 
-result = vt.Pipeline([
-    cmd.MandelAgolTransit(
-        P0=2.12345, T00=53725.174, r0=0.1, a0=10.0, inclination=90.0,
-        e0=0.0, omega0=0.0, mconst0=0.0,
-        ld_type="quad", ld_coeffs=[0.236, 0.391],
-        fitephem=0, fitr=0, fita=0, fitinclterm=0, fite=0, fitomega=0,
-        fitmconst=0, fitldcoeffs=[0, 0],
-        correct_lc=False,
-        save_model=True,
-    ),
-]).run(lc)
+result = (vt.Pipeline()
+        .MandelAgolTransit(
+            P0=2.12345, T00=53725.174, r0=0.1, a0=10.0, inclination=90.0,
+            e0=0.0, omega0=0.0, mconst0=0.0,
+            ld_type="quad", ld_coeffs=[0.236, 0.391],
+            fitephem=0, fitr=0, fita=0, fitinclterm=0, fite=0, fitomega=0,
+            fitmconst=0, fitldcoeffs=[0, 0],
+            correct_lc=False,
+            save_model=True,
+        )).run(lc)
 
 print(result.vars)
 ```

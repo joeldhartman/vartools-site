@@ -532,9 +532,8 @@ vartools -l lc_list -L USERLIBS/src/magadd.so -magadd expr "Mag_median" -tab
 import pyvartools as vt
 
 # Quick one-off
-pipe = vt.Pipeline([
-    vt.UserCommand("USERLIBS/src/mylib.so", "mylib", "fix 1.0")
-])
+pipe = (vt.Pipeline()
+        .add(vt.UserCommand("USERLIBS/src/mylib.so", "mylib", "fix 1.0")))
 result = pipe.run(lc)
 
 # Or build a proper class
@@ -544,7 +543,7 @@ class MyLib(vt.UserCommand):
     def __init__(self, value):
         super().__init__(self._lib_path, self._cmd_name, f"fix {value}")
 
-pipe = vt.Pipeline([MyLib(1.0)])
+pipe = vt.Pipeline().MyLib(1.0)
 ```
 
 See [User Extension Commands](../python/commands/extensions.md#user-extension-commands)
