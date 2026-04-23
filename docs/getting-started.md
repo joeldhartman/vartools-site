@@ -173,7 +173,7 @@ This produces output that can be more human-readable when there are many statist
 
 - **Pipeline model.** VARTOOLS reads each light curve, applies commands left to right, and emits statistics. The light curve produced by one command becomes the input to the next.
 
-- **Statistics vs. transformations.** Some commands compute statistics about the light curve without changing it (`-rms`, `-LS`, `-BLS`, `-stats`, …). Others modify the in-memory light curve so subsequent commands see a different input (`-clip`, `-fluxtomag`, `-Killharm`, …). A typical pipeline is a few transformations followed by one or more statistics commands.
+- **Statistics vs. transformations.** Some commands compute statistics about the light curve without changing it (`-rms`, `-LS`, `-BLS`, `-stats`, …). Others modify the in-memory light curve so subsequent commands see a different input (`-clip`, `-fluxtomag`, `-harmonicfilter`, …). A typical pipeline is a few transformations followed by one or more statistics commands.
 
 - **Two output channels.** The statistics table goes to stdout (or to the file given by `-redirectstats`). The (possibly modified) light curves are **not** written unless you explicitly request them with `-o` (CLI) or `capture_lc=True` (pyvartools; `capture_lc=True` is the default option in this case).
 

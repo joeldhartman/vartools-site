@@ -53,7 +53,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-Injecttransit` | Inject a Mandel-Agol transit model | [CLI](cli/simulation.md#-injecttransit) | [Python](python/commands/simulation.md#injecttransit-inject-a-transit-signal) |
 | `-jktebop` | JKTEBOP detached eclipsing binary model (USERLIB extension) | [CLI](cli/extensions.md#-jktebop) | [Python](python/commands/extensions.md#jktebop-detached-eclipsing-binary-model) |
 | `-Jstet` | Stetson J variability statistic | [CLI](cli/statistics.md#-jstet) | [Python](python/commands/statistics.md#jstet-stetson-j-statistic) |
-| `-Killharm` | Fit and subtract a harmonic (Fourier) model | [CLI](cli/model-fitting.md#-killharm) | [Python](python/commands/model-fitting.md#killharm-harmonic-series-subtraction) |
+| `-harmonicfilter` | Fit and subtract a harmonic (Fourier) model | [CLI](cli/filtering.md#-harmonicfilter) | [Python](python/commands/filtering.md#harmonicfilter-harmonic-series-subtraction) |
 | `-linfit` | Linear regression against a user-specified basis | [CLI](cli/model-fitting.md#-linfit) | [Python](python/commands/model-fitting.md#linfit-linear-combination-fitting) |
 | `-LS` | Generalized Lomb-Scargle periodogram | [CLI](cli/period-finding.md#-ls-generalized-lomb-scargle) | [Python](python/commands/period-finding.md#ls-generalized-lomb-scargle) |
 | `-macula` | Macula rotation + spot light-curve model (USERLIB extension) | [CLI](cli/extensions.md#-macula) | [Python](python/commands/extensions.md#macula-kipping-2012-spot-model) |

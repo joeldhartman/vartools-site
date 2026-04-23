@@ -88,10 +88,10 @@ All command methods are also available on `Result`. They run the command on
 
 ```python
 r1 = lc.LS(0.5, 10.0, 0.1)
-r2 = r1.Killharm(period=r1.varobjs.LS.Period_1, nharm=2)
+r2 = r1.harmonicfilter(period=r1.varobjs.LS.Period_1, nharm=2)
 r3 = r2.rms()
 
-# r3.vars contains LS, Killharm, and rms output — all together
+# r3.vars contains LS, HarmonicFilter, and rms output — all together
 print(r3.varobjs.LS.Period_1)
 print(r3.varobjs.rms.RMS)
 ```
@@ -278,7 +278,7 @@ the prior result can be used as input to the next command:
 br1 = vt.LightCurveBatch(lcs).run_LS(0.5, 10.0, 0.1)
 
 # br1.vars["LS_Period_1_0"] is a Series — one period per LC
-br2 = br1.Killharm(period=br1.vars["LS_Period_1_0"], nharm=2).run()
+br2 = br1.harmonicfilter(period=br1.vars["LS_Period_1_0"], nharm=2).run()
 ```
 
 **Series index alignment.** When a `pandas.Series` has a string (non-integer)
@@ -288,7 +288,7 @@ light curves by name rather than by position:
 ```python
 # Name-indexed Series: each LC gets the value for its own name
 periods = br1.vars.set_index("Name")["LS_Period_1_0"]
-br2 = br1.Killharm(period=periods, nharm=2).run()
+br2 = br1.harmonicfilter(period=periods, nharm=2).run()
 ```
 
 **Plain Python lists are not auto-detected** as per-LC arrays, to avoid
@@ -307,7 +307,7 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
     value-spec accepts one of the `var` / `expr` / `list column`
     keywords is supported — in practice this covers period-search
     parameters on `LS`, `BLS`, `aov`, `aov_harm`, `BLSFixPer`, as well as
-    `Phase.period`, `Killharm.period`, `Injectharm.period`,
+    `Phase.period`, `harmonicfilter.period`, `Injectharm.period`,
     `MandelAgolTransit.P0` / `T00`, and common scalar parameters such as
     `clip.sigclip` and `restricttimes.minJD` / `maxJD`.  For those
     parameters the two backends produce identical results; `Pipeline`
@@ -354,9 +354,9 @@ Command methods on `BatchResult` start a new deferred `LightCurveBatch` built
 from the captured output light curves:
 
 ```python
-# Run LS, then continue with Killharm on the output LCs
+# Run LS, then continue with harmonicfilter on the output LCs
 br1 = vt.LightCurveBatch(lcs).run_LS(0.5, 10.0, 1e-3)
-br2 = br1.Killharm(period=br1.vars["LS_Period_1_0"], nharm=2).run()
+br2 = br1.harmonicfilter(period=br1.vars["LS_Period_1_0"], nharm=2).run()
 ```
 
 `batch_result.lcs` must have been captured (`capture_lc=True`, which is

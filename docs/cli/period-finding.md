@@ -681,27 +681,28 @@ Determine the minimum peak-to-peak amplitude that a signal at a given period mus
 
 **Examples**
 
-**Example 1.** Run LS to find the best period, extract the sinusoidal signal with `-Killharm`, then compute the minimum detectable amplitude at that period given a threshold of `-ln(FAP) > 100`.
+**Example 1.** Run LS to find the best period, extract the sinusoidal signal with `-harmonicfilter`, then compute the minimum detectable amplitude at that period given a threshold of `-ln(FAP) > 100`.
 
 ```bash
 vartools -i EXAMPLES/2 -oneline \
     -LS 0.1 10. 0.1 1 0 \
-    -Killharm ls 0 0 0 fitonly \
+    -harmonicfilter ls 0 0 0 fitonly \
     -GetLSAmpThresh ls 0.1 -100 harm 0 0
 ```
 
 Output:
 ```
-Name                                 = EXAMPLES/2
-LS_Period_1_0                        =     1.23440877
-Log10_LS_Prob_1_0                    = -704.49194
-LS_SNR_1_0                           =   58.45119
-Killharm_Mean_Mag_1                  =  10.12217
-Killharm_Period_1_1                  =     1.23440877
-Killharm_Per1_Fundamental_Sincoeff_1 =   0.05008
-Killharm_Per1_Fundamental_Coscoeff_1 =  -0.00222
-Killharm_Per1_Amplitude_1            =   0.10026
-LS_AmplitudeScaleFactor_2            =   0.02473
-LS_MinimumAmplitude_2                =   0.00248
+Name                                       = EXAMPLES/2
+LS_Period_1_0                              =     1.23440877
+Log10_LS_Prob_1_0                          = -4000.59209
+LS_Periodogram_Value_1_0                   =    0.99619
+LS_SNR_1_0                                 =   45.98308
+HarmonicFilter_Mean_Mag_1                  =  10.12217
+HarmonicFilter_Period_1_1                  =     1.23440877
+HarmonicFilter_Per1_Fundamental_Sincoeff_1 =   0.05008
+HarmonicFilter_Per1_Fundamental_Coscoeff_1 =  -0.00222
+HarmonicFilter_Per1_Amplitude_1            =   0.10026
+LS_AmplitudeScaleFactor_2                  =   0.02425
+LS_MinimumAmplitude_2                      =   0.00243
 ```
 

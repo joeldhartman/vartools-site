@@ -11,15 +11,15 @@ the period.
 
 ```bash
 ./vartools -i EXAMPLES/M3.V006.lc \
-    -Killharm fix 1 0.514333 10 0 1 EXAMPLES/OUTDIR1/ fitonly outRphi \
+    -harmonicfilter fix 1 0.514333 10 0 1 EXAMPLES/OUTDIR1/ fitonly outRphi \
     -header
 ```
 
 ```
-#Name Killharm_Mean_Mag_0 Killharm_Period_1_0 \
-Killharm_Per1_Fundamental_Amp_0 Killharm_Per1_Fundamental_Phi_0 \
-Killharm_Per1_Harm_R_2_1_0 Killharm_Per1_Harm_Phi_2_1_0 ... \
-Killharm_Per1_Amplitude_0
+#Name HarmonicFilter_Mean_Mag_0 HarmonicFilter_Period_1_0 \
+HarmonicFilter_Per1_Fundamental_Amp_0 HarmonicFilter_Per1_Fundamental_Phi_0 \
+HarmonicFilter_Per1_Harm_R_2_1_0 HarmonicFilter_Per1_Harm_Phi_2_1_0 ... \
+HarmonicFilter_Per1_Amplitude_0
 EXAMPLES/M3.V006.lc  15.77123 0.51433300 0.38041 -0.07662 \
 0.47077 0.60826 0.35917 0.26249 0.23631 -0.06843 0.16353 0.60682 \
 0.10621 0.28738 0.06203 0.95751 0.03602 0.58867 0.02900 0.22322 \
@@ -75,7 +75,7 @@ import pandas as pd
 # Step 1: fit a Fourier series to the template RR Lyrae light curve
 tmpl = vt.LightCurve.from_file("EXAMPLES/M3.V006.lc")
 fit = (vt.Pipeline()
-        .Killharm(
+        .harmonicfilter(
             period=0.514333,
             nharm=10,
             nsubharm=0,
@@ -88,8 +88,8 @@ fit = (vt.Pipeline()
 row = fit.vars
 Rphi = []
 for k in range(2, 12):  # harmonic indices 2..11
-    R = float(row[f"Killharm_Per1_Harm_R_{k}_1_0"])
-    phi = float(row[f"Killharm_Per1_Harm_Phi_{k}_1_0"])
+    R = float(row[f"HarmonicFilter_Per1_Harm_R_{k}_1_0"])
+    phi = float(row[f"HarmonicFilter_Per1_Harm_Phi_{k}_1_0"])
     Rphi.append((R, phi))
 
 # Step 2: inject at 10 halving amplitudes and try to recover

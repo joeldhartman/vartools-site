@@ -9,21 +9,21 @@ it; the LS+harmonic fit should recover a peak-to-peak amplitude of ~0.1 mag.
 ```bash
 ./vartools -i EXAMPLES/2 \
     -LS 1.0 2.0 0.01 1 0 \
-    -Killharm ls 0 0 1 EXAMPLES/OUTDIR1 \
+    -harmonicfilter ls 0 0 1 EXAMPLES/OUTDIR1 \
     -oneline
 ```
 
 ```
-Name                                 = EXAMPLES/2
-LS_Period_1_0                        =     1.23538924
-Log10_LS_Prob_1_0                    = -4199.53506
-LS_Periodogram_Value_1_0             =    0.99711
-LS_SNR_1_0                           =   20.55841
-Killharm_Mean_Mag_1                  =  10.12192
-Killharm_Period_1_1                  =     1.23538924
-Killharm_Per1_Fundamental_Sincoeff_1 =  -0.04836
-Killharm_Per1_Fundamental_Coscoeff_1 =  -0.01286
-Killharm_Per1_Amplitude_1            =   0.10009
+Name                                       = EXAMPLES/2
+LS_Period_1_0                              =     1.23538924
+Log10_LS_Prob_1_0                          = -4199.53506
+LS_Periodogram_Value_1_0                   =    0.99711
+LS_SNR_1_0                                 =   20.55841
+HarmonicFilter_Mean_Mag_1                  =  10.12192
+HarmonicFilter_Period_1_1                  =     1.23538924
+HarmonicFilter_Per1_Fundamental_Sincoeff_1 =  -0.04836
+HarmonicFilter_Per1_Fundamental_Coscoeff_1 =  -0.01286
+HarmonicFilter_Per1_Amplitude_1            =   0.10009
 ```
 
 ## Python
@@ -36,22 +36,22 @@ lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 result = (vt.Pipeline()
         .LS(1.0, 2.0, 0.01, npeaks=1, save_periodogram=False)
-        .Killharm(period="ls", nharm=0, nsubharm=0)).run(lc)
+        .harmonicfilter(period="ls", nharm=0, nsubharm=0)).run(lc)
 
 print(result.vars)
 ```
 
 ```
-Name                                             2
-LS_Period_1_0                             1.235389
-Log10_LS_Prob_1_0                      -4199.53506
-LS_Periodogram_Value_1_0                   0.99711
-LS_SNR_1_0                                20.55841
-Killharm_Mean_Mag_1                       10.12192
-Killharm_Period_1_1                       1.235389
-Killharm_Per1_Fundamental_Sincoeff_1      -0.04836
-Killharm_Per1_Fundamental_Coscoeff_1      -0.01286
-Killharm_Per1_Amplitude_1                  0.10009
+Name                                                   2
+LS_Period_1_0                                   1.235389
+Log10_LS_Prob_1_0                            -4199.53506
+LS_Periodogram_Value_1_0                         0.99711
+LS_SNR_1_0                                      20.55841
+HarmonicFilter_Mean_Mag_1                       10.12192
+HarmonicFilter_Period_1_1                       1.235389
+HarmonicFilter_Per1_Fundamental_Sincoeff_1      -0.04836
+HarmonicFilter_Per1_Fundamental_Coscoeff_1      -0.01286
+HarmonicFilter_Per1_Amplitude_1                  0.10009
 ```
 
 ## Capture and plot the LS periodogram
@@ -319,11 +319,11 @@ The `0` at the end of the `-LS` argument list disables periodogram output;
 pass a directory path (or set `save_periodogram=True` in Python) to write the
 frequency-power spectrum for plotting.
 
-`-Killharm` with `ls` picks up the top LS period from the prior command. The
-three zeros after `ls` request fundamental-only (no harmonics, no
+`-harmonicfilter` with `ls` picks up the top LS period from the prior command.
+The three zeros after `ls` request fundamental-only (no harmonics, no
 sub-harmonics, output the model LC with the best-fit sine in the third
 column). The `EXAMPLES/OUTDIR1` argument is the directory where the model LC
-is written as `EXAMPLES/OUTDIR1/2.killharm.model`.
+is written as `EXAMPLES/OUTDIR1/2.harmonicfilter.model`.
 
 `-oneline` reformats the one-row-per-LC default into one-statistic-per-line
 — handy for single-LC runs.

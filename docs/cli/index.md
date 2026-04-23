@@ -13,7 +13,7 @@ vartools -l lc_list [global options] -cmd1 args -cmd2 args -cmd3 args ...
 ```
 
 - Each light curve is read once, processed through the full command chain, and its result row is emitted.
-- Commands that modify the light curve (e.g. `-clip`, `-TFA`, `-Killharm`) pass the modified version to the next command.
+- Commands that modify the light curve (e.g. `-clip`, `-TFA`, `-harmonicfilter`) pass the modified version to the next command.
 - Commands that compute statistics (e.g. `-rms`, `-LS`, `-BLS`) append columns to the output row without altering the light curve (unless instructed to with `correctlc`).
 - Periodograms and model light curves are written to on-disk files; summary statistics go to stdout.
 
@@ -74,7 +74,7 @@ CommandName_Stat_Peak_CmdIndex
 
 where:
 
-- **CommandName** is the name of the command (e.g. `LS`, `BLS`, `Killharm`)
+- **CommandName** is the name of the command (e.g. `LS`, `BLS`, `HarmonicFilter`)
 - **Stat** describes the statistic (e.g. `Period`, `SNR`, `Depth`)
 - **Peak** is the peak number when multiple peaks are reported (e.g. `1`, `2`)
 - **CmdIndex** is the zero-based index of that command in the command chain
@@ -117,7 +117,7 @@ To further process the light curve (e.g. whiten at the best-fit period and outpu
 ```bash
 vartools -l EXAMPLES/lc_list \
     -LS 0.1 30.0 0.1 1 0 \
-    -Killharm ls 2 0 1 EXAMPLES/OUTDIR1 \
+    -harmonicfilter ls 2 0 1 EXAMPLES/OUTDIR1 \
     -rms \
     -header
 ```

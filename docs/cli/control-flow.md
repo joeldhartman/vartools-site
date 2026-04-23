@@ -110,7 +110,7 @@ The `expression` can reference any variable computed by a preceding command (use
 vartools -l EXAMPLES/lc_list \
     -LS 0.5 20.0 4.0 1 0 \
     -if 'Log10_LS_Prob_1_0 < -10.0' \
-        -Killharm ls 2 0 1 EXAMPLES/OUTDIR1 \
+        -harmonicfilter ls 2 0 1 EXAMPLES/OUTDIR1 \
     -fi
 ```
 

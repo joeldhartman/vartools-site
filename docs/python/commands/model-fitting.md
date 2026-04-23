@@ -1,48 +1,6 @@
 # Model Fitting
 
-Parametric models fit to a light curve: harmonic series, transits, starspots, microlensing, generic linear / non-linear fits.
-
----
-
-## `Killharm` — Harmonic series subtraction
-
-```python
-cmd.Killharm(period="ls", nharm=3, nsubharm=0, save_model=False,
-             fitonly=False, output_format=None, clip=None,
-             maskpoints=None)
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `period` | `float` or `str` | Period to fit. Can be a number or `"ls"`, `"aov"`, `"bls"`, `"both"`, `"injectharm"`, `"fixcolumn NAME"`, or `"fix val1 val2..."` for multiple periods. |
-| `nharm` | `int` | Number of harmonics. |
-| `nsubharm` | `int` | Number of sub-harmonics. |
-| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["Killharm_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `fitonly` | `bool` | Fit the model but do not subtract it (statistics are still computed). |
-| `output_format` | `str` or `None` | Coefficient output format: `"outampphase"`, `"outampradphase"`, `"outRphi"`, or `"outRradphi"`. |
-| `clip` | `float` or `None` | Sigma-clipping threshold: fit, clip outliers, then refit. |
-
-!!! tip "Back-references work across chain steps"
-    `period` accepts `"ls"`, `"aov"`, `"bls"`, `"both"`, `"injectharm"`, and `"fixcolumn NAME"`. For `"aov"`, the most recent prior `-aov` *or* `-aov_harm` wins (whichever ran later). All of these resolve equally inside a single `Pipeline` or across chain boundaries. `"both"` supplies two periods (LS + AOV) and works in a single-LC chain, but raises `NotImplementedError` in batch-chain mode — use a single `Pipeline` invocation for batch `"both"` fitting. Missing prior command → `LookupError`.
-
-**Examples**
-
-```python
-lc = vt.LightCurve.from_file("EXAMPLES/2")
-
-# Run LS, fit and subtract the best sinusoid, compare chi2 before/after
-pipe = (vt.Pipeline()
-        .LS(0.1, 10.0, 0.1, npeaks=1)
-        .rms()
-        .chi2()
-        .Killharm("ls", nharm=1, nsubharm=0, save_model=True)
-        .rms()
-        .chi2())
-result = pipe.run(lc)
-print(result.vars["Chi2_2"])         # before: 1709.50
-print(result.vars["Chi2_5"])         # after:    6.51
-model = result.files["Killharm_model_3"]   # pd.DataFrame of the fitted harmonic curve
-```
+Parametric models fit to a light curve: transits, starspots, microlensing, generic linear / non-linear fits.
 
 ---
 

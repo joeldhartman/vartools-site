@@ -105,7 +105,7 @@ as keyword arguments:
 ```python
 # Run LS, then remove the best-fit harmonic at the detected period
 r1 = lc.LS(0.5, 10.0, 0.1)
-r2 = r1.Killharm(period=r1.varobjs.LS.Period_1, nharm=2)
+r2 = r1.harmonicfilter(period=r1.varobjs.LS.Period_1, nharm=2)
 ```
 
 !!! note "Pipeline-stateful commands"
@@ -207,7 +207,7 @@ from pyvartools import commands as cmd
 
 cmd.LS(minp=0.5, maxp=10.0, subsample=0.1)
 cmd.BLS(minper=0.5, maxper=10.0, qmin=0.01, qmax=0.1, nfreq=20000, nbins=200)
-cmd.Killharm(period="ls", nharm=3, nsubharm=0)
+cmd.harmonicfilter(period="ls", nharm=3, nsubharm=0)
 cmd.clip(sigclip=5.0)
 cmd.rms()
 ```

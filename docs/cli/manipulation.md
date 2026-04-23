@@ -343,7 +343,7 @@ vartools -l EXAMPLES/lc_list -header \
     -LS 0.1 10. 0.1 1 0 \
     -rms -chi2 \
     -expr 'mag2=mag' \
-    -Killharm ls 0 0 0 \
+    -harmonicfilter ls 0 0 0 \
     -rms -chi2 \
     -expr \
         'mag=(Npoints_5*(Chi2_6-Chi2_2)<-10000)*mag+

@@ -574,7 +574,7 @@ Per-LC arrays are supported wherever vartools itself accepts the `var varname` s
 | `clip` | `sigclip`, `niter` |
 | `fluxtomag` / `difffluxtomag` | `mag_constant`, `offset` |
 | `medianfilter` | `time` |
-| `Killharm` | `clip` |
+| `harmonicfilter` | `clip` |
 | `linfit` | `reject` |
 | `Phase` | `period`, `T0` |
 | `MandelAgolTransit` | `P0`, `T00`, `r0`, `a0`, `inclination`/`bimpact`, `e0`, `omega0`, `mconst0`, `K0`, `gamma0`, `ld_coeffs` |
@@ -613,7 +613,7 @@ This is all automatic — no manual list file or `-inlistvars` specification is 
     `Pipeline.run_batch()` only supports per-LC arrays for the parameters listed
     in the table above, because it relies on vartools' `-inlistvars` / `var varname`
     mechanism.  If you need to vary a parameter that is **not** in the supported
-    list — for example `Killharm.period`, `MandelAgolTransit.P0`, or any parameter
+    list — for example `harmonicfilter.period`, `MandelAgolTransit.P0`, or any parameter
     on a custom command — use [`LightCurveBatch`](chaining.md#batch-chaining-lightcurvebatch)
     instead.  `LightCurveBatch` resolves arrays to scalars in Python before each
     individual run, so it works for **any** parameter on **any** command with no
@@ -760,7 +760,7 @@ All commands with `save_*` parameters and their corresponding key patterns (comm
 | `dftclean` | `save_cspec` | `"dftclean_cspec_N"` | CLEAN spectrum |
 | `wwz` | `save_transform` | `"wwz_transform_N"` | Full WWZ time-frequency map |
 | `wwz` | `save_maxtransform` | `"wwz_maxtransform_N"` | WWZ maximum power vs. time |
-| `Killharm` | `save_model` | `"Killharm_model_N"` | Fitted harmonic series |
+| `harmonicfilter` | `save_model` | `"harmonicfilter_model_N"` | Fitted harmonic series |
 | `Injectharm` | `save_model` | `"Injectharm_model_N"` | Injected signal model |
 | `Injecttransit` | `save_model` | `"Injecttransit_model_N"` | Injected transit model |
 | `linfit` | `save_model` | `"linfit_model_N"` | Fitted linear model curve |

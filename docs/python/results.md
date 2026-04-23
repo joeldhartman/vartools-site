@@ -8,7 +8,7 @@ wrote to disk (periodograms, model files, etc.).
 
 The snippets on this page all share the following setup — a single light
 curve, a batch of light curves, and a two-step pipeline that runs
-Lomb-Scargle followed by a two-harmonic killharm fit:
+Lomb-Scargle followed by a two-harmonic harmonic filter fit:
 
 ```python
 import pyvartools as vt
@@ -16,7 +16,7 @@ from pyvartools import commands as cmd
 
 lc  = vt.LightCurve.from_file("EXAMPLES/2")
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 10)]
-pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).Killharm(period="ls", nharm=2)
+pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).harmonicfilter(period="ls", nharm=2)
 ```
 
 ---
@@ -315,7 +315,7 @@ import pyvartools as vt
 from pyvartools import commands as cmd
 
 # Build pipeline
-pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).Killharm(period="ls", nharm=2)
+pipe = vt.Pipeline().LS(0.5, 10.0, 1e-3).harmonicfilter(period="ls", nharm=2)
 
 # --- Single LC ---
 lc = vt.LightCurve.from_file("EXAMPLES/2")

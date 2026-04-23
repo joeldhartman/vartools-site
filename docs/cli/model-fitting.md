@@ -111,53 +111,6 @@ Fit a function that is nonlinear in its free parameters to each light curve.
 
 ---
 
-## `-Killharm`
-
-```
--Killharm <"aov" | "ls" | "both" | "injectharm"
-    | "fix" Nper <"var" v | "expr" e | per1> ... <"var" v | "expr" e | perN>
-    | "list" Nper ["column" col1]> Nharm Nsubharm
-    omodel [model_outdir] ["fitonly"]
-    ["outampphase" | "outampradphase" | "outRphi" | "outRradphi"]
-    ["clip" <"var" cvar | "expr" cexpr | val>]
-```
-
-Fit and optionally subtract a harmonic series from the light curve (i.e., whiten the light curve against one or more periods). The model has the form:
-
-```
-sum_{i=1}^{Nper}(
-    sum_{k=0}^{Nharm_i}(a_i_k*sin(2*pi*(k+1)*f_i*t) + b_i_k*cos(2*pi*(k+1)*f_i*t))
-  + sum_{k=0}^{Nsubharm_i}(c_i_k*sin(2*pi*f_i*t/(k+1)) + d_i_k*cos(2*pi*f_i*t/(k+1)))
-)
-```
-
-The mean magnitude, the period(s), and all cosine and sine coefficients are output. By default the whitened light curve is passed to the next command; use `"fitonly"` to suppress subtraction.
-
-**Period source**
-
-| Keyword | Description |
-|---------|-------------|
-| `"aov"` | Period from the most recent `-aov` or `-aov_harm` command |
-| `"ls"` | Period from the most recent `-LS` command |
-| `"both"` | Two periods: one from `-aov`, one from `-LS` |
-| `"injectharm"` | Period from the most recent `-Injectharm` command |
-| `"fix" Nper per1...perN` | `Nper` fixed periods given on the command line |
-| `"list" Nper ["column" col1]` | `Nper` periods read from the input list file |
-
-**Parameters**
-
-- `Nharm` — Number of higher harmonics to include (frequencies `2f₀`, `3f₀`, ... `(Nharm+1)f₀`).
-- `Nsubharm` — Number of sub-harmonics (frequencies `f₀/2`, `f₀/3`, ... `f₀/(Nsubharm+1)`).
-- `omodel` — Flag (`1` or `0`) to output the model light curve to `modeloutdir`. Output suffix: `.killharm.model`.
-- `"fitonly"` — If given, the model is computed but not subtracted from the light curve.
-- `"outampphase"` — Output amplitudes `A_k = sqrt(a_k² + b_k²)` and phases `φ_k = atan2(-b_k, a_k)/(2π)` instead of raw coefficients.
-- `"outampradphase"` — Same as `"outampphase"` but phases in radians.
-- `"outRphi"` — Output relative amplitudes `R_k1 = A_k/A_1` and phases `φ_k1 = φ_k - k*φ_1` (in units of 0 to 1).
-- `"outRradphi"` — Same as `"outRphi"` but phases in radians.
-- `"clip" val` — Fit the model, clip residuals at `val` sigma, then refit to the surviving points.
-
----
-
 ## `-MandelAgolTransit`
 
 ```

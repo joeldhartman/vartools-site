@@ -57,7 +57,7 @@ The accepted forms and the CLI tokens they emit:
 
 ## Variable and expression parameters
 
-Most numeric parameters throughout pyvartools now accept variable names and expressions in addition to fixed numeric values. This includes parameters on commands such as `clip`, `fluxtomag`, `difffluxtomag`, `medianfilter`, `Killharm`, `linfit`, `Injectharm`, `Injecttransit`, `MandelAgolTransit`, `Starspot`, `nonlinfit`, `BLSFixDurTc`, `BLSFixPerDurTc`, `autocorrelation`, `dftclean`, `wwz`, `binlc`, `addnoise`, `microlens`, and `Phase`.
+Most numeric parameters throughout pyvartools now accept variable names and expressions in addition to fixed numeric values. This includes parameters on commands such as `clip`, `fluxtomag`, `difffluxtomag`, `medianfilter`, `harmonicfilter`, `linfit`, `Injectharm`, `Injecttransit`, `MandelAgolTransit`, `Starspot`, `nonlinfit`, `BLSFixDurTc`, `BLSFixPerDurTc`, `autocorrelation`, `dftclean`, `wwz`, `binlc`, `addnoise`, `microlens`, and `Phase`.
 
 As an example, `minp`, `maxp`, and `subsample` on `LS` each accept four forms:
 
@@ -572,7 +572,7 @@ lc = vt.LightCurve.from_file("EXAMPLES/2")
 # Run LS, fit harmonic (fitonly), then compute minimum detectable amplitude
 pipe = (vt.Pipeline()
         .LS(0.1, 10.0, 0.1, npeaks=1)
-        .Killharm("ls", nharm=0, nsubharm=0, fitonly=True)
+        .harmonicfilter("ls", nharm=0, nsubharm=0, fitonly=True)
         .GetLSAmpThresh("ls", minp=0.1, thresh=-100.0, nharm=0, nsubharm=0))
 result = pipe.run(lc)
 print(result.vars["LS_Period_1_0"])           # 1.23440877
