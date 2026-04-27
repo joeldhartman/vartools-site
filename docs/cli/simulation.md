@@ -135,6 +135,8 @@ gawk '{print $1, 0., 0.005}' EXAMPLES/1 | \
   -o EXAMPLES/OUTDIR1/noisesim.txt
 ```
 
+![Wavelet (1/f^0.99) red+white-noise simulation](../assets/examples/addnoise_ex1.png)
+
 **Example 2.** Same as above, using a squared-exponential model for the red-noise component with a correlation timescale of 0.01 days and standard deviation 0.005 mag. An additional white-noise component is included with standard deviation 0.001.
 
 ```bash
@@ -143,6 +145,12 @@ gawk '{print $1, 0., 0.005}' EXAMPLES/1 | \
   -addnoise squareexp rho fix 0.01 sig_red fix 0.005 sig_white fix 0.001 \
   -o EXAMPLES/OUTDIR1/noisesim.txt
 ```
+
+![Squared-exponential red+white-noise simulation](../assets/examples/addnoise_ex2.png)
+
+A single-night zoom shows the 0.01-d red-noise correlation timescale being resolved at the per-point cadence:
+
+![Squared-exponential addnoise — single-night zoom](../assets/examples/addnoise_ex2_zoom.png)
 
 ---
 
@@ -220,9 +228,48 @@ For each of the `Nharm+1` harmonics (fundamental = harmonic 1) and `Nsubharm` su
 
 **Examples**
 
-**Example 1.** Inject a sinusoid into a light curve with a random period between 1.0–5.0 days, zero harmonic overtones, a uniform-log amplitude distribution, and a random phase.
+**Example 1.** Inject a sinusoid into `EXAMPLES/3` and then search for it with `-LS`. We adopt a random period between 1.0 and 5.0 days, 0 harmonic overtones (only the fundamental), a uniform-log amplitude distribution between 0.01 and 0.1, and a random phase. No sub-harmonics. The model is written to `EXAMPLES/OUTDIR1/3.injectharm.model`. `-randseed 1` makes the run reproducible (use `-randseed time` for a fresh draw).
 
-**Example 2.** Inject an RR Lyrae signal into multiple light curves with a fixed 0.514333-day period and 10 harmonics. The detection success threshold is at fundamental amplitudes of 0.00195 or higher.
+```bash
+vartools -i EXAMPLES/3 -randseed 1 -oneline \
+    -Injectharm rand 1.0 5.0 \
+        0 amplogrand 0.01 0.1 phaserand \
+        0 1 EXAMPLES/OUTDIR1 \
+    -LS 0.1 10.0 0.1 1 0
+```
+
+![EXAMPLES/3 before vs after sinusoid injection (phased on recovered period)](../assets/examples/injectharm_ex1.png)
+
+**Example 2.** Inject an RR-Lyrae-shaped signal into `EXAMPLES/4` (with the fundamental amplitude varying across 10 trial values) and recover it with `-LS` and `-aov_harm`. The initial `gawk` command builds a 10-row list, each row giving the LC name and the fundamental amplitude. The 10 fixed amplitude/phase pairs that follow define the higher-order harmonic structure of the RR-Lyrae shape (see `vartools -example -Killharm` for how these coefficients are determined). `-parallel 4` processes up to four light curves simultaneously — output row order is arbitrary in parallel mode.
+
+```bash
+echo EXAMPLES/4 | \
+    gawk '{amp = 0.25; \
+        for(i=1; i <= 10; i += 1) { \
+            print $1, amp; amp = amp*0.5; \
+        }}' | \
+    vartools -l - -header -numbercolumns -parallel 4 \
+    -Injectharm fix 0.514333 10 \
+        amplist column 2 phaserand \
+        ampfix 0.47077 amprel phasefix 0.60826 phaserel \
+        ampfix 0.35916 amprel phasefix 0.26249 phaserel \
+        ampfix 0.23631 amprel phasefix -0.06843 phaserel \
+        ampfix 0.16353 amprel phasefix 0.60682 phaserel \
+        ampfix 0.10621 amprel phasefix 0.28738 phaserel \
+        ampfix 0.06203 amprel phasefix 0.95751 phaserel \
+        ampfix 0.03602 amprel phasefix 0.58867 phaserel \
+        ampfix 0.02900 amprel phasefix 0.22322 phaserel \
+        ampfix 0.01750 amprel phasefix 0.94258 phaserel \
+        ampfix 0.00768 amprel phasefix 0.66560 phaserel \
+        0 0 \
+    -LS 0.1 10.0 0.01 2 0 \
+    -aov_harm 2 0.1 10.0 0.1 0.01 2 0
+```
+
+The phased RR-Lyrae LC at the highest fundamental amplitude (0.25 mag) and at a lower amplitude (0.001 mag, comparable to the photometric noise floor):
+
+![RR Lyrae injection — high amplitude](../assets/examples/injectharm_ex2.png)
+![RR Lyrae injection — low amplitude](../assets/examples/injectharm_ex2_low.png)
 
 ---
 
@@ -307,40 +354,54 @@ For each physical parameter, the source of the value must be specified. The keyw
 
 **Examples**
 
-**Example 1.** Inject a transit into a light curve and recover it using BLS analysis. The period is drawn from a uniform-log random distribution between 0.2 and 2.0 cycles per day. Planet radius and mass are fixed at 1.0 Jupiter values, phase and inclination are randomized, eccentricity and argument of periastron are set to zero, and stellar parameters are fixed at solar values with quadratic limb darkening coefficients 0.3471 and 0.3180. Output parameters include the injected transit properties and BLS detection results.
+**Example 1.** Inject a transit into `EXAMPLES/3` and recover it with `-BLS`. The period is drawn from a uniform-log random distribution in frequency between 0.2 and 2.0 cycles/day. Planet radius and mass are fixed at 1.0 R_J and 1.0 M_J. The phase is drawn uniformly; `sin i` is drawn from a random orientation distribution restricted to inclinations that produce a transit. Eccentricity and argument of periastron are zero, stellar mass and radius are 1.0 M_sun and 1.0 R_sun, and a quadratic limb-darkening law is used with coefficients 0.3471 and 0.3180. The model is written to `EXAMPLES/OUTDIR1/3.injecttransit.model`.
+
+```bash
+vartools -i EXAMPLES/3 -oneline -randseed 1 \
+    -Injecttransit lograndfreq 0.2 2.0 \
+        Rpfix 1.0 Mpfix 1.0 \
+        phaserand sinirand \
+        eomega efix 0. ofix 0. \
+        Mstarfix 1.0 Rstarfix 1.0 \
+        quad ldfix 0.3471 0.3180 \
+        1 EXAMPLES/OUTDIR1 \
+    -BLS q 0.01 0.1 0.5 5.0 20000 200 7 1 0 1 EXAMPLES/OUTDIR1 \
+        1 fittrap
+```
+
+![EXAMPLES/3 with injected transit (full LC + zoom around deepest event)](../assets/examples/injecttransit_ex1.png)
 
 ---
 
 ## `-copylc`
 
+**Syntax**
 ```
 -copylc
     Ncopies
 ```
 
-Replicate the current light curve `Ncopies` times in memory. Each copy is processed independently by all subsequent VARTOOLS commands. Data from commands preceding `-copylc` is replicated in the output table for each copy.
+**Description**
+
+Replicate the current light curve `Ncopies` times in memory. Each copy is processed independently by all subsequent VARTOOLS commands. Data from commands preceding `-copylc` is replicated in the output table for each copy. Each copy has the suffix `_copy$copycommandnum.$copynum` appended to its name, where `$copycommandnum` is the index of the `-copylc` command and `$copynum` runs from `0` to `Ncopies - 1`.
 
 **Parameters**
 
-- `Ncopies` — Number of copies to create.
-
-Each copy has the suffix `_copy$copycommandnum.$copynum` appended to its name, where `$copycommandnum` is the index of the `-copylc` command that created it (useful when multiple `-copylc` commands are used) and `$copynum` runs from `0` to `Ncopies - 1`.
+| Parameter | Description |
+|-----------|-------------|
+| `Ncopies` | Number of copies to create. |
 
 !!! note
     `-copylc` cannot be used together with the `-readall` option.
 
-**Typical use**
+**Examples**
 
-Combine with `-addnoise` and a period-finding or signal-detection command to perform Monte Carlo false-alarm probability estimates:
+**Example 1.** Calculate the `-LS` periodogram for `EXAMPLES/2`, then make 100 copies of the light curve with the magnitudes replaced by Gaussian random noise, and run `-LS` on each simulation. This is how one would carry out a Monte Carlo simulation for a light curve sampling to determine, for example, a bandwidth correction to the false-alarm probability. In practice one would want to run substantially more than 100 simulations.
 
 ```bash
-vartools -l EXAMPLES/lc_list \
-    -copylc 10 \
-    -addnoise white "sig_white" fix 0.005 \
-    -LS 0.5 20.0 4.0 1 0 \
+vartools -i EXAMPLES/2 -LS 0.1 10. 0.1 1 0 \
+    -copylc 100 \
+    -expr 'mag=err*gauss()' \
+    -LS 0.1 10. 0.1 1 0 \
     -header
 ```
-
-Each input LC yields `1 + copylc_N` output rows — the original plus each
-noise-realization copy — with the `_copyN.M` suffix on the `Name` column
-identifying which realization each row came from.

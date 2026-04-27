@@ -53,6 +53,9 @@ result2 = lc_blank.addnoise(noise_type="squareexp", rho=0.01,
                             sig_red=0.005, sig_white=0.001)
 ```
 
+![Wavelet (1/f^0.99) red+white-noise simulation](../../assets/examples/addnoise_ex1.png)
+![Squared-exponential red+white-noise simulation](../../assets/examples/addnoise_ex2.png)
+
 ---
 
 ## `Injectharm` — Inject a harmonic signal
@@ -86,6 +89,13 @@ result = (vt.Pipeline()
 print(result.vars["Injectharm_Period_0"])   # injected period
 print(result.vars["LS_Period_1_1"])         # recovered period
 ```
+
+![EXAMPLES/3 before vs after sinusoid injection (phased on recovered period)](../../assets/examples/injectharm_ex1.png)
+
+The same script with the canonical RR-Lyrae harmonic coefficients (and the fundamental amplitude reduced) shows the multi-harmonic shape directly:
+
+![RR Lyrae injection — high amplitude](../../assets/examples/injectharm_ex2.png)
+![RR Lyrae injection — low amplitude](../../assets/examples/injectharm_ex2_low.png)
 
 ---
 
@@ -142,6 +152,8 @@ result = (vt.Pipeline()
 print(result.vars["Injecttransit_Period_0"])   # injected period
 print(result.vars["BLS_Period_1_1"])           # recovered period
 ```
+
+![EXAMPLES/3 with injected transit (full LC + zoom)](../../assets/examples/injecttransit_ex1.png)
 
 ---
 
