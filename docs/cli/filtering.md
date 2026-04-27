@@ -170,6 +170,8 @@ vartools -i EXAMPLES/M3.V006.lc -oneline \
         EXAMPLES/OUTDIR1/ fitonly outRphi
 ```
 
+![M3.V006.lc — 10-harmonic Fourier-series fit](../assets/examples/killharm_ex2.png)
+
 ---
 
 ## `-Killharm`

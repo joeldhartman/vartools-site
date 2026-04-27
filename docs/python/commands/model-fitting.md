@@ -87,32 +87,39 @@ Fit an arbitrary analytic function using Nelder-Mead (`"amoeba"`) or MCMC (`"mcm
 
 **Examples**
 
+**Example 1.** Inject a Gaussian into `EXAMPLES/3` and fit it back. Two parameters (`c`, the peak time, and `d`, the width) are searched non-linearly with amoeba; the linear parameters (`a`, `b`) are obtained by linear least squares (`linfit_params`).
+
 ```python
-lc = vt.LightCurve.from_file("EXAMPLES/1")
+lc = vt.LightCurve.from_file("EXAMPLES/3")
+pipe = (vt.Pipeline()
+        .stats("t", "min,max")
+        .expr("t1=STATS_t_MIN_0")
+        .expr("Dt=(STATS_t_MAX_0-STATS_t_MIN_0)")
+        .expr("mag=mag+0.1*exp(-0.5*((t-(t1+Dt*0.2))/(Dt*0.05))^2)")
+        .nonlinfit("a+b*exp(-(t-c)^2/(2*d^2))",
+                   "c=(t1+Dt*0.3):(0.1*Dt),d=(Dt*0.1):(0.1*Dt)",
+                   optimizer="amoeba",
+                   linfit_params="a,b",
+                   save_model="EXAMPLES/OUTDIR1/"))
+result = pipe.run(lc)
+```
 
-# Fit a sinusoid with free period using amoeba.
-# paramlist format: "name=initial:step" (no spaces around commas)
-result = lc.nonlinfit(
-    "a*sin(2*pi*(t-t0)/P)+c",
-    "a=0.01:0.001,P=1.23:0.01,t0=0.0:0.1,c=10.0:0.01",
-    optimizer="amoeba",
-    amoeba_tolerance=1e-8,
-    amoeba_maxsteps=10000,
-    save_model=True,
-)
-print(result.vars["Nonlinfit_P_BestFit_0"])   # best-fit period
-model = result.files["nonlinfit_model_0"]
+**Example 2.** Same model and injection as Example 1, but explore the χ² landscape with MCMC. All four parameters are now free non-linear parameters with their own initial guesses and step sizes.
 
-# MCMC posterior sampling (chains written to disk via mcmc_outchains)
-result2 = lc.nonlinfit(
-    "a*sin(2*pi*(t-t0)/P)+c",
-    "a=0.01:0.001,P=1.23:0.01,t0=0.0:0.1,c=10.0:0.01",
-    optimizer="mcmc",
-    mcmc_naccept=1000,
-    mcmc_fracburnin=0.2,
-    mcmc_outchains="EXAMPLES/OUTDIR1",
-)
-print(result2.vars["Nonlinfit_P_MEDIAN_0"])   # posterior median period
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/3")
+pipe = (vt.Pipeline()
+        .stats("t", "min,max")
+        .expr("t1=STATS_t_MIN_0")
+        .expr("Dt=(STATS_t_MAX_0-STATS_t_MIN_0)")
+        .expr("mag=mag+0.1*exp(-0.5*((t-(t1+Dt*0.2))/(Dt*0.05))^2)")
+        .nonlinfit("a+b*exp(-(t-c)^2/(2*d^2))",
+                   "a=10.167:0.0002,b=0.1:0.0008,"
+                   "c=(t1+Dt*0.2):(0.005),d=(Dt*0.05):(0.016)",
+                   optimizer="mcmc",
+                   mcmc_nlinkstotal=10000,
+                   mcmc_outchains="EXAMPLES/OUTDIR1/"))
+result = pipe.run(lc)
 ```
 
 ---
@@ -208,6 +215,8 @@ model   = result.files["MandelAgolTransit_model_0"]    # fitted model LC
 phcurve = result.files["MandelAgolTransit_phcurve_0"]  # phase-folded model
 ```
 
+![Mandel-Agol fit to EXAMPLES/3.transit](../../assets/examples/mandelagoltransit_ex1.png)
+
 ---
 
 ## `SoftenedTransit` — Softened (trapezoidal) transit
@@ -248,6 +257,8 @@ print(result.vars["SoftenedTransit_Period_1"])     # 2.12322112
 print(result.vars["SoftenedTransit_chi2perdof_1"])
 model = result.files["SoftenedTransit_model_1"]   # SoftenedTransit is at index 1
 ```
+
+![Protopapas softened-transit fit to EXAMPLES/3.transit](../../assets/examples/softenedtransit_ex1.png)
 
 ---
 
@@ -300,6 +311,8 @@ print(result.vars["Starspot_chi2perdof_1"])
 model = result.files["Starspot_model_1"]   # Starspot is at index 1
 ```
 
+![Dorren single-spot fit to EXAMPLES/3.starspot](../../assets/examples/starspot_ex1.png)
+
 ---
 
 ## `microlens` — Microlensing model
@@ -331,5 +344,7 @@ print(result.vars["Microlens_tmax_0"])
 print(result.vars["Microlens_chi2perdof_0"])
 model = result.files["microlens_model_0"]
 ```
+
+![Single-lens point-source microlens fit](../../assets/examples/microlens_ex1.png)
 
 ---

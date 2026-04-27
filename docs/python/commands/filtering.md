@@ -125,6 +125,8 @@ result = lc.harmonicfilter(period="fix 0.514333", nharm=10, nsubharm=0,
                            output_format="outRphi")
 ```
 
+![M3.V006.lc — 10-harmonic Fourier-series fit](../../assets/examples/killharm_ex2.png)
+
 ---
 
 ## `restricttimes` / `restoretimes` — Time windowing

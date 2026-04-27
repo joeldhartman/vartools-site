@@ -58,6 +58,7 @@ Linfit_errc_2 = 3.2584974556662493e-05
 
 ## `-nonlinfit`
 
+**Syntax**
 ```
 -nonlinfit function paramlist ["linfit" linfitparams]
     ["errors" error_expr]
@@ -79,35 +80,67 @@ Linfit_errc_2 = 3.2584974556662493e-05
     ["omodel" model_outdir ["format" nameformat]]
 ```
 
-Fit a function that is nonlinear in its free parameters to each light curve.
+**Description**
+
+Fit a function that is nonlinear in its free parameters to each light curve. Two optimisers are supported: `amoeba` (downhill simplex / Nelder-Mead, fast greedy local minimisation) and `mcmc` (differential-evolution Markov chain Monte Carlo, full posterior exploration). Parameters that enter the model linearly may be moved out of the nonlinear search and fit by linear least squares (`linfit`), which is faster and more numerically stable. Optional Gaussian-process covariance kernels (`squareexp`, `exp`, `matern`) handle correlated errors; arbitrary priors and constraints can be added.
 
 **Parameters**
 
-- `function` — Analytic function to fit (e.g., `'a*exp(-(t-t0)^2/2/sigma^2)+b'`).
-- `paramlist` — Comma-separated list of free parameters with initial guesses and step sizes in the form `var=init:step` (e.g., `'t0=5.0:2.0,sigma=10.0:8.0'`).
-- `"linfit" linfitparams` — List any parameters that enter linearly; these will be optimized using linear least squares, speeding up the fit. These parameters are excluded from MCMC posterior distributions.
-- `"errors" error_expr` — Analytic expression for the magnitude uncertainties used in the likelihood function.
-- `"covariance"` — Allow for correlated errors using one of three Gaussian process covariance models:
-  - `"squareexp"` — Squared-exponential: covariance ∝ `amp_var * exp(-(t_i-t_j)²/(2*rho_var)²)`.
-  - `"exp"` — Exponential: covariance ∝ `amp_var * exp(-|t_i-t_j|/rho_var)`.
-  - `"matern"` — Matérn: parameterized by `amp_var`, `rho_var` (correlation length), and `nu_var` (shape). Linear fitting of a subset of parameters is not permitted when `"covariance"` is used.
-- `"priors" priorlist` — Comma-separated list of prior expressions, each evaluating to `-2*ln(P)`. Example: `'(t0-4.0)^2/3.0^2'` for a Gaussian prior on `t0` with mean 4.0 and σ 3.0.
-- `"constraints" constraintlist` — Comma-separated list of constraint expressions (e.g., `'sigma>0'`).
-- `"amoeba"` — Use the downhill simplex (Nelder-Mead) optimizer.
-  - `"tolerance" tol` — Convergence tolerance (minimum fractional change in χ² between iterations).
-  - `"maxsteps" steps` — Maximum number of iterations.
-- `"mcmc"` — Use Differential Evolution Markov Chain Monte Carlo.
-  - `"Naccept" N` — Number of accepted links to run (default: `"Nlinkstotal"` with N=100000).
-  - `"Nlinkstotal" N` — Total number of links.
-  - `"fracburnin" frac` — Fraction of chain to discard as burn-in (default: 0.1).
-  - `"eps" eps` — Scale of differential evolution random variations (default: 0.001).
-  - `"skipamoeba"` — Skip the initial downhill simplex optimization.
-  - `"chainstats" exprlist statslist` — Change which statistics are reported from the MCMC posterior. `exprlist` is a comma-separated list of analytic expressions; `statslist` is a comma-separated list of statistics (see [`-stats`](statistics.md#-stats)).
-  - `"maxmemstore" maxmem` — Maximum memory for chain storage in GB (default: 4.0).
-  - `"outchains" outdir` — Output MCMC chains to `outdir`. Each file is named `outdir/lcname.mcmc`. Use `"format"` to override naming. Use `"printevery" N` to thin the chain output.
-- `"modelvar" varname` — Store the best-fit model in vector variable `varname`.
-- `"correctlc"` — Subtract the best-fit model from the light curve.
-- `"omodel" model_outdir` — Output the model to a file. Default suffix: `.nonlinfit.model`.
+| Parameter | Description |
+|-----------|-------------|
+| `function` | Analytic function to fit (e.g. `'a*exp(-(t-t0)^2/2/sigma^2)+b'`). |
+| `paramlist` | Comma-separated free parameters with initial guesses and step sizes: `var=init:step` (e.g. `'t0=5.0:2.0,sigma=10.0:8.0'`). |
+| `"linfit" linfitparams` | List of parameters that enter linearly; optimized by linear least squares. Not included in MCMC posteriors. |
+| `"errors" error_expr` | Analytic expression for the per-point uncertainties used in the likelihood. |
+| `"covariance"` | Gaussian-process kernel: `"squareexp" amp ρ`, `"exp" amp ρ`, or `"matern" amp ρ ν`. Linear-only fitting is not permitted with `covariance`. |
+| `"priors" priorlist` | Comma-separated list of prior expressions, each evaluating to `-2 ln P`. Example: `'(t0-4.0)^2/3.0^2'` is a Gaussian prior on `t0` with mean 4.0 and σ = 3.0. |
+| `"constraints" constraintlist` | Comma-separated list of constraint expressions (e.g. `'sigma>0'`). |
+| `"amoeba"` | Use the downhill simplex (Nelder-Mead) optimiser. Sub-keywords: `"tolerance"` (Δχ² convergence threshold), `"maxsteps"` (cap). |
+| `"mcmc"` | Use differential-evolution MCMC. Sub-keywords: `"Naccept"`/`"Nlinkstotal"`, `"fracburnin"` (default 0.1), `"eps"` (default 0.001), `"skipamoeba"`, `"chainstats"`, `"maxmemstore"` (GB; default 4), `"outchains" outdir`. |
+| `"modelvar" varname` | Store the best-fit model in light-curve vector `varname`. |
+| `"correctlc"` | Subtract the best-fit model from the light curve. |
+| `"omodel" model_outdir` | Write the model to a file (default suffix `.nonlinfit.model`). |
+
+**Output columns** (suffix `_N` is the command index):
+
+| Column | Description |
+|--------|-------------|
+| `Nonlinfit_<param>_N` | Best-fit value of each non-linear parameter and (for `linfit` parameters) each linear coefficient. |
+| `Nonlinfit_<param>_err_N` | 1-σ uncertainty in each parameter. For `amoeba` these are derived from the covariance matrix at the optimum; for `mcmc` they are taken from the posterior. |
+| `Nonlinfit_Chi2_N` | χ² of the best-fit model. |
+| `Nonlinfit_Npts_N` | Number of light-curve points used in the fit. |
+
+When `mcmc` is used with `chainstats`, additional columns are emitted following the supplied `statslist` (see [`-stats`](statistics.md#-stats)). When `outchains` is given, the full chain is written to `outdir/<lcname>.mcmc`.
+
+**Examples**
+
+**Example 1.** Inject a Gaussian into `EXAMPLES/3` (with the third `-expr` call) and fit a Gaussian back to it. Two of the four parameters (`c`, the peak time, and `d`, the standard deviation) enter nonlinearly and are searched with the downhill-simplex (`amoeba`) algorithm; the linear amplitude (`b`) and offset (`a`) are recovered by linear least squares (`linfit a,b`). The model is written to `EXAMPLES/OUTDIR1/3.nonlinfit.model`.
+
+```bash
+vartools -i EXAMPLES/3 \
+    -stats t min,max \
+    -expr t1=STATS_t_MIN_0 \
+    -expr 'Dt=(STATS_t_MAX_0-STATS_t_MIN_0)' \
+    -expr 'mag=mag+0.1*exp(-0.5*((t-(t1+Dt*0.2))/(Dt*0.05))^2)' \
+    -nonlinfit 'a+b*exp(-(t-c)^2/(2*d^2))' \
+        'c=(t1+Dt*0.3):(0.1*Dt),d=(Dt*0.1):(0.1*Dt)' \
+        linfit a,b amoeba omodel EXAMPLES/OUTDIR1/ \
+    -oneline
+```
+
+**Example 2.** Same model and injection as Example 1, but explore the χ² landscape with MCMC. All four parameters (`a`, `b`, `c`, `d`) are now free non-linear parameters with their own initial guesses and step sizes. 10,000 chain links are written to `EXAMPLES/OUTDIR1/3.mcmc`.
+
+```bash
+vartools -i EXAMPLES/3 \
+    -stats t min,max \
+    -expr t1=STATS_t_MIN_0 \
+    -expr 'Dt=(STATS_t_MAX_0-STATS_t_MIN_0)' \
+    -expr 'mag=mag+0.1*exp(-0.5*((t-(t1+Dt*0.2))/(Dt*0.05))^2)' \
+    -nonlinfit 'a+b*exp(-(t-c)^2/(2*d^2))' \
+        'a=10.167:0.0002,b=0.1:0.0008,c=(t1+Dt*0.2):(0.005),d=(Dt*0.05):(0.016)' \
+        mcmc Nlinkstotal 10000 outchains EXAMPLES/OUTDIR1/ \
+    -oneline
+```
 
 ---
 
@@ -190,6 +223,8 @@ MandelAgolTransit_bimpact_1 = 0.33094
 MandelAgolTransit_chi2_1    = 27.06054
 ```
 
+![Mandel-Agol fit to EXAMPLES/3.transit](../assets/examples/mandelagoltransit_ex1.png)
+
 ---
 
 ## `-SoftenedTransit`
@@ -251,6 +286,8 @@ SoftenedTransit_mconst_1     = 10.16686817
 SoftenedTransit_chi2perdof_1 = 27.04335183
 ```
 
+![Protopapas softened-transit fit to EXAMPLES/3.transit](../assets/examples/softenedtransit_ex1.png)
+
 ---
 
 ## `-microlens`
@@ -308,6 +345,7 @@ Microlens_tmax_0       = 53740.494617109
 Microlens_chi2perdof_0 = 4.4674961258953
 ```
 
+![Single-lens point-source microlens fit](../assets/examples/microlens_ex1.png)
 
 ---
 
@@ -360,6 +398,8 @@ Starspot_psi0_1        = 0.00000
 Starspot_mconst_1      = 10.16641
 Starspot_chi2perdof_1  = 26.58796
 ```
+
+![Dorren single-spot fit to EXAMPLES/3.starspot](../assets/examples/starspot_ex1.png)
 
 ---
 

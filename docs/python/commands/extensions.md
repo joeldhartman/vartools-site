@@ -324,6 +324,10 @@ pipe = (vt.Pipeline()
 result = pipe.run(lc)
 ```
 
+The injected light curve from Example 1 with the fitted-model curve overplotted (Example 2):
+
+![Macula injected vs fitted model](../../assets/examples/macula_ex1.png)
+
 
 ### Generic integration layer
 
