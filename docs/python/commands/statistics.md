@@ -170,6 +170,8 @@ batch = vt.Pipeline().autocorrelation(0.0, 10.0, 0.05).run_batch(lcs)
 acfs = batch.files["autocorrelation_result_0"]   # list of DataFrames, one per LC
 ```
 
+![Discrete autocorrelation function for EXAMPLES/2](../../assets/examples/autocorrelation_ex1.png)
+
 ---
 
 ## `Jstet` — Stetson J-statistic
@@ -196,12 +198,20 @@ print(batch.vars[["Name", "Jstet_0", "Kurtosis_0", "Lstet_0"]])
 cmd.alarm(maskpoints=None)
 ```
 
-Computes the alarm statistic of Kovacs, Bakos & Noyes (2005) — a detection statistic for coherent signals that penalizes long run-lengths of positive or negative deviations from the mean more heavily than random scatter.
+Computes the alarm statistic (Tamuz, Mazeh & North 2006) — a detection statistic for coherent signals that penalises long run-lengths of positive or negative deviations from the mean more heavily than random scatter.
 
 **Parameters**
 
 - `maskpoints : str, optional` — Name of a mask variable; only points with `mask > 0` contribute to the statistic.
 
 **Output columns**: `Alarm_N`.
+
+**Examples**
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = lc.alarm()
+print(result.vars["Alarm_0"])
+```
 
 ---

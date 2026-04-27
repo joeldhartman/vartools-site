@@ -141,6 +141,12 @@ print(r.vars["LS_PeriodFix_1"])
 print(r.vars["Log10_LS_Prob_PeriodFix_1"])
 ```
 
+![Lomb-Scargle periodogram of EXAMPLES/2](../../assets/examples/ls_ex1.png)
+
+After pre-whitening peak 1 the periodogram looks like this — the dominant 1.234-day signal has been removed:
+
+![L-S periodogram after whitening peak 1](../../assets/examples/ls_ex1_whitened.png)
+
 ---
 
 ## `aov` — Analysis of Variance
@@ -186,6 +192,8 @@ result = (vt.Pipeline()
 print(result.vars["AOV_SNR_PeriodFix_1"])
 ```
 
+![AoV periodogram of EXAMPLES/2](../../assets/examples/aov_ex1.png)
+
 ---
 
 ## `aov_harm` — Multi-harmonic AoV
@@ -222,6 +230,8 @@ pgram = result.files["aov_harm_periodogram_0"]
 result = lc.aov_harm(2, 0.1, 10.0, 0.1, 0.01, fixperiod_snr=1.23440877)
 print(result.vars["AOV_HARM_SNR_PeriodFix_0"])
 ```
+
+![Multi-harmonic AoV periodogram of EXAMPLES/2](../../assets/examples/aov_harm_ex1.png)
 
 ---
 
@@ -307,6 +317,12 @@ result4 = lc.BLS(0.5, 10.0,
                  nbins=200, nfreq=5000,
                  freq_grid="steplogP", adjust_qmin=True, reduce_nbins=True)
 ```
+
+![BLS spectrum from EXAMPLES/3.transit](../../assets/examples/bls_ex1.png)
+
+The output `*.bls.model` file contains the phased data and the best-fit trapezoidal model:
+
+![Phased LC + BLS model](../../assets/examples/bls_ex1_phased.png)
 
 ---
 
@@ -398,18 +414,21 @@ Output columns (suffix `N` is the pipeline command index):
 | `BLSFixDurTc_Qtran_1_N` | Fractional transit duration. |
 | `BLSFixDurTc_deltaChi2_1_N` | Δχ² of the best transit. |
 
+**Examples**
+
 ```python
-import pyvartools as vt
-
-lc = vt.LightCurve.from_file("EXAMPLES/2")
-
-# Search for the period with duration and Tc fixed
-result = lc.BLSFixDurTc(duration=0.05, Tc=2450000.1,
-                        minper=0.5, maxper=10.0, nfreq=5000,
-                        timezone=0, npeaks=1)
-print(result.vars["BLSFixDurTc_Period_1_0"])     # best-fit period
-print(result.vars["BLSFixDurTc_SN_1_0"])         # signal-to-noise
-print(result.vars["BLSFixDurTc_Depth_1_0"])      # transit depth
+# Run a BLS search on EXAMPLES/3.transit with the transit duration
+# and epoch held fixed.  The two `rms` calls show the residual scatter
+# before and after subtracting the best-fit transit model.
+lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
+pipe = (vt.Pipeline()
+        .rms()
+        .BLSFixDurTc(duration=0.076996297, Tc=53727.29676321477,
+                     minper=0.1, maxper=20.0, nfreq=100000,
+                     timezone=0, npeaks=1,
+                     correct_lc=True, fittrap=True)
+        .rms())
+result = pipe.run(lc)
 ```
 
 ---
@@ -460,17 +479,21 @@ Output columns (suffix `N` is the pipeline command index):
 | `BLSFixPerDurTc_fraconenight_N` | Fraction of Δχ² from one night. |
 | `BLSFixPerDurTc_MeanMag_N` | Out-of-transit mean magnitude. |
 
+**Examples**
+
 ```python
-import pyvartools as vt
-
-lc = vt.LightCurve.from_file("EXAMPLES/2")
-
-# Evaluate BLS statistics at a fully fixed transit signal
-result = lc.BLSFixPerDurTc(period=2.12345, duration=0.05, Tc=2450000.1,
-                           timezone=0, correct_lc=False)
-print(result.vars["BLSFixPerDurTc_Depth_0"])      # transit depth
-print(result.vars["BLSFixPerDurTc_deltaChi2_0"])  # Δχ² of signal
-print(result.vars["BLSFixPerDurTc_SignaltoPinknoise_0"])   # signal-to-pink-noise
+# Evaluate BLS statistics on EXAMPLES/3.transit with period, duration,
+# and Tc all fixed; subtract the best-fit transit model.
+lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
+pipe = (vt.Pipeline()
+        .rms()
+        .BLSFixPerDurTc(period=2.12345,
+                        duration=0.076996297,
+                        Tc=53727.29676321477,
+                        timezone=0,
+                        correct_lc=True, fittrap=True)
+        .rms())
+result = pipe.run(lc)
 ```
 
 ---
@@ -508,6 +531,15 @@ print(result.vars["DFTCLEAN_CSPEC_PEAK_FREQ_0_0"])  # top CLEAN-spectrum peak fr
 dspec = result.files["dftclean_dspec_0"]   # pd.DataFrame: dirty spectrum (frequency vs power)
 ```
 
+![DFT power spectrum (Example 1)](../../assets/examples/dftclean_ex1.png)
+
+A second example injects three harmonics, runs CLEAN, and writes the four output products (dirty spectrum, cleaned spectrum, CLEAN beam, window function):
+
+![DFT dirty spectrum](../../assets/examples/dftclean_ex2_dirty.png)
+![Spectrum after CLEAN](../../assets/examples/dftclean_ex2_clean.png)
+![CLEAN beam](../../assets/examples/dftclean_ex2_beam.png)
+![Window function](../../assets/examples/dftclean_ex2_window.png)
+
 ---
 
 ## `wwz` — Weighted Wavelet Z-transform
@@ -540,6 +572,10 @@ result = lc.wwz(maxfreq=2.0, freqsamp=0.25,
                 dtau=0.1, save_transform=True, save_maxtransform=True)
 maxt = result.files["wwz_maxtransform_0"]   # pd.DataFrame: time vs peak frequency/power
 ```
+
+![WWZ 2-D transform of EXAMPLES/8](../../assets/examples/wwz_ex1.png)
+
+The transient ~0.3 cyc/day signal is visible only between days 5–20 of the series.
 
 ---
 

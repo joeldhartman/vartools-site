@@ -81,6 +81,12 @@ LS_Period_4_0 = 0.25922584 (Log10_LS_Prob = -28.26507, LS_SNR = 7.42006)
 LS_Period_5_0 = 0.50172744 (Log10_LS_Prob = -25.89142, LS_SNR = 8.63338)
 ```
 
+![Lomb-Scargle periodogram of EXAMPLES/2](../assets/examples/ls_ex1.png)
+
+After pre-whitening peak 1 the periodogram looks like this — the dominant 1.234-day signal has been removed; subsequent peaks are now visible above the residual:
+
+![L-S periodogram after whitening peak 1](../assets/examples/ls_ex1_whitened.png)
+
 ---
 
 ### `-aov` — Phase-Binned Analysis of Variance
@@ -147,6 +153,8 @@ vartools -i EXAMPLES/2 -oneline -ascii \
 
 Output: Five detected periods with `Period_1_0 = 1.23583047` (`AOV_1_0 = 18330.55450`, AOV_SNR, AOV_NEG_LN_FAP) through `Period_5_0 = 0.12056969` (`AOV_5_0 = 16.69317`), with corresponding SNR and negative log FAP values for each.
 
+![AoV periodogram of EXAMPLES/2](../assets/examples/aov_ex1.png)
+
 ---
 
 ### `-aov_harm` — Multi-Harmonic Analysis of Variance
@@ -196,6 +204,8 @@ vartools -i EXAMPLES/2 -oneline -ascii \
 ```
 
 Output: Period values and AOV_HARM, SNR, and logarithmic FAP values for 2 identified peaks (1.23533969 days and 0.49981672 days).
+
+![Multi-harmonic AoV periodogram of EXAMPLES/2](../assets/examples/aov_harm_ex1.png)
 
 ---
 
@@ -325,6 +335,12 @@ BLS_deltaChi2_invtransit_0   = -3301.69183
 BLS_MeanMag_0                =  10.16740
 ```
 
+![BLS spectrum from EXAMPLES/3.transit](../assets/examples/bls_ex1.png)
+
+The output `*.bls.model` file contains the phased data and the best-fit trapezoidal transit model — together they look like:
+
+![Phased LC + BLS model](../assets/examples/bls_ex1_phased.png)
+
 ---
 
 ### `-BLSFixPer` — BLS at a Fixed Period
@@ -448,6 +464,19 @@ Run BLS with the transit duration and a reference epoch fixed. The period is sti
 | `minper` / `maxper` / `nfreq` | Period range and number of trial frequencies. |
 | All others | Same as `-BLS`. |
 
+**Examples**
+
+**Example 1.** Run a BLS search on `EXAMPLES/3.transit` fixing the transit duration to `0.076996297` days and the transit epoch to `53727.29676321477`. Search periods between 0.1 and 20 days using 100,000 frequency steps. The time-zone is set to 0 (only affects the `BLSFixPer_fraconenight` statistic). The periodogram and model are not output, but the best-fit model is subtracted from the light curve before passing it to the next command. The `fittrap` keyword fits a trapezoidal transit. The two `-rms` calls show how subtracting the BLS model reduces the scatter.
+
+```bash
+vartools -i EXAMPLES/3.transit -oneline \
+    -rms \
+    -BLSFixDurTc duration fix 0.076996297 \
+        Tc fix 53727.29676321477 0.1 20. 100000 \
+        0 1 0 0 1 fittrap \
+    -rms
+```
+
 **References**
 
 Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
@@ -483,6 +512,20 @@ Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 **Description**
 
 Run BLS with the period, transit duration, and reference epoch all fixed. Only the phase of the transit (within a single period) is searched. All options are similar to `-BLSFixDurTc`, except the period is also specified.
+
+**Examples**
+
+**Example 1.** Fit a box-shaped transit to `EXAMPLES/3.transit` at a fixed period of 2.12345 days, with the duration fixed at `0.076996297` days and the transit epoch at `53727.29676321477`. The model is subtracted from the light curve and passed to the next command. The `fittrap` keyword fits a trapezoidal transit. The two `-rms` calls show how subtracting the BLS model reduces the scatter.
+
+```bash
+vartools -i EXAMPLES/3.transit -oneline \
+    -rms \
+    -BLSFixPerDurTc period fix 2.12345 \
+        duration fix 0.076996297 \
+        Tc fix 53727.29676321477 \
+        0 0 1 fittrap \
+    -rms
+```
 
 **References**
 
@@ -553,6 +596,8 @@ DFTCLEAN_DSPEC_PEAK_POW_0_0  = 0.000687634
 DFTCLEAN_DSPEC_PEAK_SNR_0_0  =   59.8532
 ```
 
+![DFT power spectrum (Example 1)](../assets/examples/dftclean_ex1.png)
+
 **Example 2.** Inject three harmonic signals into a light curve, compute the DFT, find the top 3 dirty-spectrum peaks, then apply the CLEAN algorithm and find the top 3 clean-spectrum peaks.
 
 ```bash
@@ -568,6 +613,13 @@ vartools -i EXAMPLES/4 -oneline -ascii \
         findcleanpeaks 3 clip 5. 1 \
         verboseout
 ```
+
+The dirty spectrum, the spectrum after CLEAN deconvolution, the CLEAN beam, and the window function are written to `EXAMPLES/OUTDIR1/`:
+
+![DFT dirty spectrum](../assets/examples/dftclean_ex2_dirty.png)
+![Spectrum after CLEAN](../assets/examples/dftclean_ex2_clean.png)
+![CLEAN beam](../assets/examples/dftclean_ex2_beam.png)
+![Window function](../assets/examples/dftclean_ex2_window.png)
 
 ---
 
@@ -633,7 +685,7 @@ Cite Foster 1996, AJ, 112, 1709.
 
 **Examples**
 
-**Example 1.** Compute the WWZ for a light curve, scanning frequencies up to 2.0 cycles/day with 0.25/T step, time-shifts spanning the full observation range in 0.1-day steps, and output the full 2D transform in gnuplot pm3d format as well as the maximum-Z projection over time-shifts.
+**Example 1.** Compute the WWZ for `EXAMPLES/8`, scanning frequencies between 0 and 2.0 cycles per day at a step of 0.25/T (where T is the difference between the last and first observation times). Time-shifts run from the first observation to the last (`tau0` and `tau1` both `auto`) in steps of 0.1 days. The full 2-D transform is written to `EXAMPLES/OUTDIR1/8.wwz` in gnuplot `pm3d` format; the maximum-Z projection over frequency is written to `EXAMPLES/OUTDIR1/8.mwwz`. A significant periodic signal is seen near time 53735.17392 at a frequency of 0.30645 cyc/day, which is not present near the beginning or end of the time series.
 
 ```bash
 vartools -i EXAMPLES/8 -oneline \
@@ -642,7 +694,19 @@ vartools -i EXAMPLES/8 -oneline \
         outmaxtransform EXAMPLES/OUTDIR1
 ```
 
-Output: Name, MaxWWZ values, frequencies, time shifts, power measurements, amplitude, effective N values, and median statistics. A significant periodic signal is found around time 53735.17392 with a frequency of 0.30645 cycles per day (absent at series endpoints).
+A heat-map of the full transform can be generated in gnuplot with:
+
+```
+gnuplot> set pm3d map
+gnuplot> unset key
+gnuplot> splot "EXAMPLES/OUTDIR1/8.wwz" u 1:2:3
+```
+
+Or directly with matplotlib:
+
+![WWZ 2-D transform of EXAMPLES/8](../assets/examples/wwz_ex1.png)
+
+The transient ~0.3 cyc/day signal is clearly visible only between days 5–20 of the series.
 
 ---
 

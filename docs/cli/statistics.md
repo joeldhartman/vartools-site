@@ -183,18 +183,35 @@ vartools -i EXAMPLES/3 \
 
 ## `-alarm`
 
+**Syntax**
 ```
 -alarm
     ["maskpoints" maskvar]
 ```
 
-Calculate the alarm variability statistic for each light curve (Tamuz, Mazeh, and North 2006, MNRAS, 367, 1521). This statistic is designed to detect time-correlated variability.
+**Description**
+
+Calculate the alarm variability statistic for each light curve. This statistic is designed to detect time-correlated variability — long runs of consecutive positive or negative residuals are penalised more heavily than randomly distributed deviations of the same RMS, making the alarm sensitive to coherent signals that other low-order moments may miss.
 
 **Parameters**
 
-- `"maskpoints" maskvar` — Optional. Points with `maskvar > 0` are included; others are excluded.
+| Parameter | Description |
+|-----------|-------------|
+| `"maskpoints" maskvar` | Optional. Only points with `maskvar > 0` contribute. |
 
-**Citation:** Tamuz, Mazeh, and North 2006, MNRAS, 367, 1521.
+**Output columns**: `Alarm_N`.
+
+**References**
+
+Cite Tamuz, Mazeh, and North 2006, MNRAS, 367, 1521.
+
+**Examples**
+
+**Example 1.** Compute the alarm statistic for `EXAMPLES/2`.
+
+```bash
+vartools -i EXAMPLES/2 -header -alarm
+```
 
 ---
 
@@ -283,3 +300,5 @@ Output:
 #Name
 EXAMPLES/2
 ```
+
+![Discrete autocorrelation function for EXAMPLES/2](../assets/examples/autocorrelation_ex1.png)
