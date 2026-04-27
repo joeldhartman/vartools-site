@@ -51,6 +51,19 @@ pipe = vt.Pipeline().magadd("fixcolumn MeanMag_0")    # from prior stats column
 | `value` | `float` or `str` | Bare number → `fix value`; string → split as `"fix v"`, `"list [column N]"`, `"fixcolumn NAME"`, or `"expr EXPR"`. |
 | `lib_path` | `str`, optional | Path to `magadd.so` / `magadd.la`. |
 
+**Examples**
+
+```python
+# Add 0.5 mag to every observation of EXAMPLES/2; the two rms calls show the
+# mean magnitude shifts by 0.5 while the RMS is unchanged.
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = (vt.Pipeline()
+          .rms()
+          .magadd(0.5, lib_path="USERLIBS/src/.libs/magadd.so")
+          .rms()).run(lc)
+print(result.vars["RMS_0"], result.vars["RMS_2"])
+```
+
 ### `hatpiflag` — HATPI binary flag combiner
 
 ```python
@@ -60,7 +73,29 @@ pipe = (vt.Pipeline()
               "tfa_outlier_mask", "pointing_outlier_flag", "quality_flag"))
 ```
 
-Combines four per-observation inputs (fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag) into a single binary flag written to a new output variable.
+Combines four per-observation inputs (fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag) into a single bit-packed flag written to a new output variable.
+
+**Examples**
+
+```python
+# Read a 7-column LC (t/mag/err + four HATPI flag columns) and combine the
+# four flag vectors into a single quality_flag.  The string-typed fiphot
+# flag column is declared with vt.LCColumn(col=4, type="string") in the
+# `columns=` mapping.
+batch = (vt.Pipeline()
+         .hatpiflag("fiphot_flag", "rejbadframe", "tfa_mask",
+                    "pointing_outlier", "quality_flag",
+                    lib_path="USERLIBS/src/.libs/hatpiflag.so")
+         .stats("quality_flag", "mean,sum,max")
+         ).run_filelist(["EXAMPLES/2.hatpiflag"],
+                        columns={
+                            "t": 1, "mag": 2, "err": 3,
+                            "fiphot_flag": vt.LCColumn(col=4, type="string"),
+                            "rejbadframe": 5,
+                            "tfa_mask": 6,
+                            "pointing_outlier": 7,
+                        })
+```
 
 ### `fastchi2` — Palmer (2009) fast chi² periodogram
 
@@ -85,6 +120,17 @@ pipe = (vt.Pipeline()
 
 “value-spec” = a number (emitted as `fix N`), or a string `"fix V"` / `"list [column N]"` / `"fixcolumn NAME"` / `"expr EXPR"`.
 
+**Examples**
+
+```python
+# Run Palmer's Fast chi^2 periodogram on EXAMPLES/2; search 0.1–10 cyc/day
+# with one harmonic and capture the periodogram.
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = lc.fastchi2(Nharm=1, freqmax=10.0, freqmin=0.1,
+                     save_per="EXAMPLES/OUTDIR1",
+                     lib_path="USERLIBS/src/.libs/fastchi2.so")
+```
+
 ### `splinedetrend` — basis-spline / poly / harmonic detrending
 
 ```python
@@ -100,6 +146,30 @@ pipe = (vt.Pipeline()
 | `sigmaclip` | value-spec, optional | Sigma-clip threshold. |
 | `save_model` / `save_coeffs` | `Output`-spec | Model / coefficient output. |
 | `omodelvariable` | str, optional | Comma-separated `outvar[:inputvar]` list. |
+
+**Examples**
+
+The canonical example (a TESS sector-1 LC for GAIA DR2 6479535620075955328) reads several auxiliary columns (`x`, `y`, `temp`) from a FITS file. Because that requires a non-default `-inputlcformat` flag while loading the LC inside vartools, the cleanest Python equivalent invokes vartools directly via `subprocess`.
+
+```python
+import subprocess
+subprocess.run([
+    "vartools",
+    "-i", "EXAMPLES/6479535620075955328_llc.fits",
+    "-inputlcformat", "t:TMID_BJD,mag:IRM1,err:IRE1,x:XIC,y:YIC,temp:CCDTEMP",
+    "-L", "USERLIBS/src/.libs/splinedetrend.so",
+    "-expr", "magorig=mag",
+    "-splinedetrend",
+    "t:spline:1.0:3:groupbygap:0.5,x:poly:1,y:poly:1,temp:poly:1",
+    "sigmaclip", "fix", "3.0",
+    "omodel", "EXAMPLES/OUTDIR1/",
+    "omodelcoeffs", "EXAMPLES/OUTDIR1/",
+    "omodelvariable", "tmod:t,xmod:x,ymod:y,tempmod:temp",
+    "-o", "EXAMPLES/OUTDIR1/6479535620075955328.splinedetrend.lc.txt",
+    "columnformat", "t,magorig,mag,err,x,y,temp,tmod,xmod,ymod,tempmod",
+    "-rms", "-oneline",
+], check=True)
+```
 
 ### `ftuneven` — complex Fourier transform of unevenly-sampled data
 
@@ -117,6 +187,17 @@ pipe = vt.Pipeline().ftuneven(output_file=True, freqauto=True)
 
 Exactly one output mode (`output_vectors`, `output_file`, or both via the `outputvectorsandfile` path) and one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. `freqrange` is a `(min, max, step)` tuple of value-specs.
 
+**Examples**
+
+```python
+# Compute Scargle's complex Fourier transform of EXAMPLES/2 over a uniform
+# frequency grid (radians per unit time), writing the FT to a per-LC file.
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
+                     freqrange=(0.05, 5.0, 0.001),
+                     lib_path="USERLIBS/src/.libs/ftuneven.so")
+```
+
 ### `stitch` — stitch multi-segment light curves at offsets
 
 ```python
@@ -132,6 +213,26 @@ pipe = (vt.Pipeline()
 ```
 
 `method` is one of `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. See the constructor docstring for the full list of optional keywords (`refnum_var`, `fitonly`, `add_stitchparams_fitsheader`, `shifts_file`, etc.).
+
+**Examples**
+
+`-stitch` is most useful with the `-l ... combinelcs` input mode, which combines multiple files into a single in-memory LC. pyvartools' `Pipeline.run_filelist()` does not currently expose `combinelcs`, so the cleanest way to use `-stitch` from Python is via `subprocess`.
+
+```python
+import subprocess
+# Combine EXAMPLES/2 and EXAMPLES/2.shifted (= EXAMPLES/2 with +0.3 mag) into a
+# single LC and remove the inter-segment offset by median.  The two -rms calls
+# show the offset before and after stitching.
+subprocess.run([
+    "vartools",
+    "-l", "EXAMPLES/lc_list_stitch", "combinelcs", "lcnumvar", "lcnum",
+    "-L", "USERLIBS/src/.libs/stitch.so",
+    "-expr", "mask=mag*0+1",
+    "-rms",
+    "-stitch", "mag", "err", "mask", "lcnum", "median",
+    "-rms", "-oneline",
+], check=True)
+```
 
 ### `jktebop` — detached eclipsing-binary model
 
@@ -150,6 +251,28 @@ pipe = (vt.Pipeline()
 ```
 
 Every mandatory parameter (`Period`, `T0`, `r1_r2`, `r2_r1`, `M2_M1`, `J2_J1`, `i` **or** `bimpact`, `esinomega`, `ecosomega`) is a value-spec; pass the corresponding `vary_*=True` to free that parameter in the fit. Optional parameters: `gravdark1/2`, `reflection1/2`, `L3`, `tidallag`. `save_curve`, `curve_xaxis="jd"|"phase"` and `curve_step` emit a dense model curve.
+
+**Examples**
+
+```python
+# Inject a JKTEBOP detached EB signal (P=2.5d, R2/R1=0.5, J2/J1=0.3, i=89 deg,
+# circular orbit, quadratic LD) into EXAMPLES/3 and recover the primary eclipse
+# with -BLS.
+lc = vt.LightCurve.from_file("EXAMPLES/3")
+result = (vt.Pipeline()
+          .jktebop("inject",
+                   Period=2.5, T0=53727.0,
+                   r1_r2=0.15, r2_r1=0.5,
+                   M2_M1=0.6, J2_J1=0.3,
+                   i=89.0,
+                   esinomega=0.0, ecosomega=0.0,
+                   LD1_law="quad", LD1_coeffs=(0.3, 0.3),
+                   LD2_law="lockLD1",
+                   save_model="EXAMPLES/OUTDIR1/",
+                   lib_path="USERLIBS/src/.libs/jktebop.so")
+          .BLS(1.0, 5.0, rmin=0.01, rmax=0.1,
+               nbins=200, nfreq=5000, npeaks=1)).run(lc)
+```
 
 ### `macula` — Kipping (2012) spot model
 
@@ -171,6 +294,35 @@ pipe = (vt.Pipeline()
 ```
 
 `mode` is `"inject"` or `"fit amoeba"` / `"fit lm"`. Each of the 13 global parameters (`Prot`, `istar`, `kappa2`, `kappa4`, `c1–c4`, `d1–d4`, `blend`) is a keyword-argument value-spec with a matching `vary_<name>` flag. `spots` is a list of dicts, one per active spot, each providing value-specs for the eight per-spot parameters (`Lambda0`, `Phi0`, `alphamax`, `fspot`, `tmax`, `life`, `ingress`, `egress`). Individual spot parameters can be marked free by passing a `(value, True)` tuple (or a `"vary_<name>": True` entry in the dict).
+
+**Examples**
+
+```python
+# Inject a single spotted-star light curve into EXAMPLES/3 (Macula's
+# "inject" mode), using the LC time sampling and replacing the magnitudes
+# with Gaussian noise.  tmax is set to the start time computed by `stats`.
+lc = vt.LightCurve.from_file("EXAMPLES/3")
+pipe = (vt.Pipeline()
+        .stats("t", "min")
+        .expr("mag=10.0+err*gauss()")
+        .macula(
+            "inject",
+            Prot=1.234567, istar=1.4567,
+            kappa2=0.0, kappa4=0.0,
+            c1=0.2, c2=0.1, c3=0.0, c4=0.0,
+            d1=0.2, d2=0.1, d3=0.0, d4=0.0,
+            blend=1.0,
+            spots=[{
+                "Lambda0": 0.0, "Phi0": 1.2345,
+                "alphamax": 0.2, "fspot": 0.1,
+                "tmax": "fixcolumn STATS_t_MIN_0",
+                "life": 1000.0,
+                "ingress": 0.1, "egress": 0.1,
+            }],
+            lib_path="USERLIBS/src/.libs/macula.so")
+        .o("EXAMPLES/OUTDIR1/3.maculainject"))
+result = pipe.run(lc)
+```
 
 
 ### Generic integration layer
