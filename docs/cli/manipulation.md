@@ -51,6 +51,8 @@ vartools -i EXAMPLES/2 \
     -o EXAMPLES/OUTDIR1/2.bin.txt
 ```
 
+![Median-binned EXAMPLES/2 (Example 1)](../assets/examples/binlc_ex1.png)
+
 **Example 2.** Run an LS period search, phase-fold on the best period, then bin the phased light curve into 100 equal phase bins.
 
 ```bash
@@ -60,6 +62,8 @@ vartools -i EXAMPLES/2 \
     -binlc median nbins 100 tcenter \
     -o EXAMPLES/OUTDIR1/2.phasebin.txt
 ```
+
+![Phase-folded + phase-binned EXAMPLES/2](../assets/examples/binlc_ex2.png)
 
 ---
 
@@ -541,6 +545,8 @@ vartools -i EXAMPLES/kplr000757076-2009166043257_llc.fits \
     -o EXAMPLES/OUTDIR1/kplr000757076-2009166043257_llc.asc.txt
 ```
 
+![KIC 757076 Q1 LC converted to magnitudes](../assets/examples/fluxtomag_ex1.png)
+
 ---
 
 ### `-match`
@@ -576,6 +582,26 @@ Perform a row-by-row match of an external data file to the light curve, merging 
 | `"cullmissing"` | Remove light curve rows that have no match. |
 | `"nanmissing"` | Set unmatched rows to NaN (float/double) or 0 (integer/string). |
 | `"missingval" value` | Set unmatched rows to the specified value. |
+
+**Examples**
+
+**Example 1.** Join `EXAMPLES/1` with the file `EXAMPLES/dates_tfa`, matching on the time column. The default tolerance for matching different times is set by `-jdtol`. The `imagename` string from the first column of `dates_tfa` is added to the light curve as a new column. Because we used `cullmissing`, rows in `EXAMPLES/1` with no match are removed. The light curve including the new `imagename` column is then written to `EXAMPLES/1_withID.txt`.
+
+```bash
+vartools -i EXAMPLES/1 -inputlcformat t:1,mag:2,err:3 \
+    -match file EXAMPLES/dates_tfa matchcolumn t:2 \
+        addcolumns imagename:1:string cullmissing \
+    -o EXAMPLES/1_withID.txt columnformat imagename,t,mag,err
+```
+
+The first few rows of the output file:
+```
+M37.0.0167.fits 53725.173920000001 10.085000000000001 0.0011900000000000001
+M37.0.0168.fits 53725.17654 10.0847 0.0014400000000000001
+M37.0.0169.fits 53725.17772 10.0825 0.00123
+M37.0.0170.fits 53725.179409999997 10.081 0.0011900000000000001
+M37.0.0171.fits 53725.180789999999 10.081899999999999 0.0013500000000000001
+```
 
 ---
 
@@ -620,6 +646,8 @@ vartools -i EXAMPLES/2 -header \
     -o EXAMPLES/OUTDIR1/2.phase.txt
 ```
 
+![Phase-folded EXAMPLES/2 at P=1.2354 d](../assets/examples/phase_ex1.png)
+
 **Example 2.** Detect a transit with BLS, phase-fold on the BLS period placing mid-transit at phase 0.5, write the phase-folded light curve, then median-bin it into 200 phase bins.
 
 ```bash
@@ -630,6 +658,8 @@ vartools -i EXAMPLES/3.transit -oneline \
     -binlc median nbins 200 tcenter \
     -o EXAMPLES/OUTDIR1/3.phasebin.txt
 ```
+
+![EXAMPLES/3.transit phased + binned at the BLS period](../assets/examples/phase_ex2.png)
 
 ---
 
@@ -762,3 +792,21 @@ Sort the light curve. By default it is sorted by time. If any subsequent command
 |-----------|-------------|
 | `"var" varname` | Sort by this named variable instead of time. |
 | `"reverse"` | Sort in descending order. |
+
+**Examples**
+
+**Example 1.** Sort `EXAMPLES/2` in reverse time order (most recent first) and write the result to disk.
+
+```bash
+vartools -i EXAMPLES/2 \
+    -sortlc reverse \
+    -o EXAMPLES/OUTDIR1/2.rev.txt
+```
+
+**Example 2.** Sort `EXAMPLES/2` by magnitude (brightest first). The `var` keyword names the variable to sort by.
+
+```bash
+vartools -i EXAMPLES/2 \
+    -sortlc var mag \
+    -o EXAMPLES/OUTDIR1/2.magsorted.txt
+```

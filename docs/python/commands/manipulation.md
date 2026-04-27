@@ -12,6 +12,20 @@ cmd.sortlc(var=None, reverse=False)
 
 Sort observations by time (default) or by any other variable. `reverse=True` sorts in descending order.
 
+**Examples**
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+
+# Reverse-time sort
+(vt.Pipeline().sortlc(reverse=True)
+              .o("EXAMPLES/OUTDIR1/2.rev.txt")).run(lc)
+
+# Sort by magnitude (brightest first)
+(vt.Pipeline().sortlc(var="mag")
+              .o("EXAMPLES/OUTDIR1/2.magsorted.txt")).run(lc)
+```
+
 ---
 
 ## `binlc` — Bin in time
@@ -49,6 +63,9 @@ pipe = (vt.Pipeline()
 result = pipe.run(lc, capture_lc=True)
 phase_binned_lc = result.lc
 ```
+
+![Median-binned EXAMPLES/2](../../assets/examples/binlc_ex1.png)
+![EXAMPLES/2 phase-folded + binned at the LS period](../../assets/examples/binlc_ex2.png)
 
 ---
 
@@ -89,6 +106,9 @@ result = (
 )
 phase_binned_lc = result.lc
 ```
+
+![Phase-folded EXAMPLES/2 at P=1.2354 d](../../assets/examples/phase_ex1.png)
+![EXAMPLES/3.transit phased + binned at the BLS period](../../assets/examples/phase_ex2.png)
 
 ---
 
@@ -318,6 +338,21 @@ Match each light curve against rows in a catalog file and add columns from the c
 | `matchcolumn` | `str` | Column specification for matching, e.g. `"t:1"` (variable:column) or `"1"` (column number). |
 | `addcolumns` | `str` | Comma-separated `varname:colnum[:dtype]` specs for columns to import. |
 | `missing` | `str` | How to handle unmatched rows: `"cullmissing"`, `"nanmissing"`, or `"missingval <value>"`. |
+
+**Examples**
+
+```python
+# Join EXAMPLES/1 with the dates file by time, importing the
+# imagename string column and culling unmatched rows.
+lc = vt.LightCurve.from_file("EXAMPLES/1")
+(vt.Pipeline()
+        .match("EXAMPLES/dates_tfa",
+               matchcolumn="t:2",
+               addcolumns="imagename:1:string",
+               missing="cullmissing")
+        .o("EXAMPLES/OUTDIR1/1_withID.txt",
+           columnformat="imagename,t,mag,err")).run(lc)
+```
 
 ---
 
