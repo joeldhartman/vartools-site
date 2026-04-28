@@ -75,9 +75,16 @@ def read_periodogram(path: Path,
     The vartools periodogram format is whitespace-delimited with the column
     layout depending on the command (LS, AoV, BLS, DFT-CLEAN, …) — pass the
     column names you want via ``names``.
+
+    If the file has *more* columns than ``names``, the trailing columns are
+    dropped (we use ``usecols=range(len(names))``).  Without this, pandas
+    silently treats the leading columns as a MultiIndex, scrambling the
+    plot data.
     """
+    names = list(names)
     return pd.read_csv(path, sep=r"\s+", comment="#",
-                       header=None, names=list(names))
+                       header=None, names=names,
+                       usecols=range(len(names)))
 
 
 def save(fig: plt.Figure, fname: str) -> Path:

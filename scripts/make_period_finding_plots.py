@@ -103,11 +103,15 @@ def make_aov_harm_ex1():
         "-aov_harm", "1", "0.1", "10.", "0.1", "0.01",
         "5", "1", "EXAMPLES/OUTDIR1", "whiten", "clip", "5.", "1",
     ])
-    pg = read_periodogram(OUTDIR / "2.aov_harm",
-                          names=["period", "theta", "sde"])
+    # Cols: period, theta_c0, theta_c1, theta_c2, theta_c3, theta_c4
+    # (one theta column per whiten cycle)
+    pg = read_periodogram(
+        OUTDIR / "2.aov_harm",
+        names=["period", "t0", "t1", "t2", "t3", "t4"],
+    )
     freq = 1.0 / pg["period"]
     fig, ax = plt.subplots()
-    ax.plot(freq, pg["theta"], "k-", lw=0.6)
+    ax.plot(freq, pg["t0"], "k-", lw=0.6)
     ax.set_xlabel("Frequency [c/d]")
     ax.set_ylabel(r"$\theta_{\rm AoV}$")
     ax.set_title("Multi-harmonic AoV periodogram (EXAMPLES/2, Nharm=1)")
@@ -165,6 +169,26 @@ def make_bls_ex1():
 
 # ---------- -dftclean Example 1 / 2 ----------------------------------------
 
+def _plot_dft(spec: pd.DataFrame, title: str, fname: str,
+              positive_only: bool = True) -> None:
+    """Plot a DFT-CLEAN power spectrum.
+
+    The output files run from ``-maxfreq`` to ``+maxfreq``; for the dirty
+    and CLEAN spectra we restrict to the positive half (the negative
+    frequencies are mirror images).  For the CLEAN beam and window
+    function we keep the full range so the symmetry around zero is
+    visible.
+    """
+    if positive_only:
+        spec = spec[spec["freq"] >= 0]
+    fig, ax = plt.subplots()
+    ax.plot(spec["freq"], spec["power"], "k-", lw=0.6)
+    ax.set_xlabel("Frequency [c/d]")
+    ax.set_ylabel("Power")
+    ax.set_title(f"{title} (EXAMPLES/2)")
+    save(fig, fname)
+
+
 def make_dftclean():
     # Example 1: simple DFT power spectrum (no CLEAN, just outdspec)
     run_vt([
@@ -174,12 +198,7 @@ def make_dftclean():
         "finddirtypeaks", "1", "clip", "5.", "1",
     ])
     sp = read_periodogram(OUTDIR / "2.dftclean.dspec", names=["freq", "power"])
-    fig, ax = plt.subplots()
-    ax.plot(sp["freq"], sp["power"], "k-", lw=0.6)
-    ax.set_xlabel("Frequency [c/d]")
-    ax.set_ylabel("Power")
-    ax.set_title("DFT power spectrum (EXAMPLES/2)")
-    save(fig, "dftclean_ex1.png")
+    _plot_dft(sp, "DFT power spectrum", "dftclean_ex1.png")
 
     # Example 2: full CLEAN with all four output products
     run_vt([
@@ -198,18 +217,12 @@ def make_dftclean():
     clean = read_periodogram(OUTDIR / "2.dftclean.cspec", names=["freq", "power"])
     beam  = read_periodogram(OUTDIR / "2.dftclean.cbeam", names=["freq", "power"])
     wfun  = read_periodogram(OUTDIR / "2.dftclean.wfunc", names=["freq", "power"])
-    for spec, ttl, fname in [
-        (dirty, "DFT power spectrum (dirty)",        "dftclean_ex2_dirty.png"),
-        (clean, "Spectrum after CLEAN deconvolution", "dftclean_ex2_clean.png"),
-        (beam,  "CLEAN beam",                         "dftclean_ex2_beam.png"),
-        (wfun,  "Window function",                    "dftclean_ex2_window.png"),
-    ]:
-        fig, ax = plt.subplots()
-        ax.plot(spec["freq"], spec["power"], "k-", lw=0.6)
-        ax.set_xlabel("Frequency [c/d]")
-        ax.set_ylabel("Power")
-        ax.set_title(f"{ttl} (EXAMPLES/2)")
-        save(fig, fname)
+    _plot_dft(dirty, "DFT power spectrum (dirty)",         "dftclean_ex2_dirty.png")
+    _plot_dft(clean, "Spectrum after CLEAN deconvolution",  "dftclean_ex2_clean.png")
+    _plot_dft(beam,  "CLEAN beam",                          "dftclean_ex2_beam.png",
+              positive_only=False)
+    _plot_dft(wfun,  "Window function",                     "dftclean_ex2_window.png",
+              positive_only=False)
 
 
 # ---------- -autocorrelation Example 1 -------------------------------------

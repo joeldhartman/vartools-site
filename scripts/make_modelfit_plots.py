@@ -135,26 +135,38 @@ def make_softenedtransit():
 
 
 def make_starspot():
-    run_vt([
+    proc = run_vt([
         "-i", "EXAMPLES/3.starspot", "-oneline",
         "-aov", "Nbin", "20", "0.1", "10.", "0.1", "0.01", "5", "0",
         "-Starspot", "aov", "0.0298", "0.08745", "20.", "85.", "30.", "0.", "-1",
         "1", "0", "0", "1", "1", "1", "1", "1", "0",
         "1", "EXAMPLES/OUTDIR1/",
     ])
+    # Pull the recovered Starspot period from the -oneline output
+    period = None
+    for line in proc.stdout.splitlines():
+        if line.lstrip().startswith("Starspot_Period_") and "=" in line:
+            period = float(line.split("=")[-1])
+            break
+    if period is None:
+        raise RuntimeError("Could not find Starspot_Period_1 in stdout")
+
     df = pd.read_csv(OUTDIR / "3.starspot.starspot.model",
                      sep=r"\s+", comment="#", header=None,
                      names=["t", "mag", "model", "err"])
-    fig, ax = plt.subplots(figsize=(9.0, 4.5))
-    ax.plot(df["t"], df["mag"], ".", ms=1.5, color="0.4", alpha=0.6,
+    # Phase fold using the recovered period.  Use t[0] as the epoch — it
+    # only sets the absolute phase zero, which is irrelevant for the figure.
+    ph = ((df["t"].values - df["t"].values[0]) / period) % 1.0
+    fig, ax = plt.subplots()
+    ax.plot(ph, df["mag"], ".", ms=1.5, color="0.4", alpha=0.6,
             label="data")
-    order = np.argsort(df["t"].values)
-    ax.plot(df["t"].values[order], df["model"].values[order], "-",
-            color="C3", lw=0.8, label="Dorren single-spot fit")
+    order = np.argsort(ph)
+    ax.plot(ph[order], df["model"].values[order], "-",
+            color="C3", lw=1.2, label="Dorren single-spot fit")
     ax.invert_yaxis()
-    ax.set_xlabel("Time [days]")
+    ax.set_xlabel(f"Phase (P = {period:.5f} d)")
     ax.set_ylabel("Magnitude")
-    ax.set_title("3.starspot — Dorren single-spot model fit")
+    ax.set_title("3.starspot — Dorren single-spot model fit, phase-folded")
     ax.legend(loc="best")
     save(fig, "starspot_ex1.png")
 
