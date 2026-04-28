@@ -119,7 +119,11 @@ Execute arbitrary Python code on each light curve (or once for the whole batch w
 CLI equivalent: [`-python`](../../cli/python-r.md#-python).
 
 !!! note "subprocess vs in-process"
-    The default path runs the user code in a vartools-spawned Python sub-process — fully isolated from the calling pyvartools interpreter, so neither sub-process libpython nor user globals leak across the boundary. Setting `inprocess=True` (Stage-2 feature, currently raises `NotImplementedError`) is intended to share the host interpreter's namespace so user code can see the caller's imports/globals; that path lands in a follow-up commit.
+    The default path runs the user code in a vartools-spawned Python sub-process — fully isolated from the calling pyvartools interpreter, so neither sub-process libpython nor user globals leak across the boundary.
+
+    Setting `inprocess=True` instead routes the user code through a C-level callback into your live pyvartools Python interpreter, so the code sees your imports, globals, and an explicit `namespace=` dict. This requires library mode (no `save_*` / `cmd.o(...)` outputs, no `UserCommand` / userlib extensions, no `randseed`/`skipmissing`/`jdtol`/`matchstringid`, no `init_lc_vars`, no `timeout=` — and only the single-LC `Pipeline.run(lc)` path, since the batch entry points always go through the subprocess). If any of those conditions force the subprocess path, `inprocess=True` raises `RuntimeError` with a list of the obstacles rather than silently falling back.
+
+    In-process v1 marshalling supports `DOUBLE`, `FLOAT`, `INT`, `LONG` scalars and LC vectors. String columns and `process_all_lcs=True` aren't yet wired through the callback — fall through to the subprocess form for those.
 
 **Parameters**
 
@@ -136,8 +140,8 @@ CLI equivalent: [`-python`](../../cli/python-r.md#-python).
 | `process_all_lcs` | `bool` | Send the whole batch to Python in one call. Vector invars arrive as a list of `numpy.ndarray`s (length `Nlc`); scalar invars as a numpy array of length `Nlc`. Outputs must follow the same shape. |
 | `skipfail` | `bool` | If a per-LC Python exception is raised, skip the remaining pipeline processing for that LC instead of aborting the run. |
 | `continueprocess` | `int` or `None` | Reuse the Python sub-process from the *N*-th prior `-python` (1-indexed), preserving its module-level state. Mutually exclusive with `init`. To share variables across calls, declare them `global` in the user code. |
-| `inprocess` | `bool` | **Stage-2 feature.** When `True`, executes user code in the host (pyvartools-side) Python interpreter rather than a vartools sub-process, sharing `sys.modules` and a caller-supplied globals dict. Currently raises `NotImplementedError`; the kwarg lives on the API now so calling code can be written against the final shape. |
-| `namespace` | `dict` or `None` | Only used when `inprocess=True`. Globals dict for the user code (default: caller's `__main__.__dict__`). |
+| `inprocess` | `bool` | When `True` and pyvartools is in library mode, executes user code in the host Python interpreter rather than a vartools sub-process — user code shares `sys.modules` and the supplied `namespace=` dict with the caller. Subprocess-only run paths (`run_filelist`, `run_batch`, `run_combinelcs`) and library-mode-blocking flags raise `RuntimeError`; see the note above. |
+| `namespace` | `dict` or `None` | Only used when `inprocess=True`. Globals dict the user code is `exec`'d in (default: caller's `__main__.__dict__`). Useful for sandboxing or for exposing a specific module's globals. |
 
 **Output**
 
@@ -231,6 +235,38 @@ batch = (vt.Pipeline()
          ).run_filelist("EXAMPLES/lc_list",
                         columns={"t": 1, "mag": 2, "err": 3})
 print(batch.vars[["Name", "PYTHON_b_1"]])
+```
+
+**Example 6.** In-process mode (`inprocess=True`).  User code shares the calling script's globals — it can reference imports, helpers, or class instances defined at module scope without going through `init`.  This works only with single-LC `Pipeline.run(lc)` in library mode; batch entry points raise `RuntimeError`.
+
+```python
+import numpy as np
+
+# A helper defined in *your* script — visible to the -python body
+# below because the in-process callback execs into __main__.__dict__.
+def fancy_metric(arr):
+    return float(np.std(arr) - np.median(np.diff(arr)))
+
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = (vt.Pipeline()
+          .python("b = fancy_metric(mag)",
+                  invars="mag", outvars="b", outputcolumns="b",
+                  inprocess=True)
+          ).run(lc)
+print(result.vars["PYTHON_b_0"])
+```
+
+To sandbox the inline code (so it can't see `__main__`), pass `namespace=...`:
+
+```python
+sandbox = {"my_factor": 7.0}
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = (vt.Pipeline()
+          .python("b = my_factor * float(numpy.var(mag))",
+                  invars="mag", outvars="b", outputcolumns="b",
+                  inprocess=True, namespace=sandbox)
+          ).run(lc)
+print(result.vars["PYTHON_b_0"])
 ```
 
 ---
