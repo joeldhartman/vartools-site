@@ -271,3 +271,193 @@ from the BLS transit centre. The red curve is the Mandel-Agol model
 written by `ophcurve` (directly on a [−0.5, 0.5] phase grid); the gray
 points are the observations folded on the fitted ephemeris via
 `cmd.Phase(..., phasevar="ph_obs", startphase=-0.5)`.
+
+### Variation: GPU transit search with CETRA
+
+[CETRA](https://github.com/leigh2/cetra) (Smith et al. 2025, MNRAS, 539, 297) is a CUDA-accelerated transit-detection algorithm that often outperforms BLS in both sensitivity and runtime.  Because it's a Python package rather than a vartools command, it slots into the pipeline through `cmd.python(inprocess=True)` — the in-process callback runs the user code in pyvartools' own interpreter, so `import cetra` (and the live PyCUDA context it spins up) sees the same GPU resources as the calling script.
+
+Once CETRA finds the period / `T0` / duration, the rest of the pipeline is the same chain as the BLS variant above: `BLSFixPerDurTc` re-derives depth and other transit statistics at the CETRA ephemeris, then `MandelAgolTransit` fits a Mandel-Agol model.
+
+!!! note "Requires CUDA + PyCUDA + CETRA"
+    This variation needs an NVIDIA GPU, the CUDA toolkit on `PATH` (so `pycuda` can compile kernels), and the `cetra` Python package in the same conda env as pyvartools.  See the [CETRA README](https://github.com/leigh2/cetra) for installation.
+
+```python
+import numpy as np
+import pyvartools as vt
+import cetra
+import matplotlib.pyplot as plt
+
+
+def cetra_search(t, mag, mag_err):
+    """Run CETRA on a magnitude LC, return the highest-SNR Transit object."""
+    fluxes = 10.0 ** (-0.4 * mag)
+    flux_errors = fluxes * mag_err / 1.0857
+    medflux = float(np.median(fluxes))
+    fluxes /= medflux
+    flux_errors /= medflux
+    lc_cetra = cetra.LightCurve(t, fluxes, flux_errors)
+    td = cetra.TransitDetector(lc_cetra)
+    td.linear_search()
+    td.period_search()
+    return td.get_max_snr_periodic_transit()
+
+
+lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
+
+result = (vt.Pipeline()
+          .python(
+              "tr = cetra_search(t, mag, err); "
+              "period   = float(tr.period); "
+              "t0       = float(tr.t0); "
+              "duration = float(tr.duration)",
+              invars="t,mag,err",
+              outvars="period,t0,duration",
+              outputcolumns="period,t0,duration",
+              inprocess=True)
+          .BLSFixPerDurTc(period="period", duration="duration", Tc="t0",
+                          correct_lc=False, fittrap=True)
+          .MandelAgolTransit(
+              P0="expr BLSFixPerDurTc_Period_1",
+              T00="expr BLSFixPerDurTc_Tc_1",
+              r0="expr sqrt(BLSFixPerDurTc_Depth_1)",
+              a0="expr 1.0/(BLSFixPerDurTc_Qtran_1*pi)",
+              bimpact=0.1, mconst0=-1,
+              ld_coeffs=[0.3, 0.3],
+              fitephem=1, fitr=1, fita=1, fitinclterm=1,
+              fite=0, fitomega=0, fitmconst=1, fitldcoeffs=[0, 0])
+          ).run(lc, capture_lc=True)
+
+P  = float(result.vars["MandelAgolTransit_Period_2"])
+T0 = float(result.vars["MandelAgolTransit_T0_2"])
+print(f"CETRA period         = {result.vars['PYTHON_period_0']:.6f} d")
+print(f"Mandel-Agol P        = {P:.6f} d")
+print(f"Mandel-Agol T0       = {T0:.5f}")
+print(f"Mandel-Agol r        = {result.vars['MandelAgolTransit_r_2']:.5f}")
+print(f"Mandel-Agol a/R*     = {result.vars['MandelAgolTransit_a_2']:.4f}")
+print(f"Mandel-Agol inc      = {result.vars['MandelAgolTransit_inc_2']:.3f} deg")
+print(f"Mandel-Agol chi2     = {result.vars['MandelAgolTransit_chi2_2']:.3f}")
+
+# Phase-fold the (untransformed) LC at the fitted Mandel-Agol ephemeris.
+out = result.lc
+ph = ((out.t - T0) / P)
+ph -= np.floor(ph)
+ph[ph > 0.5] -= 1.0
+
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.plot(ph, out.mag, ".", ms=2, color="0.4")
+ax.set_xlim(-0.15, 0.15)
+ax.invert_yaxis()
+ax.set_xlabel(f"Phase  (P = {P:.6f} d, T0 = {T0:.5f})")
+ax.set_ylabel("mag")
+ax.set_title("CETRA → BLSFixPerDurTc → Mandel-Agol")
+fig.tight_layout()
+fig.savefig("/tmp/cetra_transit_fold.png", dpi=120)
+```
+
+```
+CETRA period         = 2.123535 d
+Mandel-Agol P        = 2.123393 d
+Mandel-Agol T0       = 53727.29676
+Mandel-Agol r        = 0.09774
+Mandel-Agol a/R*     = 9.9821
+Mandel-Agol inc      = 89.153 deg
+Mandel-Agol chi2     = 27.065
+```
+
+![CETRA → Mandel-Agol fit on EXAMPLES/3.transit](../assets/examples/cetra_transit_fold.png)
+
+CETRA's grid period (2.1235 d) is within ~10 s of the Mandel-Agol fitted period (2.12339 d) — close enough that `BLSFixPerDurTc` finds the transit cleanly, and the subsequent Mandel-Agol fit produces parameters consistent with the BLS-seeded variant above (r = 0.098, a/R* = 9.98, i = 89.15°).
+
+### Variation: high-pass detrending + CETRA + fit
+
+CETRA is designed for *detrended* light curves, so a quick way to improve robustness on noisier data is to remove a few low-frequency Fourier modes first.  Setting `period=10.0` with `nharm=0` and `nsubharm=10` on `cmd.harmonicfilter` fits and subtracts the fundamental at 10 d plus sub-harmonics at 20, 30, …, 110 d — i.e. a high-pass that removes any structure on timescales ≥ 10 d while leaving the ~2 d transit signal alone.
+
+```python
+import numpy as np
+import pyvartools as vt
+import cetra
+import matplotlib.pyplot as plt
+
+
+def cetra_search(t, mag, mag_err):
+    fluxes = 10.0 ** (-0.4 * mag)
+    flux_errors = fluxes * mag_err / 1.0857
+    medflux = float(np.median(fluxes))
+    fluxes /= medflux
+    flux_errors /= medflux
+    lc_cetra = cetra.LightCurve(t, fluxes, flux_errors)
+    td = cetra.TransitDetector(lc_cetra)
+    td.linear_search()
+    td.period_search()
+    return td.get_max_snr_periodic_transit()
+
+
+lc = vt.LightCurve.from_file("EXAMPLES/3.transit")
+
+result = (vt.Pipeline()
+          # High-pass at P=10 d: subtract the fundamental + 10 sub-harmonics
+          # (covering periods 10, 20, …, 110 d).  nharm=0 → no harmonics
+          # shorter than 10 d are removed, so the ~2 d transit stays intact.
+          .harmonicfilter(period=10.0, nharm=0, nsubharm=10)
+          .python(
+              "tr = cetra_search(t, mag, err); "
+              "period   = float(tr.period); "
+              "t0       = float(tr.t0); "
+              "duration = float(tr.duration)",
+              invars="t,mag,err",
+              outvars="period,t0,duration",
+              outputcolumns="period,t0,duration",
+              inprocess=True)
+          .BLSFixPerDurTc(period="period", duration="duration", Tc="t0",
+                          correct_lc=False, fittrap=True)
+          .MandelAgolTransit(
+              P0="expr BLSFixPerDurTc_Period_2",
+              T00="expr BLSFixPerDurTc_Tc_2",
+              r0="expr sqrt(BLSFixPerDurTc_Depth_2)",
+              a0="expr 1.0/(BLSFixPerDurTc_Qtran_2*pi)",
+              bimpact=0.1, mconst0=-1,
+              ld_coeffs=[0.3, 0.3],
+              fitephem=1, fitr=1, fita=1, fitinclterm=1,
+              fite=0, fitomega=0, fitmconst=1, fitldcoeffs=[0, 0])
+          ).run(lc, capture_lc=True)
+
+P  = float(result.vars["MandelAgolTransit_Period_3"])
+T0 = float(result.vars["MandelAgolTransit_T0_3"])
+print(f"CETRA period         = {result.vars['PYTHON_period_1']:.6f} d")
+print(f"Mandel-Agol P        = {P:.6f} d")
+print(f"Mandel-Agol T0       = {T0:.5f}")
+print(f"Mandel-Agol r        = {result.vars['MandelAgolTransit_r_3']:.5f}")
+print(f"Mandel-Agol a/R*     = {result.vars['MandelAgolTransit_a_3']:.4f}")
+print(f"Mandel-Agol inc      = {result.vars['MandelAgolTransit_inc_3']:.3f} deg")
+print(f"Mandel-Agol chi2     = {result.vars['MandelAgolTransit_chi2_3']:.3f}")
+
+# Phase-fold the (already detrended) LC at the fitted ephemeris.
+out = result.lc
+ph = ((out.t - T0) / P)
+ph -= np.floor(ph)
+ph[ph > 0.5] -= 1.0
+
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.plot(ph, out.mag, ".", ms=2, color="0.4")
+ax.set_xlim(-0.15, 0.15)
+ax.invert_yaxis()
+ax.set_xlabel(f"Phase  (P = {P:.6f} d, T0 = {T0:.5f})")
+ax.set_ylabel("mag (after high-pass)")
+ax.set_title("harmonicfilter (P=10d, nsubharm=10) → CETRA → Mandel-Agol")
+fig.tight_layout()
+fig.savefig("/tmp/cetra_highpass_transit_fold.png", dpi=120)
+```
+
+```
+CETRA period         = 2.123535 d
+Mandel-Agol P        = 2.123408 d
+Mandel-Agol T0       = 53727.29540
+Mandel-Agol r        = 0.09268
+Mandel-Agol a/R*     = 10.3707
+Mandel-Agol inc      = 89.097 deg
+Mandel-Agol chi2     = 26.148
+```
+
+![High-pass + CETRA + Mandel-Agol on EXAMPLES/3.transit](../assets/examples/cetra_highpass_transit_fold.png)
+
+The high-pass step removes a small amount of long-timescale structure that BLS-style searches typically don't care about but that can bias a model fit; here the χ² drops modestly from 27.1 to 26.1, and the fitted radius / a /inclination shift by a fraction of their per-fit uncertainties — consistent with the picture that the input LC was already mostly clean.
