@@ -45,6 +45,7 @@ Per peak `k` (1 to `npeaks`) and command index `N`:
 |--------|-------------|
 | `LS_Period_k_N` | Best period of peak `k` (days). |
 | `Log10_LS_Prob_k_N` | Log₁₀ of the formal false-alarm probability. |
+| `LS_Periodogram_Value_k_N` | Periodogram statistic at peak `k`. |
 | `LS_SNR_k_N` | Spectroscopic SNR: `(LS − ⟨LS⟩) / RMS(LS)`. |
 
 When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
@@ -168,9 +169,13 @@ Per peak `k` (1 to `npeaks`) and command index `N`:
 | Column | Description |
 |--------|-------------|
 | `Period_k_N` | Best period of peak `k` (days). |
-| `AOV_k_N` | θ_aov statistic. |
-| `AOV_SNR_k_N` | Signal-to-noise ratio in the periodogram. |
-| `AOV_NEG_LOG_FAP_k_N` | `−ln(FAP)` (formal false alarm probability). |
+| `AOV_k_N` | θ_aov statistic (default; replaced by `AOV_LOGSNR_k_N` when `uselog=True`). |
+| `AOV_SNR_k_N` | Signal-to-noise ratio in the periodogram (omitted when `uselog=True`). |
+| `AOV_NEG_LN_FAP_k_N` | `−ln(FAP)` (formal false alarm probability). Omitted when `uselog=True`. |
+| `AOV_LOGSNR_k_N` | SNR computed on `−ln(θ_aov)`. Only when `uselog=True`. |
+| `Mean_lnAOV_N` | Mean of `−ln(θ_aov)` (always emitted unless both `whiten=True` and `uselog=True`). |
+| `RMS_lnAOV_N` | RMS of `−ln(θ_aov)` (same condition as `Mean_lnAOV_N`). |
+| `Mean_lnAOV_k_N`, `RMS_lnAOV_k_N` | Per-peak whitened mean / RMS. Only when both `whiten=True` and `uselog=True`. |
 
 When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
 
@@ -238,14 +243,18 @@ CLI equivalent: [`-aov_harm`](../../cli/period-finding.md#-aov_harm-multi-harmon
 
 **Output**
 
-Same column structure as `aov` but with the `AOV_HARM` prefix:
+Per peak `k` (1 to `npeaks`) and command index `N`:
 
 | Column | Description |
 |--------|-------------|
 | `Period_k_N` | Best period of peak `k` (days). |
-| `AOV_HARM_k_N` | Multi-harmonic AoV statistic. |
+| `AOV_HARM_k_N` | Multi-harmonic AoV statistic. Only when `nharm > 0`. |
+| `AOV_HARM_NEG_LOG_FAP_k_N` | `−log(FAP)`. Always emitted; when `nharm <= 0` (auto-select) it carries the periodogram value at the peak instead of the AoV statistic. |
+| `AOV_HARM_NHARM_k_N` | Number of harmonics chosen at peak `k`. Only when `nharm <= 0` (automatic harmonic selection). |
 | `AOV_HARM_SNR_k_N` | Signal-to-noise ratio in the periodogram. |
-| `AOV_HARM_NEG_LN_FAP_k_N` | `−ln(FAP)`. |
+| `Mean_AOV_HARM_N` | Mean of the AoV-harm statistic (always emitted unless `whiten=True`). |
+| `RMS_AOV_HARM_N` | RMS of the AoV-harm statistic (same condition as `Mean_AOV_HARM_N`). |
+| `Mean_AOV_HARM_k_N`, `RMS_AOV_HARM_k_N` | Per-peak whitened mean / RMS. Only when `whiten=True`. |
 
 When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
 
@@ -336,7 +345,9 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `save_periodogram` | `bool`, `str`, or `Output` | BLS spectrum file. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `save_model` | `bool`, `str`, or `Output` | Best-fit transit model. `True` captures as `result.files["BLS_model_N"]`. |
 | `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["BLS_phcurve_N"]`. |
+| `ophcurve_phmin`, `ophcurve_phmax`, `ophcurve_phstep` | `float` | Phase range and step for the phase-curve output. Defaults `0.0`, `1.0`, `0.005`. |
 | `save_jdcurve` | `bool`, `str`, or `Output` | JD-sampled model curve. `True` captures as `result.files["BLS_jdcurve_N"]`. |
+| `ojdcurve_jdstep` | `float` | Time step (days) for the JD-curve output. Default `0.02`. |
 | `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
 | `fittrap` | `bool` | Fit a trapezoidal rather than box-shaped transit at each peak. Adds `BLS_Qingress_k_N` and `BLS_OOTmag_k_N` to the output. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded from the BLS spectrum. |
@@ -354,14 +365,21 @@ Per peak `k` (1 to `npeaks`) and command index `N`:
 | `BLS_SDE_k_N` | Signal detection efficiency. |
 | `BLS_Depth_k_N` | Transit depth (magnitudes). |
 | `BLS_Qtran_k_N` | Fractional transit duration `q`. |
+| `BLS_i1_k_N`, `BLS_i2_k_N` | Phases of transit ingress and egress. |
 | `BLS_deltaChi2_k_N` | Δχ² of the best-fit transit. |
-| `BLS_SignaltoPinknoise_k_N` | Signal-to-pink-noise ratio. |
-| `BLS_Ntransits_k_N` | Number of observed transits. |
-| `BLS_Npointsintransit_k_N` | Points within the transit window. |
 | `BLS_fraconenight_k_N` | Fraction of Δχ² from a single night. |
+| `BLS_Npointsintransit_k_N` | Points within the transit window. |
+| `BLS_Ntransits_k_N` | Number of observed transits. |
+| `BLS_Npointsbeforetransit_k_N`, `BLS_Npointsaftertransit_k_N` | Points immediately before/after each transit (used for diagnostics). |
 | `BLS_Rednoise_k_N` | Estimated red noise level. |
 | `BLS_Whitenoise_k_N` | Estimated white noise level. |
-| `BLS_Qingress_k_N`, `BLS_OOTmag_k_N` | Ingress fraction and out-of-transit magnitude (only when `fittrap=True`). |
+| `BLS_SignaltoPinknoise_k_N` | Signal-to-pink-noise ratio. |
+| `BLS_Qingress_k_N`, `BLS_OOTmag_k_N` | Ingress fraction and out-of-transit magnitude. Only when `fittrap=True`. |
+| `BLS_Period_invtransit_N` | Period of the largest *inverted* (anti-transit) Δχ² peak — diagnostic for symmetric systematics. |
+| `BLS_deltaChi2_invtransit_N` | Δχ² of the inverse-transit peak. |
+| `BLS_MeanMag_N` | Out-of-transit mean magnitude. |
+
+When `extraparams=True` is set, the following additional per-peak columns are appended: `BLS_SRSum_k_N`, `BLS_ResSig_k_N`, `BLS_DipSig_k_N`, `BLS_SRShift_k_N`, `BLS_SRSig_k_N`, `BLS_SRShiftSNR_k_N`, `BLS_DSP_k_N`, `BLS_DSPG_k_N`, `BLS_FreqLow_k_N`, `BLS_FreqHigh_k_N`, `BLS_LogProb_k_N`, `BLS_PeakArea_k_N`, `BLS_PeakMean_k_N`, `BLS_PeakDev_k_N`, `BLS_LombLog_k_N`, `BLS_NTV_k_N`, `BLS_GDSP_k_N`, `BLS_OOTSig_k_N`, `BLS_TRSig_k_N`, `BLS_OOTDFTF_k_N`, `BLS_OOTDFTA_k_N`, `BLS_BinSN_k_N`, `BLS_MaxPhaseGap_k_N`, `BLS_Dip1DblPeriod_k_N`, `BLS_Dip2DblPeriod_k_N`, `BLS_DelChi2DblPeriod_k_N`, `BLS_SRSecondary_k_N`, `BLS_SRSumSecondary_k_N`, `BLS_QSecondary_k_N`, `BLS_EpochSecondary_k_N`, `BLS_HSecondary_k_N`, `BLS_LSecondary_k_N`, `BLS_DepthSecondary_k_N`, `BLS_NPointsInTransitSecondary_k_N`, `BLS_NTransitsSecondary_k_N`, `BLS_SignaltoPinknoiseSecondary_k_N`, `BLS_DeltaChi2TransitSecondary_k_N`, `BLS_BinSNSecondary_k_N`, `BLS_PhaseOffsetSecondary_k_N`, `BLS_HarmMean_k_N`, `BLS_fundA_k_N`, `BLS_fundB_k_N`, `BLS_harmA_k_N`, `BLS_harmB_k_N`, `BLS_HarmAmp_k_N`, `BLS_HarmDeltaChi2_k_N`.
 
 When the corresponding `save_*` keyword is set:
 
@@ -463,13 +481,17 @@ Suffix `N` is the pipeline command index:
 | `BLSFixPer_SR_N` | BLS spectral residual. |
 | `BLSFixPer_Depth_N` | Transit depth (mag). |
 | `BLSFixPer_Qtran_N` | Fractional transit duration. |
+| `BLSFixPer_Qingress_N`, `BLSFixPer_OOTmag_N` | Ingress fraction and out-of-transit magnitude. Only when `fittrap=True`. |
+| `BLSFixPer_i1_N`, `BLSFixPer_i2_N` | Phases of transit ingress and egress. |
 | `BLSFixPer_deltaChi2_N` | Δχ² of the transit. |
-| `BLSFixPer_SignaltoPinknoise_N` | Signal-to-pink-noise. |
-| `BLSFixPer_Ntransits_N` | Number of observed transits. |
-| `BLSFixPer_Npointsintransit_N` | Points within the transit window. |
 | `BLSFixPer_fraconenight_N` | Fraction of Δχ² from one night. |
+| `BLSFixPer_Npointsintransit_N` | Points within the transit window. |
+| `BLSFixPer_Ntransits_N` | Number of observed transits. |
+| `BLSFixPer_Npointsbeforetransit_N`, `BLSFixPer_Npointsaftertransit_N` | Points immediately before/after each transit. |
 | `BLSFixPer_Rednoise_N`, `BLSFixPer_Whitenoise_N` | Noise estimates. |
-| `BLSFixPer_Qingress_N`, `BLSFixPer_OOTmag_N` | Only when `fittrap=True`. |
+| `BLSFixPer_SignaltoPinknoise_N` | Signal-to-pink-noise. |
+| `BLSFixPer_deltaChi2_invtransit_N` | Δχ² of the largest inverted (anti-transit) peak. |
+| `BLSFixPer_MeanMag_N` | Out-of-transit mean magnitude. |
 
 When `save_model` is enabled:
 
@@ -537,23 +559,39 @@ CLI equivalent: [`-BLSFixDurTc`](../../cli/period-finding.md#-blsfixdurtc-bls-wi
 | `fixdepth` | `float`, `str`, or `None` | Fix transit depth to this value (or column/list spec); `None` to optimise. |
 | `qgress` | `float`, `str`, or `None` | Fractional ingress/egress duration (requires `fixdepth`). |
 | `save_periodogram`, `save_model`, `save_phcurve`, `save_jdcurve` | `bool`, `str`, or `Output` | Auxiliary file outputs (BLS spectrum, model, phase curve, JD curve). |
+| `ophcurve_phmin`, `ophcurve_phmax`, `ophcurve_phstep` | `float` | Phase range and step for the phase-curve output. Defaults `0.0`, `1.0`, `0.005`. |
+| `ojdcurve_jdstep` | `float` | Time step (days) for the JD-curve output. Default `0.02`. |
 | `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
 | `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
 
 **Output**
 
-Per peak `k` (1 to `npeaks`) and command index `N`:
+Suffix `N` is the pipeline command index. Per-peak quantities use suffix `k_N` (1 to `npeaks`).
 
 | Column | Description |
 |--------|-------------|
 | `BLSFixDurTc_Duration_N` | Fixed transit duration used. |
 | `BLSFixDurTc_Tc_N` | Fixed epoch used. |
+| `BLSFixDurTc_Depth_N` | Fixed depth used. Only when `fixdepth` is set. |
+| `BLSFixDurTc_Qingress_N` | Fixed ingress fraction used. Only when `fixdepth` is set. |
 | `BLSFixDurTc_Period_k_N` | Best-fit period of peak `k`. |
 | `BLSFixDurTc_SN_k_N` | Signal-to-noise of peak `k`. |
+| `BLSFixDurTc_SR_k_N` | BLS spectral residual. |
+| `BLSFixDurTc_SDE_k_N` | Signal detection efficiency. |
 | `BLSFixDurTc_Depth_k_N` | Best-fit transit depth. |
 | `BLSFixDurTc_Qtran_k_N` | Fractional transit duration. |
+| `BLSFixDurTc_Qingress_k_N`, `BLSFixDurTc_OOTmag_k_N` | Ingress fraction and out-of-transit magnitude. Only when `fittrap=True` and `fixdepth` is **not** set. |
 | `BLSFixDurTc_deltaChi2_k_N` | Δχ² of the best transit. |
+| `BLSFixDurTc_fraconenight_k_N` | Fraction of Δχ² from one night. |
+| `BLSFixDurTc_Npointsintransit_k_N` | Points within the transit window. |
+| `BLSFixDurTc_Ntransits_k_N` | Number of observed transits. |
+| `BLSFixDurTc_Npointsbeforetransit_k_N`, `BLSFixDurTc_Npointsaftertransit_k_N` | Points immediately before/after each transit. |
+| `BLSFixDurTc_Rednoise_k_N`, `BLSFixDurTc_Whitenoise_k_N` | Noise estimates. |
+| `BLSFixDurTc_SignaltoPinknoise_k_N` | Signal-to-pink-noise. |
+| `BLSFixDurTc_Period_invtransit_N` | Period of the largest inverted (anti-transit) Δχ² peak. |
+| `BLSFixDurTc_deltaChi2_invtransit_N` | Δχ² of the inverse-transit peak. |
+| `BLSFixDurTc_MeanMag_N` | Out-of-transit mean magnitude. |
 
 When `save_*` keywords are set:
 
@@ -621,6 +659,8 @@ CLI equivalent: [`-BLSFixPerDurTc`](../../cli/period-finding.md#-blsfixperdurtc-
 | `fixdepth` | `float`, `str`, or `None` | Fix transit depth (or column/list spec); `None` to optimise. |
 | `qgress` | `float`, `str`, or `None` | Fractional ingress/egress duration (requires `fixdepth`). |
 | `save_model`, `save_phcurve`, `save_jdcurve` | `bool`, `str`, or `Output` | Auxiliary file outputs. |
+| `ophcurve_phmin`, `ophcurve_phmax`, `ophcurve_phstep` | `float` | Phase range and step for the phase-curve output. Defaults `0.0`, `1.0`, `0.005`. |
+| `ojdcurve_jdstep` | `float` | Time step (days) for the JD-curve output. Default `0.02`. |
 | `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
 | `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
@@ -634,11 +674,16 @@ Suffix `N` is the pipeline command index:
 | `BLSFixPerDurTc_Period_N` | Period used. |
 | `BLSFixPerDurTc_Duration_N` | Duration used. |
 | `BLSFixPerDurTc_Tc_N` | Epoch used. |
-| `BLSFixPerDurTc_Depth_N` | Best-fit (or fixed) transit depth. |
+| `BLSFixPerDurTc_Depth_N` | Transit depth (fixed input when `fixdepth` is set, otherwise best-fit). |
 | `BLSFixPerDurTc_Qtran_N` | Fractional transit duration. |
+| `BLSFixPerDurTc_Qingress_N`, `BLSFixPerDurTc_OOTmag_N` | Ingress fraction and out-of-transit magnitude. Only when `fittrap=True` and `fixdepth` is **not** set. When `fixdepth` is set, only `BLSFixPerDurTc_Qingress_N` (the fixed input value) is emitted. |
 | `BLSFixPerDurTc_deltaChi2_N` | Δχ² of the transit signal. |
-| `BLSFixPerDurTc_SignaltoPinknoise_N` | Signal-to-pink-noise. |
 | `BLSFixPerDurTc_fraconenight_N` | Fraction of Δχ² from one night. |
+| `BLSFixPerDurTc_Npointsintransit_N` | Points within the transit window. |
+| `BLSFixPerDurTc_Ntransits_N` | Number of observed transits. |
+| `BLSFixPerDurTc_Npointsbeforetransit_N`, `BLSFixPerDurTc_Npointsaftertransit_N` | Points immediately before/after each transit. |
+| `BLSFixPerDurTc_Rednoise_N`, `BLSFixPerDurTc_Whitenoise_N` | Noise estimates. |
+| `BLSFixPerDurTc_SignaltoPinknoise_N` | Signal-to-pink-noise. |
 | `BLSFixPerDurTc_MeanMag_N` | Out-of-transit mean magnitude. |
 
 When `save_*` keywords are set:
@@ -704,30 +749,33 @@ CLI equivalent: [`-dftclean`](../../cli/period-finding.md#-dftclean-dft-power-sp
 | `npeaks` | `int` or `None` | Number of peaks to find in the *clean* spectrum. |
 | `finddirtypeaks` | `int` or `None` | Number of peaks to find in the *dirty* spectrum. |
 | `finddirtypeaks_clip`, `finddirtypeaks_clipiter` | `float`, `int` | Sigma-clipping for dirty-peak SNR (default: iterative 5σ). |
-| `outcbeam` | `bool`, `str`, or `Output` | Write the CLEAN beam to a file. Captured as `result.files["dftclean_cbeam_N"]`. |
+| `outcbeam` | `bool`, `str`, or `Output` | Write the CLEAN beam to a file (the file is written to the output directory but is not currently captured into `result.files`). |
 | `useampspec` | `bool` | Compute SNR on the amplitude spectrum instead of the power spectrum. |
 | `verboseout` | `bool` | Include the mean and stddev of the spectrum (before and after clipping) in the output. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
 
 **Output**
 
-Per peak `k` (1 to `npeaks` or `finddirtypeaks`) and command index `N`:
+Peak indices in `dftclean` output columns are **0-indexed** (`k` runs from 0 to `npeaks − 1` or `finddirtypeaks − 1`). `N` is the pipeline command index:
 
 | Column | Description |
 |--------|-------------|
-| `DFTCLEAN_DSPEC_PEAK_FREQ_k_N` | Frequency of dirty-spectrum peak `k` (cycles/day). |
-| `DFTCLEAN_DSPEC_PEAK_POW_k_N` | Power at the peak. |
-| `DFTCLEAN_DSPEC_PEAK_SNR_k_N` | SNR of the peak. |
-| `DFTCLEAN_CSPEC_PEAK_FREQ_k_N`, `_POW_k_N`, `_SNR_k_N` | Same trio for the CLEAN-spectrum peaks. |
+| `DFTCLEAN_DSPEC_PEAK_FREQ_k_N` | Frequency of dirty-spectrum peak `k` (cycles/day). Only when `finddirtypeaks` is set. |
+| `DFTCLEAN_DSPEC_PEAK_POW_k_N` | Power at the dirty peak. Only when `finddirtypeaks` is set. |
+| `DFTCLEAN_DSPEC_PEAK_SNR_k_N` | SNR of the dirty peak. Only when `finddirtypeaks` is set. |
+| `DFTCLEAN_CSPEC_PEAK_FREQ_k_N`, `_POW_k_N`, `_SNR_k_N` | Same trio for the CLEAN-spectrum peaks. Only when `npeaks` is set. |
+| `DFTCLEAN_DSPEC_AVESPEC_N`, `DFTCLEAN_DSPEC_STDSPEC_N` | Mean / RMS of the (sigma-clipped) dirty power spectrum. Only when `verboseout=True` and `finddirtypeaks` is set. |
+| `DFTCLEAN_DSPEC_AVESPEC_NOCLIP_N`, `DFTCLEAN_DSPEC_STDSPEC_NOCLIP_N` | Same statistics computed without sigma-clipping. Same condition. |
+| `DFTCLEAN_CSPEC_AVESPEC_N`, `DFTCLEAN_CSPEC_STDSPEC_N` | Mean / RMS of the (sigma-clipped) CLEAN spectrum. Only when `verboseout=True` and `npeaks` is set. |
+| `DFTCLEAN_CSPEC_AVESPEC_NOCLIP_N`, `DFTCLEAN_CSPEC_STDSPEC_NOCLIP_N` | Same statistics without sigma-clipping. Same condition. |
 
-When `save_*` / `outcbeam` keywords are set:
+When `save_*` keywords are set:
 
 | File key | Description |
 |----------|-------------|
 | `result.files["dftclean_dspec_N"]` | DataFrame: dirty power spectrum (frequency vs. power). |
 | `result.files["dftclean_cspec_N"]` | DataFrame: CLEAN power spectrum. |
 | `result.files["dftclean_wfunc_N"]` | DataFrame: window function. |
-| `result.files["dftclean_cbeam_N"]` | DataFrame: CLEAN beam. |
 
 **References**
 
@@ -800,14 +848,19 @@ Suffix `N` is the pipeline command index:
 
 | Column | Description |
 |--------|-------------|
-| `WWZ_maxZ_N` | Maximum value of the Z-transform over all time-shifts and frequencies. |
-| `WWZ_maxfreq_N` | Frequency at the maximum Z. |
-| `WWZ_maxpower_N` | Power at the maximum Z. |
-| `WWZ_maxamp_N` | Amplitude at the maximum Z. |
-| `WWZ_maxNeff_N` | Effective number of data points at the maximum Z. |
-| `WWZ_maxtau_N` | Time-shift at the maximum Z. |
-| `WWZ_maxmeanmag_N` | Local mean magnitude at the maximum Z. |
-| `WWZ_medZ_N`, `WWZ_med*_N` | Median over time-shifts of the maximum-Z frequency's Z value (and the corresponding median statistics for the other quantities). |
+| `MaxWWZ_N` | Maximum value of the Z-transform over all time-shifts and frequencies. |
+| `MaxWWZ_Freq_N` | Frequency at the maximum Z. |
+| `MaxWWZ_TShift_N` | Time-shift τ at the maximum Z. |
+| `MaxWWZ_Power_N` | Power at the maximum Z. |
+| `MaxWWZ_Amplitude_N` | Amplitude at the maximum Z. |
+| `MaxWWZ_Neffective_N` | Effective number of data points at the maximum Z. |
+| `MaxWWZ_AverageMag_N` | Local mean magnitude at the maximum Z. |
+| `Med_WWZ_N` | Median Z over τ at the max-Z frequency. |
+| `Med_Freq_N` | Median frequency over τ. |
+| `Med_Power_N` | Median power over τ. |
+| `Med_Amplitude_N` | Median amplitude over τ. |
+| `Med_Neffective_N` | Median Neffective over τ. |
+| `Med_AverageMag_N` | Median local mean magnitude over τ. |
 
 When `save_*` keywords are set:
 
@@ -909,14 +962,36 @@ print(result.vars["LS_MinimumAmplitude_2"])   # 0.00248 mag
 
 Several period-finding commands (`LS`, `aov`, `aov_harm`) accept a `fixperiod_snr` keyword that evaluates the periodogram at a single known period and reports its significance, in addition to the regular peak search.
 
-When set, four extra output columns are appended (N = 0-based pipeline index of the command, `PREFIX` is `LS` / `AOV` / `AOV_HARM`):
+When set, extra output columns are appended (N = 0-based pipeline index of the command). The exact column names differ across the three commands:
+
+For `LS`:
 
 | Column | Description |
 |--------|-------------|
-| `PREFIX_PeriodFix_N` | The fixed period used (omitted when `fixperiod_snr` is a plain number — the value is already known to the caller). |
-| `Log10_PREFIX_Prob_PeriodFix_N` | Log₁₀ false-alarm probability at that period. |
-| `PREFIX_Periodogram_Value_PeriodFix_N` | Periodogram statistic at that period. |
-| `PREFIX_SNR_PeriodFix_N` | SNR = `(power − ⟨power⟩) / σ`. |
+| `LS_PeriodFix_N` | The fixed period used. |
+| `Log10_LS_Prob_PeriodFix_N` | Log₁₀ false-alarm probability at that period. |
+| `LS_Periodogram_Value_PeriodFix_N` | Periodogram statistic at that period. |
+| `LS_SNR_PeriodFix_N` | SNR = `(power − ⟨power⟩) / σ`. |
+
+For `aov` (with default `uselog=False`):
+
+| Column | Description |
+|--------|-------------|
+| `PeriodFix_N` | The fixed period used. |
+| `AOV_PeriodFix_N` | θ_aov statistic at that period. |
+| `AOV_SNR_PeriodFix_N` | SNR at that period. |
+| `AOV_NEG_LN_FAP_PeriodFix_N` | `−ln(FAP)` at that period. |
+
+When `uselog=True`, only `PeriodFix_N` and `AOV_LOGSNR_PeriodFix_N` are emitted.
+
+For `aov_harm`:
+
+| Column | Description |
+|--------|-------------|
+| `PeriodFix_N` | The fixed period used. |
+| `AOV_HARM_PeriodFix_N` | Multi-harmonic AoV statistic at that period. |
+| `AOV_HARM_SNR_PeriodFix_N` | SNR at that period. |
+| `AOV_HARM_NEG_LN_FAP_PeriodFix_N` | `−ln(FAP)` at that period. Only when `nharm > 0`. |
 
 Accepted Python values and the CLI tokens they emit:
 

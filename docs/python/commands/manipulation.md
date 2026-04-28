@@ -405,7 +405,15 @@ CLI equivalent: [`-changeerror`](../../cli/manipulation.md#-changeerror).
 
 **Output**
 
-Modifies the LC in-place: overwrites the `err` column with a single value equal to the LC RMS; no output statistics.
+Suffix `N` is the pipeline command index.
+
+| Column | Description |
+|--------|-------------|
+| `Mean_Mag_N` | Mean magnitude of the light curve. |
+| `RMS_N` | RMS of the light curve (the value the `err` column is replaced with). |
+| `Npoints_N` | Number of points used. |
+
+The LC's `err` column is also modified in-place: every entry becomes the value reported as `RMS_N`.
 
 **Examples**
 

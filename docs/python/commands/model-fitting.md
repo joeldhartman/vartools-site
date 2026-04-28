@@ -131,21 +131,33 @@ CLI equivalent: [`-nonlinfit`](../../cli/model-fitting.md#-nonlinfit).
 
 **Output**
 
-Suffix `N` is the 0-indexed pipeline command position:
+Suffix `N` is the 0-indexed pipeline command position. Columns differ between the two optimisers:
+
+`optimizer="amoeba"`:
 
 | Column | Description |
 |--------|-------------|
-| `Nonlinfit_<p>_N` | Best-fit value of each non-linear parameter and (for `linfit_params` parameters) each linear coefficient. |
-| `Nonlinfit_<p>_err_N` | 1-σ uncertainty in each parameter. For `amoeba` derived from the covariance matrix at the optimum; for `mcmc` taken from the posterior. |
-| `Nonlinfit_Chi2_N` | χ² of the best-fit model. |
-| `Nonlinfit_Npts_N` | Number of light-curve points used in the fit. |
+| `Nonlinfit_<p>_BestFit_N` | Best-fit value of each non-linear parameter and (for `linfit_params` parameters) each linear coefficient. |
+| `Nonlinfit_<p>_Err_N` | 1-σ uncertainty in each parameter, derived from the covariance matrix at the optimum. |
+| `Nonlinfit_BestFit_Chi2_N` | χ² of the best-fit model. |
+| `Nonlinfit_HasConverged_N` | `1` if the amoeba optimiser converged within `amoeba_maxsteps`, `0` otherwise. |
 
-When `save_model` or `mcmc_outchains` is set:
+`optimizer="mcmc"`:
+
+| Column | Description |
+|--------|-------------|
+| `Nonlinfit_<p>_BestFit_N` | Best-fit (lowest-χ²) value of each non-linear parameter sampled by the chain. |
+| `Nonlinfit_<p>_MEDIAN_N` | Posterior median of each parameter. |
+| `Nonlinfit_<p>_STDDEV_N` | Posterior standard deviation of each parameter. |
+| `Nonlinfit_BestFit_Chi2_N` | χ² of the best-fit model. |
+
+When `save_model` is set:
 
 | File key | Description |
 |----------|-------------|
 | `result.files["nonlinfit_model_N"]` | DataFrame: time-sampled best-fit model. |
-| `result.files["nonlinfit_chains_N"]` | DataFrame: MCMC chain links (when `optimizer="mcmc"` and `mcmc_outchains` is set). |
+
+`mcmc_outchains` writes per-LC chain files named `<lcname>.mcmc` to the supplied directory; these files are written but are not currently captured into `result.files`.
 
 **Examples**
 
@@ -219,12 +231,16 @@ CLI equivalent: [`-decorr`](../../cli/model-fitting.md#-decorr).
 
 **Output**
 
-Suffix `N` is the 0-indexed pipeline command position. The exact set of `Decorr_*` columns depends on the number of `global_files` and `lc_columns` terms requested; each polynomial coefficient is reported with its 1-σ error, plus an overall χ²:
+Suffix `N` is the 0-indexed pipeline command position. The exact set of columns depends on the number of `global_files` and `lc_columns` terms and on `zeropointterm`; each polynomial coefficient is reported with its 1-σ error, plus an overall χ²:
 
 | Column | Description |
 |--------|-------------|
-| `Decorr_<term>_<order>_N` | Best-fit polynomial coefficient for each trend term and order. |
-| `Decorr_err<term>_<order>_N` | 1-σ uncertainty in the coefficient. |
+| `Decorr_constant_term_N` | Zero-point offset (only when `zeropointterm=1`). |
+| `Decorr_constant_term_err_N` | 1-σ uncertainty in the zero-point offset. |
+| `Global_<i>_coeff_<order>_N` | Best-fit coefficient for global trend file `i` (1-indexed) at polynomial `order`. |
+| `Global_<i>_coeff_err_<order>_N` | 1-σ uncertainty in the corresponding global-trend coefficient. |
+| `LCColumn_<col>_coeff_<order>_N` | Best-fit coefficient for light-curve column `col` at polynomial `order`. |
+| `LCColumn_<col>_coeff_err_<order>_N` | 1-σ uncertainty in the corresponding LC-column coefficient. |
 | `Decorr_chi2_N` | χ² of the decorrelation fit. |
 
 When `save_model` is set:
@@ -266,7 +282,10 @@ cmd.MandelAgolTransit(P0, T00, r0=0.1, a0=10.0, inclination=90.0,
                       K0=None, gamma0=None, fitK=0, fitgamma=0,
                       correct_lc=False, save_model=False,
                       modelvar=None,
-                      save_phcurve=False, save_jdcurve=False)
+                      save_phcurve=False,
+                      ophcurve_phmin=0.0, ophcurve_phmax=1.0,
+                      ophcurve_phstep=0.005,
+                      save_jdcurve=False, ojdcurve_jdstep=0.02)
 ```
 
 **Description**
@@ -298,14 +317,16 @@ CLI equivalent: [`-MandelAgolTransit`](../../cli/model-fitting.md#-mandelagoltra
 | `save_model` | `bool`, `str`, or `Output` | Best-fit transit model on the input cadence. `True` captures as `result.files["MandelAgolTransit_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `modelvar` | `str` or `None` | Variable name used to store the best-fit model on the light curve (requires `save_model` to be set). |
 | `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["MandelAgolTransit_phcurve_N"]`. |
+| `ophcurve_phmin`, `ophcurve_phmax`, `ophcurve_phstep` | `float` | Phase range (start, end, step) for the phase curve, used when `save_phcurve` is set. Defaults `0.0`, `1.0`, `0.005`. |
 | `save_jdcurve` | `bool`, `str`, or `Output` | JD-sampled model curve. `True` captures as `result.files["MandelAgolTransit_jdcurve_N"]`. |
+| `ojdcurve_jdstep` | `float` | Time step (days) for the JD curve, used when `save_jdcurve` is set. Default `0.02`. |
 
 !!! tip "Back-reference seeding from BLS / BLSFixPer"
     When `P0="bls"` (or `"blsfixper"`) is used after a prior `-BLS` / `-BLSFixPer` in the chain, pyvartools pulls Period, Tc, Depth, and Qtran from the prior result and seeds four fields at once: `P0 = BLS.Period_1`, `T00 = BLS.Tc_1`, `r0 = sqrt(BLS.Depth_1)`, `a0 = 1 / (π · BLS.Qtran_1)`. Any of those four values you pass explicitly override the seeded default. This resolves equally in a single `Pipeline` or across chain steps; in batch chains each LC gets its own seed values. Missing prior BLS → `LookupError`.
 
 **Output**
 
-Suffix `N` is the 0-indexed pipeline command position:
+Suffix `N` is the 0-indexed pipeline command position. All of the following parameter columns appear regardless of whether each parameter was fixed or fit:
 
 | Column | Description |
 |--------|-------------|
@@ -313,10 +334,12 @@ Suffix `N` is the 0-indexed pipeline command position:
 | `MandelAgolTransit_T0_N` | Best-fit mid-transit epoch. |
 | `MandelAgolTransit_r_N` | Best-fit `Rp/R★`. |
 | `MandelAgolTransit_a_N` | Best-fit `a/R★`. |
-| `MandelAgolTransit_inclination_N` or `MandelAgolTransit_bimpact_N` | Best-fit inclination (deg) or impact parameter. |
-| `MandelAgolTransit_e_N`, `MandelAgolTransit_omega_N` | Best-fit eccentricity and argument of periastron (when fit). |
+| `MandelAgolTransit_inc_N` | Best-fit inclination (degrees). |
+| `MandelAgolTransit_bimpact_N` | Best-fit impact parameter `b = (a/R★) cos(i)`. |
+| `MandelAgolTransit_e_N` | Best-fit eccentricity. |
+| `MandelAgolTransit_omega_N` | Best-fit argument of periastron (degrees). |
 | `MandelAgolTransit_mconst_N` | Best-fit out-of-transit magnitude. |
-| `MandelAgolTransit_ldcoeff<i>_N` | Best-fit limb-darkening coefficients. |
+| `MandelAgolTransit_ldcoeff<i>_N` | Best-fit limb-darkening coefficients (`i = 1, 2` for `quad`; `1..4` for `nonlin`). |
 | `MandelAgolTransit_chi2_N` | χ² of the best-fit model. |
 | `MandelAgolTransit_K_N`, `MandelAgolTransit_gamma_N` | Best-fit RV semi-amplitude (km/s) and systemic velocity (only when `rv_file` is given). |
 

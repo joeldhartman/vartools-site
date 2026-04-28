@@ -40,8 +40,9 @@ Suffix `N` is the pipeline command index:
 
 | Column | Description |
 |--------|-------------|
-| `Findblends_VarName_N` | Name of the brightest blended variable (in flux). |
-| `Findblends_FluxAmp_N` | Flux amplitude of that variable. |
+| `FindBlends_Period_N` | Period used for the Fourier amplitude measurement. |
+| `FindBlends_LCname_N` | Name of the brightest blended variable (in flux). |
+| `FindBlends_FluxAmp_N` | Flux amplitude of that variable. |
 
 When `save_matches` is enabled:
 

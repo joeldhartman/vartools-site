@@ -155,13 +155,14 @@ CLI equivalent: [`-harmonicfilter`](../../cli/filtering.md#-harmonicfilter).
 
 **Output**
 
-Suffix `N` is the pipeline command index; per-period coefficients carry an extra index `k` for the period when more than one is fit:
+Suffix `N` is the pipeline command index; per-period coefficients are tagged with a `Per<k>` segment (`k` = 1, 2, … is the 1-based period index when more than one period is fit):
 
 | Column | Description |
 |--------|-------------|
 | `HarmonicFilter_Mean_Mag_N` | Mean magnitude after the fit. |
-| `HarmonicFilter_Period_k_N` | Period(s) used in the fit. |
-| `HarmonicFilter_*coeff*_k_N` | Per-period harmonic coefficients in one of four representations (`{Sin,Cos}coeff`, `{Amplitude,Phase}`, `R/Phi`, etc.) selected by `output_format`. |
+| `HarmonicFilter_Period_k_N` | Period(s) used in the fit (one column per period). |
+| `HarmonicFilter_Per<k>_Amplitude_N` | Peak-to-trough amplitude of the best-fit model at period `k`. |
+| `HarmonicFilter_Per<k>_Fundamental_*_N`, `HarmonicFilter_Per<k>_Harm_<n>_*_N`, `HarmonicFilter_Per<k>_Subharm_<n>_*_N` | Per-period harmonic coefficients in one of four representations selected by `output_format` (default `{Sin,Cos}coeff`; `outampphase` → `{Amp,Phi}` in cycles; `outampradphase` → `{Amp,Phi}` in radians; `outRphi`/`outRradphi` → relative `R`/`Phi` representations). |
 
 When called via the legacy `Killharm` synonym, columns appear under the `Killharm_*` prefix.
 
@@ -495,6 +496,7 @@ Suffix `N` is the pipeline command index:
 |--------|-------------|
 | `SYSREM_MeanMag_N` | Mean magnitude after SYSREM. |
 | `SYSREM_RMS_N` | Post-filter RMS. |
+| `SYSREM_Trend_<k>_Coeff_N` | Per-LC trend coefficient for trend `k` (`k = 0, 1, … ninput_color + ninput_airmass − 1`). |
 
 When `save_model` is set:
 

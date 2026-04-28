@@ -78,18 +78,18 @@ CLI equivalent: [`-rmsbin`](../../cli/statistics.md#-rmsbin).
 
 **Output**
 
-For each binning timescale `T_i` and command index `N`, vartools emits an `RMS_bin_<T_i>min_N` column (and an associated `Expected_RMS_bin_<T_i>min_N` column). Bin times are truncated for column-naming, so choose well-separated values.
+For each binning timescale `T_i` (in minutes) and command index `N`, vartools emits an `RMSBin_<T_i>_N` column (and an associated `Expected_RMS_Bin_<T_i>_N` column). The timescale tag in the column name is built from the input minutes value with a one-decimal-place form (e.g. `5.0` minutes becomes `RMSBin_5.0_0`); two distinct input values that round to the same tag will produce duplicate column names, so choose well-separated values.
 
 **Examples**
 
 ```python
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
 
-# Compute binned RMS at a range of timescales, in days.
-# (vartools internally truncates bin times for column-naming,
+# Compute binned RMS at a range of timescales, in minutes.
+# (vartools truncates bin times when forming column names,
 # so pick values that are well separated.)
-bintimes_days = [0.01, 0.05, 0.1, 1.0, 10.0]
-batch = vt.Pipeline().rmsbin(5, bintimes_days).run_batch(lcs)
+bintimes_min = [5.0, 10.0, 60.0, 1440.0, 14400.0]
+batch = vt.Pipeline().rmsbin(5, bintimes_min).run_batch(lcs)
 print(batch.vars)
 ```
 
@@ -161,14 +161,14 @@ CLI equivalent: [`-chi2bin`](../../cli/statistics.md#-chi2bin).
 
 **Output**
 
-For each binning timescale `T_i` and command index `N`, vartools emits a `Chi2_bin_<T_i>min_N` column and a `Weighted_Mean_Mag_bin_<T_i>min_N` column.
+For each binning timescale `T_i` (in minutes) and command index `N`, vartools emits a `Chi2Bin_<T_i>_N` column and a `Weight_Mean_Mag_Bin_<T_i>_N` column. The timescale tag is formatted the same way as for [`rmsbin`](#rmsbin-binned-rms) (e.g. `60.0` minutes becomes `Chi2Bin_60.0_0`); choose well-separated bin times to avoid duplicate column names.
 
 **Examples**
 
 ```python
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-bintimes_days = [0.01, 0.05, 0.1, 1.0, 10.0]
-batch = vt.Pipeline().chi2bin(5, bintimes_days).run_batch(lcs)
+bintimes_min = [5.0, 10.0, 60.0, 1440.0, 14400.0]
+batch = vt.Pipeline().chi2bin(5, bintimes_min).run_batch(lcs)
 print(batch.vars)
 ```
 

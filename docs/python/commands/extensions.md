@@ -96,7 +96,7 @@ print(result.vars["RMS_0"], result.vars["RMS_2"])
 
 ```python
 cmd.hatpiflag(fiphot_string_flag_var, rejbadframe_mask_var,
-              TFA_outlier_mask_var, pointing_outlier_flag_var,
+              tfa_outlier_mask_var, pointing_outlier_flag_var,
               output_flag_var, lib_path=None)
 ```
 
@@ -117,7 +117,7 @@ CLI equivalent: [`-hatpiflag`](../../cli/extensions.md#-hatpiflag).
 |-----------|------|-------------|
 | `fiphot_string_flag_var` | `str` | Name of the LC vector of one-character string flags from fiphot. |
 | `rejbadframe_mask_var` | `str` | Bad-frame mask vector (0 = rejected, 1 = keep). |
-| `TFA_outlier_mask_var` | `str` | TFA outlier mask vector (0 = outlier, 1 = keep). |
+| `tfa_outlier_mask_var` | `str` | TFA outlier mask vector (0 = outlier, 1 = keep). |
 | `pointing_outlier_flag_var` | `str` | Pointing outlier flag vector (1 = outlier, 0 = ok). |
 | `output_flag_var` | `str` | Name of the LC vector to receive the combined binary flag. |
 | `lib_path` | `str`, optional | Path to `hatpiflag.so` / `hatpiflag.la`. |
@@ -200,9 +200,8 @@ Per peak `k` (1 to `Npeak`) and command index `N`:
 
 | Column | Description |
 |--------|-------------|
-| `FastChi2_Period_k_N` | Best period of peak `k`. |
-| `FastChi2_Chi2_k_N` | χ² at the peak. |
-| `FastChi2_RChi2_k_N` | Reduced χ² at the peak. |
+| `Fastchi2_Frequency_k_N` | Frequency (cycles/day) of peak `k`. |
+| `Fastchi2_Chi2Reduction_k_N` | χ² reduction at the peak (`χ²₀ − χ²` of the harmonic fit). |
 
 When the corresponding `save_*` keyword is set:
 
@@ -320,8 +319,8 @@ subprocess.run([
 **Syntax**
 
 ```python
-cmd.ftuneven(output_vectors=None, output_file=None,
-             outputvectorsandfile=None,
+cmd.ftuneven(output_vectors=None, output_file=False,
+             save_outdir=None, nameformat=None,
              freqauto=False, freqrange=None,
              freqvariable=None, freqfile=None,
              ft_sign=None, tt_zero=None,
@@ -332,19 +331,20 @@ cmd.ftuneven(output_vectors=None, output_file=None,
 
 Compute the complex Fourier transform of an unevenly sampled time series using Scargle's method. Returns the real and imaginary components plus the absolute-square power spectrum (equivalent to the Lomb-Scargle periodogram). **Input and output frequencies are in radians per unit time.**
 
-Exactly one output mode (`output_vectors`, `output_file`, or both via `outputvectorsandfile`) and one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. `freqrange` is a `(min, max, step)` tuple of value-specs.
+At least one output mode (`output_vectors`, `output_file`, or both) and exactly one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. To write both LC vectors and a per-LC file, pass `output_vectors=(...)` together with `output_file=True` (or a path). `freqrange` is a `(min, max, step)` tuple of value-specs.
 
 CLI equivalent: [`-ftuneven`](../../cli/extensions.md#-ftuneven).
 
 **Parameters**
 
-Output mode (choose one):
+Output mode (at least one; both may be combined):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `output_vectors` | tuple of 4 `str`, optional | Names of LC vectors `(freq, FTreal, FTimag, periodogram)`; all LC vectors are resized to the transform length. |
 | `output_file` | `bool`, `str`, or `Output`, optional | Write per-LC files (default name `BASELC.ftuneven`; four whitespace columns: freq, FT_real, FT_imag, periodogram). |
-| `outputvectorsandfile` | tuple/dict, optional | Do both simultaneously. |
+| `save_outdir` | `str`, optional | Directory used when `output_file=True`; overrides the pipeline temp dir. |
+| `nameformat` | `str`, optional | Format string for the per-LC output filename. |
 
 Frequency source (choose one):
 
@@ -401,10 +401,18 @@ result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
 
 ```python
 cmd.stitch(stitch_variables, uncertainty_variables, mask_variables,
-           lcnum_var, method="median",
-           refnum_var=None, groupbytime=None, fitonly=False,
-           save_fitted_parameters=False, shifts_file=None,
-           add_stitchparams_fitsheader=False, lib_path=None)
+           lcnum_var, method,
+           refnum_var=None, groupbytime=None, groupbytime_start=None,
+           fitonly=False,
+           save_fitted_parameters=False, params_nameformat=None,
+           add_stitchparams_fitsheader=False, add_stitchparams_mode=None,
+           add_shifts_fitsheader=None, add_shifts_hdu=None,
+           add_shifts_mode=None,
+           shifts_file=None, append_refnum_to_fieldlabel=False,
+           in_shifts_file=None, nobs_refit=None,
+           header_basename_only=False,
+           out_shifts_file=None, include_missing=False,
+           lib_path=None)
 ```
 
 **Description**
@@ -423,13 +431,25 @@ CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
 | `uncertainty_variables` | `str` or `list` of `str` | Uncertainties for each magnitude variable (typically `"err"`). |
 | `mask_variables` | `str` or `list` of `str` | Mask vector(s); points with `mask = 0` are *excluded* from the fit (1 = include). |
 | `lcnum_var` | `str` | Variable identifying which input segment each observation belongs to (typically set by the `lcnumvar` keyword of `combinelcs`). |
-| `method` | `str` | `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. |
+| `method` | `str`, required | `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. |
 | `refnum_var` | `str`, optional | Further subdivide segments by a second grouping variable. |
 | `groupbytime` | `float` or `str`, optional | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
+| `groupbytime_start` | `float`, optional | Start time of the first time bin (only meaningful when `groupbytime` is set). |
 | `fitonly` | `bool` | Compute the shifts but do not subtract them. |
 | `save_fitted_parameters` | `bool`, `str`, or `Output` | Write per-source shift files. |
-| `shifts_file` | `str`, optional | Read previously determined shifts and/or write new ones for incremental re-processing of large datasets. |
-| `add_stitchparams_fitsheader` | `bool` | Add stitch parameters to the FITS header (when applicable). |
+| `params_nameformat` | `str`, optional | Format string applied to the fitted-parameter filenames (`format` keyword). |
+| `add_stitchparams_fitsheader` | `bool` or `str` | Add stitch parameters to the FITS header. Pass `True`, or `"primary"`/`"extension"` to select the HDU. |
+| `add_stitchparams_mode` | `str`, optional | `"append"` or `"update"`. |
+| `add_shifts_fitsheader` | `str`, optional | Keyword base (e.g. `"SHFT"`) used to log shifts into FITS headers. |
+| `add_shifts_hdu` | `str`, optional | `"primary"` or `"extension"`. |
+| `add_shifts_mode` | `str`, optional | `"append"` or `"update"`. |
+| `shifts_file` | tuple of 2 `str`, optional | `(fieldlabelsvar, starnamevar)` — enables `shifts_file` mode for reading/writing previously determined shifts. |
+| `append_refnum_to_fieldlabel` | `bool` | Append the `refnum_var` value to the field label in shifts files. |
+| `in_shifts_file` | `str` or `list` of `str`, optional | Pre-existing shifts file(s) to read. |
+| `nobs_refit` | `int`, optional | Minimum new observations before re-fitting an existing shift. |
+| `header_basename_only` | `bool` | Match shifts-file rows by basename only. |
+| `out_shifts_file` | `str` or `list` of `str`, optional | Output shifts file(s) to write. |
+| `include_missing` | `bool` | Include un-fit (missing) sources in the output shifts file. |
 | `lib_path` | `str`, optional | Path to `stitch.so` / `stitch.la`. |
 
 **Output**
@@ -489,21 +509,28 @@ print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 
 ```python
 cmd.jktebop(mode,
-            Period, T0, r1_r2, r2_r1, M2_M1, J2_J1,
-            i=None, bimpact=None,
-            esinomega=0.0, ecosomega=0.0,
-            LD1_law=None, LD1_coeffs=None,
-            LD2_law=None, LD2_coeffs=None,
-            gravdark1=None, gravdark2=None,
-            reflection1=None, reflection2=None,
-            L3=None, tidallag=None,
-            vary_Period=False, vary_T0=False, vary_r1_r2=False,
-            vary_r2_r1=False, vary_M2_M1=False, vary_J2_J1=False,
-            vary_i=False, vary_bimpact=False,
-            vary_esinomega=False, vary_ecosomega=False,
-            vary_LD1=False, vary_LD2=False,
-            correctlc=False, save_model=False,
-            save_curve=False, curve_xaxis="jd", curve_step=None,
+            Period=None, vary_Period=False,
+            T0=None, vary_T0=False,
+            r1_r2=None, vary_r1_r2=False,
+            r2_r1=None, vary_r2_r1=False,
+            M2_M1=None, vary_M2_M1=False,
+            J2_J1=None, vary_J2_J1=False,
+            i=None, vary_i=False,
+            bimpact=None, vary_bimpact=False,
+            esinomega=None, vary_esinomega=False,
+            ecosomega=None, vary_ecosomega=False,
+            LD1_law="quad", LD1_coeffs=(0.3, 0.3), vary_LD1=False,
+            LD2_law="lockLD1", LD2_coeffs=(), vary_LD2=False,
+            gravdark1=None, vary_gravdark1=False,
+            gravdark2=None, vary_gravdark2=False,
+            reflection1=None, vary_reflection1=False,
+            reflection2=None, vary_reflection2=False,
+            L3=None, vary_L3=False,
+            tidallag=None, vary_tidallag=False,
+            correctlc=False,
+            save_model=False, model_nameformat=None,
+            save_curve=False, curve_xaxis=None,
+            curve_step=None, curve_nameformat=None,
             lib_path=None)
 ```
 
@@ -540,21 +567,46 @@ CLI equivalent: [`-jktebop`](../../cli/extensions.md#-jktebop).
 | `vary_*` | `bool` | Free the corresponding parameter during fitting. |
 | `correctlc` | `bool` | Subtract the best-fit model from the LC. |
 | `save_model` | `bool`, `str`, or `Output` | Write the model evaluated at the observed times. |
+| `model_nameformat` | `str`, optional | Format string for the saved model filename. |
 | `save_curve` | `bool`, `str`, or `Output` | Write a uniformly sampled model curve. |
-| `curve_xaxis` | `"jd"` or `"phase"` | Axis for the saved curve. |
+| `curve_xaxis` | `"jd"` or `"phase"`, optional | Axis for the saved curve. |
 | `curve_step` | `float`, optional | Step size for the saved curve. |
+| `curve_nameformat` | `str`, optional | Format string for the saved curve filename. |
 | `lib_path` | `str`, optional | Path to `jktebop.so` / `jktebop.la`. |
 
 **Output**
 
-`jktebop` produces fit-statistic columns (parameter values and uncertainties) prefixed by the parameter name. The exact column set depends on which parameters are varied; consult the live `vartools -L jktebop.so -help -jktebop` output for an authoritative list.
+Suffix `N` is the pipeline command index. The base parameter columns are produced unconditionally:
 
-When the corresponding `save_*` keyword is set:
+| Column | Description |
+|--------|-------------|
+| `Jktebop_PERIOD_N` | Best-fit (or injected) orbital period. |
+| `Jktebop_T0_N` | Best-fit (or injected) reference epoch. |
+| `Jktebop_R1+R2_N` | Best-fit (or injected) sum of fractional radii. |
+| `Jktebop_R2/R1_N` | Best-fit (or injected) ratio of radii. |
+| `Jktebop_M2/M1_N` | Best-fit (or injected) mass ratio. |
+| `Jktebop_J2/J1_N` | Best-fit (or injected) surface-brightness ratio. |
+| `Jktebop_INCLINATION_N` | Inclination (degrees). |
+| `Jktebop_bimpact_N` | Impact parameter at primary eclipse. |
+| `Jktebop_ESINOMEGA_N` | *e* sin ω. |
+| `Jktebop_ECOSOMEGA_N` | *e* cos ω. |
+| `Jktebop_STAR1_LD_COEFF_1_N` | Primary limb-darkening coefficient #1. |
+| `Jktebop_STAR1_LD_COEFF_2_N` | Primary limb-darkening coefficient #2 (if the law has two). |
 
-| File key | Description |
-|----------|-------------|
-| `result.files["jktebop_model_N"]` | Model evaluated at the observed times (suffix `.jktebop.model`). |
-| `result.files["jktebop_curve_N"]` | Uniformly sampled model curve in JD or phase. |
+Conditional columns (added only when the input is set):
+
+| Column | Condition |
+|--------|-----------|
+| `Jktebop_STAR2_LD_COEFF_1_N`, `Jktebop_STAR2_LD_COEFF_2_N` | When `LD2_law` is not `"lockLD1"`. |
+| `Jktebop_GRAVDARK1_N`, `Jktebop_GRAVDARK2_N` | When `gravdark1` / `gravdark2` is given. |
+| `Jktebop_REFLECTION1_N`, `Jktebop_REFLECTION2_N` | When `reflection1` / `reflection2` is given. |
+| `Jktebop_L3_N` | When `L3` is given. |
+| `Jktebop_TIDALLAG_N` | When `tidallag` is given. |
+| `Jktebop_CHI2_N`, `Jktebop_NDOF_N` | When `mode="fit"` (best-fit χ² and degrees of freedom). |
+
+When `save_model` is set, vartools writes a per-LC ASCII file with the columns `Time  Mag_lc  Err  Mag_model`. The file suffix is `.jktebop`.
+
+> The `save_curve` (CLI: `ocurve`) keyword is accepted but the underlying USERLIB extension currently leaves curve output unimplemented (the C code marks the branch *TBD*); no curve file is produced.
 
 **References**
 
@@ -603,14 +655,21 @@ result = (vt.Pipeline()
 **Syntax**
 
 ```python
-cmd.macula(mode,
-           Prot, istar, kappa2, kappa4,
-           c1, c2, c3, c4, d1, d2, d3, d4, blend,
-           spots,
-           vary_Prot=False, vary_istar=False, ...,
+cmd.macula(mode, *,
+           Prot=None, vary_Prot=False,
+           istar=None, vary_istar=False,
+           kappa2=None, vary_kappa2=False,
+           kappa4=None, vary_kappa4=False,
+           c1=None, vary_c1=False, c2=None, vary_c2=False,
+           c3=None, vary_c3=False, c4=None, vary_c4=False,
+           d1=None, vary_d1=False, d2=None, vary_d2=False,
+           d3=None, vary_d3=False, d4=None, vary_d4=False,
+           blend=None, vary_blend=False,
+           spots=None,
            fluxinput=False, fluxoutput=False, correctlc=False,
-           save_model=False, save_curve=False,
-           curve_step=None, tdelv=False,
+           save_model=False, model_tdelv=False, model_nameformat=None,
+           save_curve=False, curve_tdelv=False,
+           curve_step=None, curve_nameformat=None,
            lib_path=None)
 ```
 
@@ -656,15 +715,45 @@ Output / control flags:
 | `vary_<name>` | `bool` | Free the corresponding global parameter during fitting. |
 | `fluxinput`, `fluxoutput` | `bool` | Toggle flux vs. magnitude input/output (default: magnitudes). |
 | `correctlc` | `bool` | Subtract the model from the LC. |
-| `save_model` | `bool`, `str`, or `Output` | Write the model evaluated at the observed times (suffix `.macula.model`). |
-| `save_curve` | `bool`, `str`, or `Output` | Write the model on a uniformly sampled time grid. |
+| `save_model` | `bool`, `str`, or `Output` | Write the model evaluated at the observed times (suffix `.macula`). |
+| `model_tdelv` | `bool` | Include predicted transit-depth variations in the saved model. |
+| `model_nameformat` | `str`, optional | Format string for the model filename. |
+| `save_curve` | `bool`, `str`, or `Output` | Write the model on a uniformly sampled time grid (suffix `.maculacurve`). |
+| `curve_tdelv` | `bool` | Include predicted transit-depth variations in the saved curve. |
 | `curve_step` | `float`, optional | Grid spacing for the saved curve. |
-| `tdelv` | `bool` | Include predicted transit-depth variations in the saved model. |
+| `curve_nameformat` | `str`, optional | Format string for the curve filename. |
 | `lib_path` | `str`, optional | Path to `macula.so` / `macula.la`. |
 
 **Output**
 
-`macula` produces fit-statistic columns for each varied parameter (best-fit value and uncertainty) when run in `"fit"` mode. The exact column set depends on which parameters are varied; consult the live `vartools -L macula.so -help -macula` output for an authoritative list.
+Suffix `N` is the pipeline command index, and `s` is the 0-indexed spot number.
+
+Always-emitted columns (one per global parameter and per per-spot parameter):
+
+| Column | Description |
+|--------|-------------|
+| `Macula_Prot_N` | Equatorial rotation period. |
+| `Macula_Istar_N` | Stellar inclination (radians). |
+| `Macula_kappa2_N`, `Macula_kappa4_N` | Differential-rotation coefficients. |
+| `Macula_c1_N`–`Macula_c4_N` | Stellar limb-darkening coefficients. |
+| `Macula_d1_N`–`Macula_d4_N` | Spot limb-darkening coefficients. |
+| `Macula_blend_N` | Blend parameter. |
+| `Macula_lambda0_s_N` | Spot `s` longitude at max size. |
+| `Macula_phi0_s_N` | Spot `s` latitude at max size. |
+| `Macula_alphamax_s_N` | Spot `s` maximum angular radius. |
+| `Macula_fspot_s_N` | Spot `s` flux contrast. |
+| `Macula_tmax_s_N` | Spot `s` reference epoch. |
+| `Macula_life_s_N` | Spot `s` lifetime FWHM. |
+| `Macula_ingress_s_N`, `Macula_egress_s_N` | Spot `s` ingress/egress durations. |
+
+Fit-mode columns (added when `mode` starts with `"fit"`):
+
+| Column | Description |
+|--------|-------------|
+| `Macula_CHI2_N` | Best-fit χ². |
+| `Macula_NDOF_N` | Degrees of freedom. |
+
+The values reported in the parameter columns are the best-fit values when the matching `vary_*` is true, otherwise the input value (or, in `"inject"` mode, the value injected). Macula does **not** emit separate uncertainty columns.
 
 When the corresponding `save_*` keyword is set:
 

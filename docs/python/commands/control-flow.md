@@ -194,7 +194,7 @@ Per command index `N`:
 
 | Column | Description |
 |--------|-------------|
-| `Print_<var>_<j>_N` | Value of the `j`-th requested variable (1-based). Replaced by the entry in `columnnames` when supplied. The trailing `_N` suffix is omitted when `-columnsuffix` is in effect for the pipeline. |
+| `Print_<var>_<j>_N` | Value of the `j`-th requested variable (0-based). Replaced by the entry in `columnnames` when supplied. The trailing `_N` suffix is omitted when `-columnsuffix` is in effect for the pipeline. |
 
 **Examples**
 

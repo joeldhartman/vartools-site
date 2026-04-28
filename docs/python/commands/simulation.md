@@ -202,8 +202,8 @@ Suffix `N` is the 0-indexed pipeline command position:
 | `Injecttransit_Mp_N` | Planet mass (Jupiter masses). |
 | `Injecttransit_phase_N` | Injected phase. |
 | `Injecttransit_sin_i_N` | Injected `sin i`. |
-| `Injecttransit_e_N`, `Injecttransit_omega_N` | Eccentricity components (only when `hk=False`). |
-| `Injecttransit_h_N`, `Injecttransit_k_N` | Eccentricity components (only when `hk=True`). |
+| `Injecttransit_h_N`, `Injecttransit_k_N` | Eccentricity components (only when `hk=False`; values are the supplied `e`, `omega`). |
+| `Injecttransit_e_N`, `Injecttransit_omega_N` | Eccentricity components (only when `hk=True`; values are the supplied `h`, `k`). |
 | `Injecttransit_Mstar_N` | Stellar mass (M☉). |
 | `Injecttransit_Rstar_N` | Stellar radius (R☉). |
 | `Injecttransit_ld_k_N` | Limb-darkening coefficient `k` (1 to `Nld`). |
