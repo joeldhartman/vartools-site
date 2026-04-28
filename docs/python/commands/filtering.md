@@ -482,11 +482,8 @@ CLI equivalent: [`-SYSREM`](../../cli/filtering.md#-sysrem).
 | `saturation` | `float` | Magnitudes brighter than this value do not contribute to the fit. |
 | `correct_lc` | `bool` | Subtract the SYSREM model from each light curve. |
 | `save_model` | `bool`, `str`, or `Output` | Per-LC model. `True` captures as `result.files["SYSREM_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `save_trends` | `bool`, `str`, or `Output` | Single global trend file (the converged airmass/color trend vectors for the run). |
+| `save_trends` | `bool`, `str`, or `Output` | Single global trend file (the converged airmass/color trend vectors for the run). `True` writes to a default path inside the per-command output directory and captures as `result.files["SYSREM_trends_N"]`; pass a string path to write to a specific file (and still capture). |
 | `useweights` | `int` | `1` to weight observations by their formal uncertainties; `0` to weight uniformly. |
-
-!!! warning "Known issue: `save_trends`"
-    The CLI form of `-SYSREM` writes the converged trend vectors to a single **file path**, not a directory; the current wrapper treats `save_trends` as a directory-style `Output` spec and so cannot drive the trend-output flag correctly. Use `subprocess.run` to capture the trend file until this is fixed.
 
 **Output**
 
@@ -498,11 +495,12 @@ Suffix `N` is the pipeline command index:
 | `SYSREM_RMS_N` | Post-filter RMS. |
 | `SYSREM_Trend_<k>_Coeff_N` | Per-LC trend coefficient for trend `k` (`k = 0, 1, … ninput_color + ninput_airmass − 1`). |
 
-When `save_model` is set:
+When `save_*` keywords are set:
 
 | File key | Description |
 |----------|-------------|
-| `result.files["SYSREM_model_N"]` | DataFrame: per-LC SYSREM model (`JD mag mag_model sig clip`). |
+| `result.files["SYSREM_model_N"]` | Per-LC SYSREM model (`JD mag mag_model sig clip`). One DataFrame per LC (list-valued in batch results). |
+| `result.files["SYSREM_trends_N"]` | Single global trends file: row per JD, columns `JD trend_0 trend_1 … trend_{Ntrends−1}` where `Ntrends = ninput_color + ninput_airmass`. **Single DataFrame** (not a list) — the file is shared across the whole batch. |
 
 **References**
 
@@ -510,7 +508,7 @@ Tamuz, Mazeh & Zucker 2005, MNRAS, 356, 1466.
 
 **Examples**
 
-**Example 1.** Apply SYSREM to the light curves listed in `EXAMPLES/trendlist_tfa`. Two color-like terms (cols 2 and 3 of the list) and one airmass-like term (the time series in `EXAMPLES/3`) are used; the corrected light curves are passed downstream and the per-LC SYSREM models are written.
+**Example 1.** Apply SYSREM to the light curves listed in `EXAMPLES/trendlist_tfa`. Two color-like terms (cols 2 and 3 of the list) and one airmass-like term (the time series in `EXAMPLES/3`) are used; the corrected light curves are passed downstream, and both the per-LC SYSREM models and the single global trends file are captured.
 
 ```python
 batch = (vt.Pipeline()
@@ -521,9 +519,12 @@ batch = (vt.Pipeline()
                  saturation=8.0,
                  correct_lc=True,
                  save_model=True,
+                 save_trends=True,
                  useweights=1)
          .rms()
          ).run_filelist("EXAMPLES/trendlist_tfa")
+trends = batch.files["SYSREM_trends_1"]   # single DataFrame: JD + 3 trend columns
+print(trends.shape, trends.head())
 ```
 
 ---
