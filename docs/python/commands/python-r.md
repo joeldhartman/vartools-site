@@ -16,18 +16,66 @@ Execute inline R code or an R script on each light curve. `vars` specifies varia
 
 **Examples**
 
+**Example 1.** Compute the standard deviation of the magnitudes for each light curve in `EXAMPLES/lc_list` using R; the result appears as `R_b_0` in the output table.
+
 ```python
-lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
-
-# Compute standard deviation via R for each light curve
 batch = (vt.Pipeline()
-        .R("b <- sd(mag)", invars="mag", outvars="b",
-          outputcolumns="b")).run_batch(lcs)
+         .R("b <- sd(mag)",
+            invars="mag", outvars="b", outputcolumns="b")
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
 print(batch.vars[["Name", "R_b_0"]])
-
-# `process_all_lcs=True` sends every LC's `mag` array into R as a list
-# in a single invocation; R code then loops over the list.  Useful for
-# global analyses that need all LCs at once (e.g. ensemble models).
 ```
+
+**Example 2.** Same as Example 1 but using `process_all_lcs=True` to send the whole batch to R at once. Inside R, `mag` arrives as a list of vectors and the output `b` must also be a list (one entry per LC).
+
+```python
+batch = (vt.Pipeline()
+         .R("b <- list(); for(i in 1:length(mag)) "
+            "{ b[[i]] <- sd(mag[[i]]); }",
+            invars="mag", outvars="b", outputcolumns="b",
+            process_all_lcs=True)
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+```
+
+**Example 3.** ARIMA modelling using R's `forecast` package. After saving the original `mag`, we bin and resample the LC onto a uniform grid (ARIMA needs evenly-sampled data), call `auto.arima`, and subtract the residuals to obtain the smoothed model `mag_arima`. The model is then resampled back to the original time grid and the original `mag` is restored. Requires `tseries` and `forecast` to be installed in R.
+
+The pyvartools `resample` wrapper does not yet expose the
+`-resample linear file list listcolumn 1 tcolumn 1` form needed for the
+back-resampling step in this example, so the cleanest Python equivalent
+goes through `subprocess`:
+
+```python
+import subprocess
+subprocess.run([
+    "vartools", "-l", "EXAMPLES/lc_list",
+    "-inputlcformat", "t:1,mag:2,err:3",
+    "-header",
+    "-savelc",
+    "-binlc", "average", "binsize", "0.05", "taverage",
+    "-resample", "linear", "delt", "fix", "0.05",
+    "-R",
+    ("mag_ts <- ts(mag, start=1, end=length(t), frequency=1); "
+     "arima_model <- auto.arima(mag_ts); "
+     "mag_arima <- mag - as.vector(arima_model$residuals);"),
+    "init", "library(tseries); library(forecast);",
+    "invars", "mag,t", "outvars", "mag_arima",
+    "-resample", "linear", "file", "list", "listcolumn", "1", "tcolumn", "1",
+    "-restorelc", "1", "vars", "mag",
+    "-o", "EXAMPLES/OUTDIR1", "nameformat", "%s.arimamodel",
+    "columnformat", "t,mag,mag_arima",
+], check=True)
+```
+
+The resulting `*.arimamodel` files contain `t`, the original `mag`, and the smoothed `mag_arima`:
+
+![EXAMPLES/2 — ARIMA model overlay](../../assets/examples/R_arimamodel_2_data.png)
+![ARIMA model residuals — EXAMPLES/2](../../assets/examples/R_arimamodel_2_resid.png)
+
+**Example 4.** Same as Example 3 but with the ARIMA fit + diagnostic plots wrapped in a function `DoArimaFitPlot` defined in `EXAMPLES/Rexample4.R`. The function writes per-LC `*.arimaforecast.png` and `*.arimaresiduals.png` files via R's `forecast` plotting helpers.
+
+![ARIMA forecast plot for EXAMPLES/2](../../assets/examples/R_arimaforecast_2.png)
+![ARIMA residuals plot for EXAMPLES/2](../../assets/examples/R_arimaresiduals_2.png)
 
 ---
