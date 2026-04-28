@@ -4,7 +4,9 @@ Periodogram-based algorithms for discovering or refining periodicities: Lomb-Sca
 
 ---
 
-## `LS` — Generalized Lomb-Scargle
+### `LS` — Generalized Lomb-Scargle
+
+**Syntax**
 
 ```python
 cmd.LS(minp, maxp, subsample, npeaks=5, save_periodogram=False,
@@ -12,73 +14,50 @@ cmd.LS(minp, maxp, subsample, npeaks=5, save_periodogram=False,
        bootstrap=None, maskpoints=None, fixperiod_snr=None)
 ```
 
+**Description**
+
+Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. The search runs over frequencies from `fmin = 1/maxp` to `fmax = 1/minp` with a uniform frequency step `Δf = subsample/T`, where `T` is the time baseline. The GLS implementation of Zechmeister & Kürster (2009) allows a floating mean and heteroscedastic errors, unlike the traditional LS periodogram.
+
+The reported statistic is `LS = (χ0² − χ(f)²) / χ0²`, where `χ0²` is χ² about the weighted mean and `χ(f)²` is χ² about the best-fit sinusoid at frequency `f`. With `noGLS=True` the wrapper instead computes the standard un-normalized Lomb-Scargle power.
+
+CLI equivalent: [`-LS`](../../cli/period-finding.md#-ls-generalized-lomb-scargle).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `minp`, `maxp` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period search range (same units as the time column, typically days). See [Variable and expression parameters](#variable-and-expression-parameters) below; for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| `minp`, `maxp` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period search range (same units as the time column, typically days). See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
 | `subsample` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Frequency step as a fraction of 1/T (time span). Smaller values = finer resolution. Typical: `1e-3`. Accepts variable names, expressions, and per-LC arrays. |
-| `npeaks` | `int` | Number of peaks to report. Default `5`. |
-| `save_periodogram` | `bool`, `str`, or `Output` | Controls auxiliary file output. `True` captures as `result.files["LS_periodogram_N"]`; a path string writes to that directory without capturing; `Output(path, capture=True)` does both. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `noGLS` | `bool` | Use the classical (non-generalised) Lomb-Scargle statistic instead of the generalised (Zechmeister & Kurster) version. |
-| `whiten` | `bool` | Iteratively subtract the best-fit sinusoid and re-search. |
-| `clip` | `float` | Sigma-clipping threshold applied during whitening iterations. |
-| `bootstrap` | `int` | Number of bootstrap resamples for false-alarm probability estimation. |
-| `maskpoints` | `str` or `None` | Name of a mask variable; points where the variable is non-zero are excluded from the periodogram. |
-| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the periodogram at a known period and report its significance. See [fixperiod_snr — fixed-period significance](#fixperiod_snr-fixed-period-significance) below. |
+| `npeaks` | `int` | Number of highest peaks to find and report. Default `5`. |
+| `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["LS_periodogram_N"]`; a path string writes to that directory without capturing; `Output(path, capture=True)` does both. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `noGLS` | `bool` | Compute the traditional (non-generalised) Lomb-Scargle periodogram instead of the GLS form. |
+| `whiten` | `bool` | After each peak, whiten the light curve at that period before searching for the next. The SNR of each peak is computed on the whitened periodogram. |
+| `clip`, `clipiter` | `float`, `int` | Sigma-clipping parameters for the mean / RMS used in the SNR estimate. `clip` is the σ factor; `clipiter=1` enables iterative clipping (default: iterative 5σ). |
+| `bootstrap` | `int` or `None` | Number of bootstrap resamples for false-alarm probability estimation. Each simulation reuses the observed times with magnitudes drawn randomly with replacement. |
+| `maskpoints` | `str` or `None` | Name of a mask variable; points where the variable is `≤ 0` are excluded from the periodogram. |
+| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the periodogram at a known period and report its significance. See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 
-Output statistics include `LS_Period_1_N`, `LS_Amplitude_1_N`, `Log10_LS_Prob_1_N` (log₁₀ of the false-alarm probability) for each of the `npeaks` peaks (N = 0-based command index, or the `columnsuffix` string).
+**Output**
 
-CLI equivalent: `-LS minp maxp subsample npeaks [operiodogram dir] [noGLS] [whiten] ...`
-
-## fixperiod_snr — fixed-period significance
-
-When `fixperiod_snr` is set, vartools evaluates the periodogram at a single known period and appends four extra output columns (N = 0-based pipeline index of the LS command):
+Per peak `k` (1 to `npeaks`) and command index `N`:
 
 | Column | Description |
 |--------|-------------|
-| `LS_PeriodFix_N` | The fixed period used (omitted when `fixperiod_snr` is a plain number, since it is already known). |
-| `Log10_LS_Prob_PeriodFix_N` | Log₁₀ false-alarm probability at that period. |
-| `LS_Periodogram_Value_PeriodFix_N` | LS power at that period. |
-| `LS_SNR_PeriodFix_N` | SNR = (power − mean) / σ. |
+| `LS_Period_k_N` | Best period of peak `k` (days). |
+| `Log10_LS_Prob_k_N` | Log₁₀ of the formal false-alarm probability. |
+| `LS_SNR_k_N` | Spectroscopic SNR: `(LS − ⟨LS⟩) / RMS(LS)`. |
 
-The accepted forms and the CLI tokens they emit:
+When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
 
-| Python value | Emitted CLI tokens | When to use |
-|---|---|---|
-| `1.234` (number) | `fixperiodSNR fix 1.234` | Period known at pipeline-construction time. |
-| `"ls"` | `fixperiodSNR ls` | Use the best period found by the most recent prior `-LS` run. |
-| `"aov"` | `fixperiodSNR aov` | Use the best period found by the most recent prior `-aov` run. |
-| `"injectharm"` | `fixperiodSNR injectharm` | Use the injected-signal period from a prior injection run. |
-| `"fixcolumn LS_Period_1_0"` | `fixperiodSNR fixcolumn LS_Period_1_0` | Read the period from a named per-star column. |
-| `"list"` | `fixperiodSNR list` | Read the period from the current list-file column. |
-| `"list column 2"` | `fixperiodSNR list column 2` | Read the period from column 2 of the list file. |
+When `save_periodogram` is enabled:
 
-!!! tip "Back-references work across chain steps"
-    `fixperiod_snr` accepts `"ls"`, `"aov"`, `"injectharm"`, and `"fixcolumn NAME"` in both single-Pipeline usage and across chain boundaries (e.g. `lc.LS(...).LS(fixperiod_snr="ls")`). When the keyword appears, pyvartools substitutes the concrete numeric value pulled from the prior `Result` before invoking vartools. The `"aov"` keyword picks the most recent prior `-aov` *or* `-aov_harm`, whichever ran later. `"fixcolumn NAME"` requires a column name (not a numeric column index) when used across a chain boundary. A missing prior command raises `LookupError`.
+| File key | Description |
+|----------|-------------|
+| `result.files["LS_periodogram_N"]` | DataFrame with columns `freq`, `power` (and the prewhitened periodogram rows when `whiten=True`). |
 
-## Variable and expression parameters
+**References**
 
-Most numeric parameters throughout pyvartools now accept variable names and expressions in addition to fixed numeric values. This includes parameters on commands such as `clip`, `fluxtomag`, `difffluxtomag`, `medianfilter`, `harmonicfilter`, `linfit`, `Injectharm`, `Injecttransit`, `MandelAgolTransit`, `Starspot`, `nonlinfit`, `BLSFixDurTc`, `BLSFixPerDurTc`, `autocorrelation`, `dftclean`, `wwz`, `binlc`, `addnoise`, `microlens`, and `Phase`.
-
-As an example, `minp`, `maxp`, and `subsample` on `LS` each accept four forms:
-
-| Value | Emitted CLI tokens | When to use |
-|-------|--------------------|-------------|
-| A number (`float` or `int`) | `0.5` | Fixed value known at pipeline-construction time. |
-| A bare identifier string, e.g. `"minperiod"` | `var minperiod` | Value is read from a named per-star vartools variable — typically one loaded from a list file via `run_filelist`. |
-| Any other string, e.g. `"tspan/200"` | `expr tspan/200` | Evaluated as a math expression using vartools' built-in expression engine, per light curve. |
-| A numpy array, `PerLC`, or `pd.Series` | *(handled automatically)* | A different value for each light curve in a batch run. See [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
-
-The identifier rule is: if the string matches `[A-Za-z_]\w*` it is treated as a variable name; otherwise it is treated as an expression.
-
-!!! note "Defining variables for the `expr` form"
-    The `expr` keyword evaluates an expression against vartools' internal variable registry at the time each light curve is processed. Variables such as `tspan` are *not* built-in; they must be defined by prior commands in the same pipeline. Use `cmd.stats` to compute per-star statistics and `cmd.expr` to derive new variables from them:
-
-    ```python
-    cmd.stats("t", "min,max")                         # → STATS_t_MIN_0, STATS_t_MAX_0
-    cmd.expr("tspan=STATS_t_MAX_0-STATS_t_MIN_0")     # → tspan
-    ```
-
-    The `var` form similarly requires the named variable to exist in the per-star variable registry. This is most naturally supplied via `run_filelist` with a list file that includes per-star columns for `minp` and `maxp`.
+Zechmeister & Kürster 2009, A&A, 496, 577 and Press et al. 1992 (*Numerical Recipes*) for the GLS form. For the traditional LS periodogram, also cite Lomb 1976, ApSS, 39, 447; Scargle 1982, ApJ, 263, 835; Press & Rybicki 1989, ApJ, 338, 277.
 
 **Examples**
 
@@ -149,7 +128,9 @@ After pre-whitening peak 1 the periodogram looks like this — the dominant 1.23
 
 ---
 
-## `aov` — Analysis of Variance
+### `aov` — Phase-Binned Analysis of Variance
+
+**Syntax**
 
 ```python
 cmd.aov(minp, maxp, subsample, finetune, npeaks=5, nbin=None,
@@ -157,21 +138,51 @@ cmd.aov(minp, maxp, subsample, finetune, npeaks=5, nbin=None,
         clipiter=None, uselog=False, maskpoints=None, fixperiod_snr=None)
 ```
 
+**Description**
+
+Perform an Analysis of Variance (AoV) period search using phase binning. For each trial frequency, the light curve is phase-folded and binned; the AoV statistic θ_aov measures how much variance is explained by the phase bins relative to the total variance. A high θ_aov indicates a phase-coherent signal.
+
+The initial search uses a frequency step of `subsample/T`. The top peaks are refined to a resolution of `finetune/T`. Use AoV instead of LS when the signal is strictly periodic but non-sinusoidal (e.g. eclipsing binaries, pulsating stars) — AoV is less sensitive to the shape of the variation.
+
+CLI equivalent: [`-aov`](../../cli/period-finding.md#-aov-phase-binned-analysis-of-variance).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `minp`, `maxp`, `subsample` | `float` or `str` | Period range and frequency step (same as LS). Accept variable names and expressions — see [Variable and expression parameters](#variable-and-expression-parameters).  Also accept per-LC arrays — see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
-| `finetune` | `float` or `str` | Oversampling factor applied near peak frequencies for fine-tuning. Accepts var/expr forms and per-LC arrays. |
-| `npeaks` | `int` | Number of peaks to report. |
-| `nbin` | `int`, `str`, or `None` | Number of phase bins. If `None`, vartools selects automatically. Accepts var/expr forms and per-LC arrays. |
+| `minp`, `maxp`, `subsample` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period range and frequency step (same forms as `LS`). See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| `finetune` | `float` or `str` | Fine-tuning frequency step factor applied near peak frequencies. Accepts var/expr forms and per-LC arrays. |
+| `npeaks` | `int` | Number of peaks to report. Default `5`. |
+| `nbin` | `int`, `str`, or `None` | Number of phase bins. Default `None` (vartools default = 8). Accepts var/expr forms and per-LC arrays. |
 | `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["aov_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `uselog` | `bool` | Use the log of the AOV statistic. |
-| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the AOV periodogram at a known period and report its significance. Same forms as `LS.fixperiod_snr`. When set, appends `PeriodFix_N`, `AOV_PeriodFix_N`, `AOV_SNR_PeriodFix_N`, `AOV_NEG_LN_FAP_PeriodFix_N`. |
+| `whiten` | `bool` | Whiten the light curve at each peak before searching for the next. |
+| `clip`, `clipiter` | `float`, `int` | Sigma-clipping parameters for the SNR calculation (default: iterative 5σ). |
+| `uselog` | `bool` | Use `−ln(θ_aov)` for the SNR statistic; also outputs the mean and RMS of `−ln(θ_aov)`. |
+| `maskpoints` | `str` or `None` | Name of a mask variable; points where the variable is `≤ 0` are excluded. |
+| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the AoV periodogram at a known period and report its significance. See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 
-`fixperiod_snr` accepts the same `"ls"` / `"aov"` / `"injectharm"` / `"fixcolumn NAME"` back-reference keywords as `LS.fixperiod_snr`, and they resolve correctly both inside a single `Pipeline` and across chain steps.
+**Output**
 
-Use AoV instead of LS when the signal is strictly periodic but non-sinusoidal (e.g. eclipsing binaries, pulsating stars). AoV is less sensitive to the shape of the variation.
+Per peak `k` (1 to `npeaks`) and command index `N`:
 
-CLI equivalent: `-aov [Nbin N] minp maxp subsample finetune npeaks ...`
+| Column | Description |
+|--------|-------------|
+| `Period_k_N` | Best period of peak `k` (days). |
+| `AOV_k_N` | θ_aov statistic. |
+| `AOV_SNR_k_N` | Signal-to-noise ratio in the periodogram. |
+| `AOV_NEG_LOG_FAP_k_N` | `−ln(FAP)` (formal false alarm probability). |
+
+When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
+
+When `save_periodogram` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["aov_periodogram_N"]` | DataFrame: frequency vs. θ_aov. |
+
+**References**
+
+Schwarzenberg-Czerny 1989, MNRAS, 241, 153 and Devor 2005, ApJ, 628, 411.
 
 **Examples**
 
@@ -196,7 +207,9 @@ print(result.vars["AOV_SNR_PeriodFix_1"])
 
 ---
 
-## `aov_harm` — Multi-harmonic AoV
+### `aov_harm` — Multi-Harmonic Analysis of Variance
+
+**Syntax**
 
 ```python
 cmd.aov_harm(nharm, minp, maxp, subsample, finetune, npeaks=5,
@@ -204,16 +217,47 @@ cmd.aov_harm(nharm, minp, maxp, subsample, finetune, npeaks=5,
              clipiter=None, maskpoints=None, fixperiod_snr=None)
 ```
 
+**Description**
+
+Perform an AoV period search fitting a multi-harmonic model in place of phase bins. The model signal has `nharm` harmonics; if `nharm < 1`, the number of harmonics is varied automatically to minimise the false-alarm probability (with a penalty for overfitting). All other parameters behave identically to `aov`.
+
+Multi-harmonic AoV is preferable to phase-binned AoV for highly non-sinusoidal but smoothly-varying signals such as RR Lyrae, Cepheids, and W UMa systems.
+
+CLI equivalent: [`-aov_harm`](../../cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `nharm` | `int` or `str` | Number of harmonics to include in the model.  Also accepts variable names (`"nharmvar"`) and expressions (`"npeaks*2"`) — see [Variable and expression parameters](#variable-and-expression-parameters).  Also accepts per-LC arrays — see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
-| `minp`, `maxp`, `subsample`, `finetune` | `float` or `str` | Same as `aov`. Accept variable names, expressions, and per-LC arrays — see [Variable and expression parameters](#variable-and-expression-parameters) and [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
-| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the AOV_HARM periodogram at a known period and report its significance. Same forms and output columns as `aov.fixperiod_snr`. Accepts the `"ls"` / `"aov"` / `"injectharm"` / `"fixcolumn NAME"` back-references in single-Pipeline and chain usage. |
-| All others | — | Same as `aov`. |
+| `nharm` | `int`, `str`, numpy array, `PerLC`, or `pd.Series` | Number of harmonics in the model (≥ 1). Set to `0` or negative for automatic selection. Accepts variable names (`"nharmvar"`), expressions (`"npeaks*2"`), and per-LC arrays. |
+| `minp`, `maxp`, `subsample`, `finetune` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Same as `aov`. |
+| `npeaks` | `int` | Number of peaks to report. |
+| `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["aov_harm_periodogram_N"]`. |
+| `whiten`, `clip`, `clipiter`, `maskpoints` | — | Same as `aov`. |
+| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the multi-harmonic AoV periodogram at a known period. See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 
-Multi-harmonic AoV projects the phase-folded light curve onto a truncated Fourier series. It is better than plain AoV for highly non-sinusoidal signals such as RR Lyrae, Cepheids, and W UMa systems.
+**Output**
 
-CLI equivalent: `-aov_harm nharm minp maxp subsample finetune npeaks ...`
+Same column structure as `aov` but with the `AOV_HARM` prefix:
+
+| Column | Description |
+|--------|-------------|
+| `Period_k_N` | Best period of peak `k` (days). |
+| `AOV_HARM_k_N` | Multi-harmonic AoV statistic. |
+| `AOV_HARM_SNR_k_N` | Signal-to-noise ratio in the periodogram. |
+| `AOV_HARM_NEG_LN_FAP_k_N` | `−ln(FAP)`. |
+
+When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
+
+When `save_periodogram` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["aov_harm_periodogram_N"]` | DataFrame: frequency vs. multi-harmonic AoV statistic. |
+
+**References**
+
+Schwarzenberg-Czerny 1996, ApJ, 460, L107.
 
 **Examples**
 
@@ -235,7 +279,9 @@ print(result.vars["AOV_HARM_SNR_PeriodFix_0"])
 
 ---
 
-## `BLS` — Box-Least-Squares transit search
+### `BLS` — Box-fitting Least Squares
+
+**Syntax**
 
 ```python
 cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
@@ -253,36 +299,82 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
         correct_lc=False, fittrap=False, maskpoints=None)
 ```
 
+**Description**
+
+Run the Box-Least Squares (BLS) transit search algorithm of Kovács, Zucker & Mazeh (2002). BLS searches for periodic box-shaped (or trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
+
+The transit-duration grid can be specified three ways:
+
+- **`r` mode** (default): pass `rmin`/`rmax` as the minimum/maximum stellar radius in solar radii. The fractional-duration range for each period is derived from `q = 0.076 · R^(2/3) · P^(-2/3)`.
+- **`q` mode**: pass `qmin`/`qmax` directly as the fractional transit duration (ingress-to-egress fraction).
+- **density mode**: set `density_mode=True` and supply `stellar_density` (g/cm³) plus `min_exp_dur_frac` / `max_exp_dur_frac` to bracket the expected circular-orbit duration.
+
+CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squares).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `minper`, `maxper` | `float` or `str` | Period search range.  Also accept variable names and expressions — see [Variable and expression parameters](#variable-and-expression-parameters).  Also accept per-LC arrays — see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
-| `rmin`, `rmax` | `float` or `str` | Minimum and maximum fractional transit duration (`r` mode, as a fraction of the orbital period).  Ignored when `qmin`/`qmax` are set.  Accept var/expr forms and per-LC arrays. |
-| `qmin`, `qmax` | `float`, `str`, or `None` | Minimum and maximum fractional transit duration in `q` mode (`q` = ingress-to-egress fraction, not full duration).  When set, emits `"q" qmin qmax` instead of `"r" rmin rmax`.  Accept var/expr forms and per-LC arrays. |
-| `nbins` | `int` or `str` | Number of phase bins.  Accepts var/expr forms and per-LC arrays. |
-| `timezone` | `float` | Time-zone offset (0 for HJD/BJD). |
+| `minper`, `maxper` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period search range (days). See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| `rmin`, `rmax` | `float` or `str` | `r`-mode duration bounds (default mode). Ignored when `qmin`/`qmax` are set. |
+| `qmin`, `qmax` | `float`, `str`, or `None` | `q`-mode duration bounds (fractional transit duration). When set, emits `"q" qmin qmax` instead of `"r" rmin rmax`. |
+| `nbins` | `int` or `str` | Number of phase bins (≥ `2/qmin`). Accepts var/expr/PerLC forms. |
+| `timezone` | `float` | Time-zone offset (0 for HJD/BJD); affects the single-night Δχ² fraction. |
 | `npeaks` | `int` | Number of transit candidates to report. |
-| `subsample` | `float` or `str` | Frequency oversampling factor.  Accepts var/expr forms and per-LC arrays. |
-| `nfreq` | `int`, `str`, or `None` | Fixed number of test frequencies (overrides `subsample`).  Accepts var/expr forms and per-LC arrays. |
-| `density_mode` | `bool` | Use stellar density to set transit duration bounds instead of `rmin`/`rmax`. |
-| `stellar_density` | `float`, `str`, or `None` | Stellar density (g/cm³) for density mode.  Accepts var/expr forms and per-LC arrays. |
-| `min_exp_dur_frac`, `max_exp_dur_frac` | `float` or `str` | Expected-duration fractions for density mode (default `0.5` and `1.5`).  Accept var/expr forms and per-LC arrays. |
-| `df` | `float`, `str`, or `None` | Fixed frequency step (alternative to `subsample`).  Accepts var/expr forms and per-LC arrays. |
-| `extraparams` | `bool` | Compute extra BLS statistics (epoch, depth, etc.). |
-| `nobinnedrms` | `bool` | Do not compute binned RMS statistics. |
-| `freq_grid` | `str` or `None` | Frequency grid mode: `"stepP"` (uniform in period) or `"steplogP"` (log-uniform). |
-| `adjust_qmin` | `bool` | Automatically adjust `qmin` based on the minimum cadence. |
-| `reduce_nbins` | `bool` | Reduce `nbins` when `adjust_qmin` requires it (only active when `adjust_qmin=True`). |
-| `reportharmonics` | `bool` | Report harmonic periods (½, ⅓, … of best period) as additional candidates. |
-| `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["BLS_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `subsample` | `float` or `str` | Frequency oversampling factor. |
+| `nfreq` | `int`, `str`, or `None` | Fixed number of test frequencies (overrides `subsample`). |
+| `density_mode` | `bool` | Use stellar density to set transit-duration bounds. Required for the Ofir (2014) optimal grid. |
+| `stellar_density` | `float`, `str`, or `None` | Stellar density (g/cm³) for density mode. |
+| `min_exp_dur_frac`, `max_exp_dur_frac` | `float` or `str` | Expected-duration fractions for density mode (default `0.5` and `1.5`). |
+| `df` | `float`, `str`, or `None` | Fixed frequency step (alternative to `subsample`). |
+| `extraparams` | `bool` | Include additional false-positive diagnostic columns in the output. |
+| `nobinnedrms` | `bool` | Compute `BLS_SN` without binned RMS (faster, but SN is suppressed for high-significance peaks). |
+| `freq_grid` | `str` or `None` | `"stepP"` for uniform period sampling, `"steplogP"` for log-uniform. |
+| `adjust_qmin` | `bool` | Adaptively increase `qmin` at each frequency to `max(qmin, mindt·f)`. |
+| `reduce_nbins` | `bool` | (With `adjust_qmin=True`) adaptively reduce `nbins` at each frequency. |
+| `reportharmonics` | `bool` | Report period harmonics (½, ⅓, …) as additional candidates. |
+| `save_periodogram` | `bool`, `str`, or `Output` | BLS spectrum file. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_model` | `bool`, `str`, or `Output` | Best-fit transit model. `True` captures as `result.files["BLS_model_N"]`. |
 | `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["BLS_phcurve_N"]`. |
 | `save_jdcurve` | `bool`, `str`, or `Output` | JD-sampled model curve. `True` captures as `result.files["BLS_jdcurve_N"]`. |
-| `correct_lc` | `bool` | Subtract the best-fit box from the light curve. |
-| `fittrap` | `bool` | Fit a trapezoidal rather than a box-shaped transit. |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `fittrap` | `bool` | Fit a trapezoidal rather than box-shaped transit at each peak. Adds `BLS_Qingress_k_N` and `BLS_OOTmag_k_N` to the output. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded from the BLS spectrum. |
 
-Key output statistics: `BLS_Period_1_N`, `BLS_SDE_1_N` (signal detection efficiency), `BLS_SN_1_N` (signal-to-noise), `BLS_Depth_1_N`, `BLS_Qtran_1_N` (fractional duration), `BLS_Tc_1_N` (transit epoch).
+**Output**
 
-CLI equivalent: `-BLS r rmin rmax minper maxper [nf N | optimal s] nbins timezone npeaks ...`
+Per peak `k` (1 to `npeaks`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `BLS_Period_k_N` | Best period of peak `k` (days). |
+| `BLS_Tc_k_N` | Mid-transit epoch. |
+| `BLS_SN_k_N` | Signal-to-noise ratio in the BLS spectrum. |
+| `BLS_SR_k_N` | BLS spectral residual. |
+| `BLS_SDE_k_N` | Signal detection efficiency. |
+| `BLS_Depth_k_N` | Transit depth (magnitudes). |
+| `BLS_Qtran_k_N` | Fractional transit duration `q`. |
+| `BLS_deltaChi2_k_N` | Δχ² of the best-fit transit. |
+| `BLS_SignaltoPinknoise_k_N` | Signal-to-pink-noise ratio. |
+| `BLS_Ntransits_k_N` | Number of observed transits. |
+| `BLS_Npointsintransit_k_N` | Points within the transit window. |
+| `BLS_fraconenight_k_N` | Fraction of Δχ² from a single night. |
+| `BLS_Rednoise_k_N` | Estimated red noise level. |
+| `BLS_Whitenoise_k_N` | Estimated white noise level. |
+| `BLS_Qingress_k_N`, `BLS_OOTmag_k_N` | Ingress fraction and out-of-transit magnitude (only when `fittrap=True`). |
+
+When the corresponding `save_*` keyword is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["BLS_periodogram_N"]` | DataFrame: frequency vs. BLS spectral residual. |
+| `result.files["BLS_model_N"]` | DataFrame: phased data with best-fit transit model overlaid. |
+| `result.files["BLS_phcurve_N"]` | DataFrame: model phase curve sampled on `[ophcurve_phmin, ophcurve_phmax]`. |
+| `result.files["BLS_jdcurve_N"]` | DataFrame: model curve sampled in JD space at `ojdcurve_jdstep`. |
+
+**References**
+
+Kovács, Zucker & Mazeh 2002, A&A, 391, 369. For the Ofir (2014) optimal frequency sampling (used in density mode), cite Ofir 2014, A&A, 561, A138.
 
 **Examples**
 
@@ -326,7 +418,9 @@ The output `*.bls.model` file contains the phased data and the best-fit trapezoi
 
 ---
 
-## `BLSFixPer` — BLS with fixed period
+### `BLSFixPer` — BLS at a Fixed Period
+
+**Syntax**
 
 ```python
 cmd.BLSFixPer(period, rmin=0.01, rmax=0.1, nbins=200, timezone=0,
@@ -335,15 +429,57 @@ cmd.BLSFixPer(period, rmin=0.01, rmax=0.1, nbins=200, timezone=0,
               maskpoints=None)
 ```
 
-Searches for the best transit epoch and duration at a known (fixed) period. Useful when a period has already been identified from a prior BLS or LS run.
+**Description**
+
+Run BLS at a single fixed period, searching only for the transit phase, depth, and duration. Useful as a second pass after a full BLS or LS period search.
+
+CLI equivalent: [`-BLSFixPer`](../../cli/period-finding.md#-blsfixper-bls-at-a-fixed-period).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `qmin`, `qmax` | `float` or `None` | Use `q` mode for duration bounds (ingress-to-egress fraction). When set, emits `"q" qmin qmax` instead of `"r" rmin rmax`. |
-| All others | — | Same as `BLS`. |
+| `period` | `float` or `str` | Fixed period (days). Accepts back-reference keywords — see the tip below. |
+| `rmin`, `rmax` | `float` or `str` | `r`-mode duration bounds. |
+| `qmin`, `qmax` | `float` or `None` | `q`-mode duration bounds (ingress-to-egress fraction). When set, emits `"q" qmin qmax` instead of `"r" rmin rmax`. |
+| `nbins` | `int` or `str` | Number of phase bins. |
+| `timezone` | `float` | Time-zone offset (0 for HJD/BJD). |
+| `save_model` | `bool`, `str`, or `Output` | Best-fit transit model. `True` captures as `result.files["BLSFixPer_model_N"]`. |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
 
 !!! tip "Back-references for `period`"
     `period` accepts `"ls"`, `"aov"`, and `"fixcolumn NAME"` in addition to numeric values. The keyword resolves to the best period from the most recent matching prior command and works equally inside a single `Pipeline` or across chain steps (e.g. `lc.LS(...).BLSFixPer(period="ls")`). With no matching prior command in the chain, a `LookupError` is raised.
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `BLSFixPer_Period_N` | Period used. |
+| `BLSFixPer_Tc_N` | Mid-transit epoch. |
+| `BLSFixPer_SR_N` | BLS spectral residual. |
+| `BLSFixPer_Depth_N` | Transit depth (mag). |
+| `BLSFixPer_Qtran_N` | Fractional transit duration. |
+| `BLSFixPer_deltaChi2_N` | Δχ² of the transit. |
+| `BLSFixPer_SignaltoPinknoise_N` | Signal-to-pink-noise. |
+| `BLSFixPer_Ntransits_N` | Number of observed transits. |
+| `BLSFixPer_Npointsintransit_N` | Points within the transit window. |
+| `BLSFixPer_fraconenight_N` | Fraction of Δχ² from one night. |
+| `BLSFixPer_Rednoise_N`, `BLSFixPer_Whitenoise_N` | Noise estimates. |
+| `BLSFixPer_Qingress_N`, `BLSFixPer_OOTmag_N` | Only when `fittrap=True`. |
+
+When `save_model` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["BLSFixPer_model_N"]` | DataFrame: phased data with the best-fit transit model. |
+
+**References**
+
+Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 
 **Examples**
 
@@ -363,7 +499,9 @@ print(result.vars["BLSFixPer_Qtran_1"])     # fractional duration
 
 ---
 
-## `BLSFixDurTc` — BLS with fixed duration and epoch, searching for period
+### `BLSFixDurTc` — BLS with Fixed Transit Duration and Epoch
+
+**Syntax**
 
 ```python
 cmd.BLSFixDurTc(duration, Tc,
@@ -378,41 +516,57 @@ cmd.BLSFixDurTc(duration, Tc,
                 maskpoints=None)
 ```
 
-Runs a BLS period search with the transit duration and epoch (Tc) held fixed.
-The period that maximises the BLS statistic is found and reported.
+**Description**
 
-`duration` and `Tc` each accept:
+Run BLS with the transit duration and reference epoch fixed; the period is searched over a grid from `minper` to `maxper`. Optionally the transit depth and ingress fraction (`qgress`) can also be fixed. For `qgress`: `0` = box-shaped, `0.5` = V-shaped (grazing).
 
-- A float → `fix <value>` (same value for all light curves)
-- `"fixcolumn <colname>"` → read from a named per-star column
-- `"list"` or `"list column <N>"` → read from an input-list column
+`duration` and `Tc` each accept either a float (→ `fix <value>`), `"fixcolumn <colname>"`, or `"list"` / `"list column <N>"`.
 
-| Parameter | Description |
-|---|---|
-| `duration` | Transit duration (days). |
-| `Tc` | Epoch of transit center (JD/BJD). |
-| `minper`, `maxper` | Period search range (days). |
-| `nfreq` | Number of trial frequencies. |
-| `timezone` | Add to JD to get local date (0 for UTC/BJD). |
-| `npeaks` | Number of peaks to report. |
-| `fixdepth` | Fix transit depth to this value (or column/list spec); `None` to optimise. |
-| `qgress` | Fractional ingress/egress duration (requires `fixdepth`). |
-| `save_periodogram` | Write BLS power spectrum to output dir. |
-| `save_model` | Write best-fit transit model to output dir. |
-| `correct_lc` | Subtract transit model from light curve. |
-| `fittrap` | Fit a trapezoidal transit instead of a box. |
+CLI equivalent: [`-BLSFixDurTc`](../../cli/period-finding.md#-blsfixdurtc-bls-with-fixed-transit-duration-and-epoch).
 
-Output columns (suffix `N` is the pipeline command index):
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `duration` | `float` or `str` | Transit duration (days). |
+| `Tc` | `float` or `str` | Mid-transit epoch (JD/BJD). |
+| `minper`, `maxper` | `float` or `str` | Period search range (days). |
+| `nfreq` | `int` or `str` | Number of trial frequencies. |
+| `timezone` | `float` | Time-zone offset (0 for UTC/BJD). |
+| `npeaks` | `int` | Number of peaks to report. |
+| `fixdepth` | `float`, `str`, or `None` | Fix transit depth to this value (or column/list spec); `None` to optimise. |
+| `qgress` | `float`, `str`, or `None` | Fractional ingress/egress duration (requires `fixdepth`). |
+| `save_periodogram`, `save_model`, `save_phcurve`, `save_jdcurve` | `bool`, `str`, or `Output` | Auxiliary file outputs (BLS spectrum, model, phase curve, JD curve). |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
+
+**Output**
+
+Per peak `k` (1 to `npeaks`) and command index `N`:
 
 | Column | Description |
-|---|---|
+|--------|-------------|
 | `BLSFixDurTc_Duration_N` | Fixed transit duration used. |
 | `BLSFixDurTc_Tc_N` | Fixed epoch used. |
-| `BLSFixDurTc_Period_1_N` | Best-fit period (first peak). |
-| `BLSFixDurTc_SN_1_N` | Signal-to-noise of best peak. |
-| `BLSFixDurTc_Depth_1_N` | Best-fit transit depth. |
-| `BLSFixDurTc_Qtran_1_N` | Fractional transit duration. |
-| `BLSFixDurTc_deltaChi2_1_N` | Δχ² of the best transit. |
+| `BLSFixDurTc_Period_k_N` | Best-fit period of peak `k`. |
+| `BLSFixDurTc_SN_k_N` | Signal-to-noise of peak `k`. |
+| `BLSFixDurTc_Depth_k_N` | Best-fit transit depth. |
+| `BLSFixDurTc_Qtran_k_N` | Fractional transit duration. |
+| `BLSFixDurTc_deltaChi2_k_N` | Δχ² of the best transit. |
+
+When `save_*` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["BLSFixDurTc_periodogram_N"]` | BLS spectrum (frequency vs. SR). |
+| `result.files["BLSFixDurTc_model_N"]` | Phased data with the best-fit transit model. |
+| `result.files["BLSFixDurTc_phcurve_N"]` | Model phase curve. |
+| `result.files["BLSFixDurTc_jdcurve_N"]` | Model curve in JD space. |
+
+**References**
+
+Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 
 **Examples**
 
@@ -433,7 +587,9 @@ result = pipe.run(lc)
 
 ---
 
-## `BLSFixPerDurTc` — BLS with fixed period, duration, and epoch
+### `BLSFixPerDurTc` — BLS with Fixed Period, Duration, and Epoch
+
+**Syntax**
 
 ```python
 cmd.BLSFixPerDurTc(period, duration, Tc,
@@ -446,29 +602,35 @@ cmd.BLSFixPerDurTc(period, duration, Tc,
                    maskpoints=None)
 ```
 
-Computes BLS transit statistics for a fully specified signal — no period
-search is performed. The period, duration, and Tc are all fixed; the depth
-is optimised by default (or also fixed if `fixdepth` is given).
+**Description**
 
-`period`, `duration`, and `Tc` each accept a float, `"fixcolumn <colname>"`,
-or `"list"` / `"list column <N>"` (same forms as `BLSFixDurTc`).
+Compute BLS transit statistics for a fully specified signal — no period search is performed. The period, duration, and `Tc` are all fixed; the depth is optimised by default (or also fixed when `fixdepth` is given).
 
-| Parameter | Description |
-|---|---|
-| `period` | Transit period (days). |
-| `duration` | Transit duration (days). |
-| `Tc` | Epoch of transit center (JD/BJD). |
-| `timezone` | Add to JD to get local date (0 for UTC/BJD). |
-| `fixdepth` | Fix transit depth (or column/list spec); `None` to optimise. |
-| `qgress` | Fractional ingress/egress duration (requires `fixdepth`). |
-| `save_model` | Write best-fit transit model to output dir. |
-| `correct_lc` | Subtract transit model from light curve. |
-| `fittrap` | Fit a trapezoidal transit instead of a box. |
+`period`, `duration`, and `Tc` each accept a float, `"fixcolumn <colname>"`, or `"list"` / `"list column <N>"` (same forms as `BLSFixDurTc`).
 
-Output columns (suffix `N` is the pipeline command index):
+CLI equivalent: [`-BLSFixPerDurTc`](../../cli/period-finding.md#-blsfixperdurtc-bls-with-fixed-period-duration-and-epoch).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | `float` or `str` | Transit period (days). |
+| `duration` | `float` or `str` | Transit duration (days). |
+| `Tc` | `float` or `str` | Mid-transit epoch (JD/BJD). |
+| `timezone` | `float` | Time-zone offset (0 for UTC/BJD). |
+| `fixdepth` | `float`, `str`, or `None` | Fix transit depth (or column/list spec); `None` to optimise. |
+| `qgress` | `float`, `str`, or `None` | Fractional ingress/egress duration (requires `fixdepth`). |
+| `save_model`, `save_phcurve`, `save_jdcurve` | `bool`, `str`, or `Output` | Auxiliary file outputs. |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
 
 | Column | Description |
-|---|---|
+|--------|-------------|
 | `BLSFixPerDurTc_Period_N` | Period used. |
 | `BLSFixPerDurTc_Duration_N` | Duration used. |
 | `BLSFixPerDurTc_Tc_N` | Epoch used. |
@@ -478,6 +640,18 @@ Output columns (suffix `N` is the pipeline command index):
 | `BLSFixPerDurTc_SignaltoPinknoise_N` | Signal-to-pink-noise. |
 | `BLSFixPerDurTc_fraconenight_N` | Fraction of Δχ² from one night. |
 | `BLSFixPerDurTc_MeanMag_N` | Out-of-transit mean magnitude. |
+
+When `save_*` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["BLSFixPerDurTc_model_N"]` | Phased data with the best-fit transit model. |
+| `result.files["BLSFixPerDurTc_phcurve_N"]` | Model phase curve. |
+| `result.files["BLSFixPerDurTc_jdcurve_N"]` | Model curve in JD space. |
+
+**References**
+
+Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 
 **Examples**
 
@@ -498,7 +672,9 @@ result = pipe.run(lc)
 
 ---
 
-## `dftclean` — CLEAN periodogram
+### `dftclean` — DFT Power Spectrum + CLEAN
+
+**Syntax**
 
 ```python
 cmd.dftclean(nbeam, maxfreq=None, save_dspec=False, save_wfunc=False,
@@ -509,16 +685,53 @@ cmd.dftclean(nbeam, maxfreq=None, save_dspec=False, save_wfunc=False,
              maskpoints=None)
 ```
 
-Computes the CLEAN deconvolution periodogram (Roberts et al. 1987). Output files: `"dftclean_dspec_N"` (dirty spectrum), `"dftclean_wfunc_N"` (window function), `"dftclean_cspec_N"` (CLEAN spectrum), `"dftclean_cbeam_N"` (CLEAN beam, when `outcbeam` is set).
+**Description**
+
+Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm of Kurtz (1985), and optionally deconvolve it with the CLEAN algorithm of Roberts, Lehar & Dreher (1987) to remove aliasing due to the window function.
+
+The CLEAN iteration starts from the dirty spectrum, identifies the strongest peak, subtracts a scaled CLEAN beam centred on that peak, and repeats until the residual is below `SNlimit · noise`. The `gain` parameter (∈ [0.1, 1.0]) controls how aggressively each iteration removes the peak: smaller is slower but more thorough.
+
+CLI equivalent: [`-dftclean`](../../cli/period-finding.md#-dftclean-dft-power-spectrum-clean).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `finddirtypeaks` | `int` or `None` | Number of peaks to find in the dirty spectrum before CLEANing. |
-| `finddirtypeaks_clip` | `float` or `None` | Sigma-clipping threshold for dirty-peak finding. |
-| `finddirtypeaks_clipiter` | `int` or `None` | Number of sigma-clipping iterations. |
+| `nbeam` | `int` or `str` | Number of frequency samples per `1/T` element (`T` = light-curve baseline). Controls spectral resolution. |
+| `maxfreq` | `float`, `str`, or `None` | Maximum frequency (cycles/day). Default: `1 / (2 · min_time_separation)` (Nyquist). |
+| `save_dspec`, `save_cspec`, `save_wfunc` | `bool`, `str`, or `Output` | Save the dirty spectrum, CLEAN spectrum, and window function. Captured as `result.files["dftclean_dspec_N"]`, `result.files["dftclean_cspec_N"]`, `result.files["dftclean_wfunc_N"]`. |
+| `gain`, `SNlimit` | `float` | CLEAN gain (∈ [0.1, 1.0]) and SN-stop threshold. CLEAN runs only when at least one of `save_cspec` / `npeaks` / `finddirtypeaks` is set. |
+| `npeaks` | `int` or `None` | Number of peaks to find in the *clean* spectrum. |
+| `finddirtypeaks` | `int` or `None` | Number of peaks to find in the *dirty* spectrum. |
+| `finddirtypeaks_clip`, `finddirtypeaks_clipiter` | `float`, `int` | Sigma-clipping for dirty-peak SNR (default: iterative 5σ). |
 | `outcbeam` | `bool`, `str`, or `Output` | Write the CLEAN beam to a file. Captured as `result.files["dftclean_cbeam_N"]`. |
-| `useampspec` | `bool` | Use the amplitude spectrum instead of power spectrum for CLEANing. |
-| `verboseout` | `bool` | Write verbose diagnostics to the output file. |
+| `useampspec` | `bool` | Compute SNR on the amplitude spectrum instead of the power spectrum. |
+| `verboseout` | `bool` | Include the mean and stddev of the spectrum (before and after clipping) in the output. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
+
+**Output**
+
+Per peak `k` (1 to `npeaks` or `finddirtypeaks`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `DFTCLEAN_DSPEC_PEAK_FREQ_k_N` | Frequency of dirty-spectrum peak `k` (cycles/day). |
+| `DFTCLEAN_DSPEC_PEAK_POW_k_N` | Power at the peak. |
+| `DFTCLEAN_DSPEC_PEAK_SNR_k_N` | SNR of the peak. |
+| `DFTCLEAN_CSPEC_PEAK_FREQ_k_N`, `_POW_k_N`, `_SNR_k_N` | Same trio for the CLEAN-spectrum peaks. |
+
+When `save_*` / `outcbeam` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["dftclean_dspec_N"]` | DataFrame: dirty power spectrum (frequency vs. power). |
+| `result.files["dftclean_cspec_N"]` | DataFrame: CLEAN power spectrum. |
+| `result.files["dftclean_wfunc_N"]` | DataFrame: window function. |
+| `result.files["dftclean_cbeam_N"]` | DataFrame: CLEAN beam. |
+
+**References**
+
+Kurtz 1985, MNRAS, 213, 773 for the FDFT algorithm. Roberts, Lehar & Dreher 1987, AJ, 93, 4 for the CLEAN algorithm.
 
 **Examples**
 
@@ -542,7 +755,9 @@ A second example injects three harmonics, runs CLEAN, and writes the four output
 
 ---
 
-## `wwz` — Weighted Wavelet Z-transform
+### `wwz` — Weighted Wavelet Z-Transform
+
+**Syntax**
 
 ```python
 cmd.wwz(maxfreq="auto", freqsamp=None, tau0="auto", tau1="auto",
@@ -552,13 +767,58 @@ cmd.wwz(maxfreq="auto", freqsamp=None, tau0="auto", tau1="auto",
         maxtransform_name=None, maskpoints=None)
 ```
 
-Time-frequency analysis for non-stationary signals. Output files: `"wwz_transform_N"` (full time-frequency map), `"wwz_maxtransform_N"` (maximum power vs. time).
+**Description**
+
+Compute the Weighted Wavelet Z-Transform (WWZ) as defined by Foster (1996), using an abbreviated Morlet wavelet:
+
+```
+f(z) = exp(i·2π·f·(t − τ) − c·(2π·f)²·(t − τ)²)
+```
+
+The transform is computed for all combinations of trial frequency (up to `maxfreq`) and time shift (`tau0` to `tau1` in steps of `dtau`). The result is a time-frequency map of signal power, especially useful for non-stationary signals. The decay constant `c` controls the trade-off between time and frequency resolution.
+
+CLI equivalent: [`-wwz`](../../cli/period-finding.md#-wwz-weighted-wavelet-z-transform).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `transform_format` | `str` or `None` | Output format for the full transform: `"fits"` or `"pm3d"`. Only applies when `save_transform` is set. |
-| `transform_name` | `str` or `None` | Naming format string for the full-transform output file (e.g. `"%s.wwz"`). |
-| `maxtransform_name` | `str` or `None` | Naming format string for the max-transform output file. |
+| `maxfreq` | `float`, `str`, or `"auto"` | Maximum frequency in cycles/day. `"auto"` = `1 / (2 · min_time_separation)`. |
+| `freqsamp` | `float`, `str`, or `None` | Frequency sampling as a multiple of `1/T`. |
+| `tau0`, `tau1` | `float`, `str`, or `"auto"` | Start and end times for the time-shift scan. `"auto"` uses min/max of the LC time. |
+| `dtau` | `float`, `str`, or `"auto"` | Step size in time shift. `"auto"` = minimum time separation. |
+| `c` | `float` or `str` | Morlet wavelet decay constant (default: `1/(8π²) ≈ 0.0125`). |
+| `save_transform` | `bool`, `str`, or `Output` | Write the full 2-D transform; captured as `result.files["wwz_transform_N"]`. |
+| `save_maxtransform` | `bool`, `str`, or `Output` | Write the max-Z projection over frequency; captured as `result.files["wwz_maxtransform_N"]`. |
+| `transform_format` | `str` or `None` | Output format for the full transform: `"fits"` or `"pm3d"`. Only used when `save_transform` is set. |
+| `transform_name`, `maxtransform_name` | `str` or `None` | Naming format strings for the output files (e.g. `"%s.wwz"`). |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `WWZ_maxZ_N` | Maximum value of the Z-transform over all time-shifts and frequencies. |
+| `WWZ_maxfreq_N` | Frequency at the maximum Z. |
+| `WWZ_maxpower_N` | Power at the maximum Z. |
+| `WWZ_maxamp_N` | Amplitude at the maximum Z. |
+| `WWZ_maxNeff_N` | Effective number of data points at the maximum Z. |
+| `WWZ_maxtau_N` | Time-shift at the maximum Z. |
+| `WWZ_maxmeanmag_N` | Local mean magnitude at the maximum Z. |
+| `WWZ_medZ_N`, `WWZ_med*_N` | Median over time-shifts of the maximum-Z frequency's Z value (and the corresponding median statistics for the other quantities). |
+
+When `save_*` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["wwz_transform_N"]` | Full time-frequency map of the transform. |
+| `result.files["wwz_maxtransform_N"]` | DataFrame: time vs. peak-frequency power. |
+
+**References**
+
+Foster 1996, AJ, 112, 1709.
 
 **Examples**
 
@@ -579,7 +839,9 @@ The transient ~0.3 cyc/day signal is visible only between days 5–20 of the ser
 
 ---
 
-## `GetLSAmpThresh` — LS amplitude threshold
+### `GetLSAmpThresh` — Minimum Detectable Amplitude
+
+**Syntax**
 
 ```python
 cmd.GetLSAmpThresh(period="ls", minp=0.1, thresh=10.0,
@@ -587,18 +849,42 @@ cmd.GetLSAmpThresh(period="ls", minp=0.1, thresh=10.0,
                    listfile=None, noGLS=False)
 ```
 
-Estimates the signal amplitude required to achieve a given detection threshold. Used in injection-recovery studies.
+**Description**
+
+Determine the minimum peak-to-peak amplitude that a signal at a given period must have to be detected by a Lomb-Scargle search with `−ln(FAP) > thresh`. The signal shape is either a Fourier series (`mode="harm"`) or read from a file (`mode="file"`). The threshold is computed by scaling the signal template until the LS statistic reaches the detection limit.
+
+Used primarily in injection-recovery studies — typically chained after a Lomb-Scargle search and a harmonic fit (see the example below).
+
+CLI equivalent: [`-GetLSAmpThresh`](../../cli/period-finding.md#-getlsampthresh-minimum-detectable-amplitude).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
+| `period` | `float` or `str` | Reference period. Accepts the `"ls"` back-reference keyword (use the period from the most recent `-LS`). See the tip below. |
+| `minp` | `float` | Minimum period that would be searched (sets the FAP scale). |
+| `thresh` | `float` | Desired `−ln(FAP)` detection threshold. |
 | `mode` | `str` | Signal model: `"harm"` (Fourier series, default) or `"file"` (read template from `listfile`). |
 | `nharm` | `int` | Number of harmonics (only when `mode="harm"`). |
 | `nsubharm` | `int` | Number of sub-harmonics (only when `mode="harm"`). |
-| `listfile` | `str` or `None` | Path to template signal file (required when `mode="file"`). |
-| `noGLS` | `bool` | Use classical Lomb-Scargle instead of the generalized (GLS) form. |
+| `listfile` | `str` or `None` | Path to template-signal list file (required when `mode="file"`). |
+| `noGLS` | `bool` | Use classical Lomb-Scargle instead of the generalised (GLS) form. |
 
 !!! tip "Back-reference for `period`"
     `period` accepts the `"ls"` keyword to inherit the best period from the most recent prior `-LS`. Unlike most back-references, this is resolved by the vartools CLI itself — the CLI only understands `"ls"` / `"list"` and cannot take a bare number in this slot. Within a single `Pipeline` the keyword passes through verbatim. Across a chain boundary, pyvartools detects the mismatch and raises `NotImplementedError` when no prior `-LS` is present in the chain — in that case, use a single `Pipeline` invocation that includes the LS step.
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `LS_AmplitudeScaleFactor_N` | Scale factor applied to the template signal at the detection threshold. |
+| `LS_MinimumAmplitude_N` | Resulting minimum peak-to-peak amplitude (mag). |
+
+**References**
+
+Same references as `LS` (Zechmeister & Kürster 2009; Press et al. 1992; Lomb 1976; Scargle 1982; Press & Rybicki 1989).
 
 **Examples**
 
@@ -616,3 +902,60 @@ print(result.vars["LS_MinimumAmplitude_2"])   # 0.00248 mag
 ```
 
 ---
+
+## Shared topics
+
+### `fixperiod_snr` — fixed-period significance
+
+Several period-finding commands (`LS`, `aov`, `aov_harm`) accept a `fixperiod_snr` keyword that evaluates the periodogram at a single known period and reports its significance, in addition to the regular peak search.
+
+When set, four extra output columns are appended (N = 0-based pipeline index of the command, `PREFIX` is `LS` / `AOV` / `AOV_HARM`):
+
+| Column | Description |
+|--------|-------------|
+| `PREFIX_PeriodFix_N` | The fixed period used (omitted when `fixperiod_snr` is a plain number — the value is already known to the caller). |
+| `Log10_PREFIX_Prob_PeriodFix_N` | Log₁₀ false-alarm probability at that period. |
+| `PREFIX_Periodogram_Value_PeriodFix_N` | Periodogram statistic at that period. |
+| `PREFIX_SNR_PeriodFix_N` | SNR = `(power − ⟨power⟩) / σ`. |
+
+Accepted Python values and the CLI tokens they emit:
+
+| Python value | Emitted CLI tokens | When to use |
+|---|---|---|
+| `1.234` (number) | `fixperiodSNR fix 1.234` | Period known at pipeline-construction time. |
+| `"ls"` | `fixperiodSNR ls` | Use the best period found by the most recent prior `-LS` run. |
+| `"aov"` | `fixperiodSNR aov` | Use the best period found by the most recent prior `-aov` (or `-aov_harm`) run. |
+| `"injectharm"` | `fixperiodSNR injectharm` | Use the injected-signal period from a prior injection run. |
+| `"fixcolumn LS_Period_1_0"` | `fixperiodSNR fixcolumn LS_Period_1_0` | Read the period from a named per-star column. |
+| `"list"` | `fixperiodSNR list` | Read the period from the current list-file column. |
+| `"list column 2"` | `fixperiodSNR list column 2` | Read the period from column 2 of the list file. |
+
+!!! tip "Back-references work across chain steps"
+    `fixperiod_snr` accepts `"ls"`, `"aov"`, `"injectharm"`, and `"fixcolumn NAME"` in both single-Pipeline usage and across chain boundaries (e.g. `lc.LS(...).LS(fixperiod_snr="ls")`). When the keyword appears, pyvartools substitutes the concrete numeric value pulled from the prior `Result` before invoking vartools. The `"aov"` keyword picks the most recent prior `-aov` *or* `-aov_harm`, whichever ran later. `"fixcolumn NAME"` requires a column name (not a numeric column index) when used across a chain boundary. A missing prior command raises `LookupError`.
+
+---
+
+### Variable and expression parameters
+
+Most numeric parameters throughout pyvartools accept variable names and expressions in addition to fixed numeric values. This includes parameters on the period-finding commands above as well as `clip`, `fluxtomag`, `difffluxtomag`, `medianfilter`, `harmonicfilter`, `linfit`, `Injectharm`, `Injecttransit`, `MandelAgolTransit`, `Starspot`, `nonlinfit`, `BLSFixDurTc`, `BLSFixPerDurTc`, `autocorrelation`, `dftclean`, `wwz`, `binlc`, `addnoise`, `microlens`, and `Phase`.
+
+As an example, `minp`, `maxp`, and `subsample` on `LS` each accept four forms:
+
+| Value | Emitted CLI tokens | When to use |
+|-------|--------------------|-------------|
+| A number (`float` or `int`) | `0.5` | Fixed value known at pipeline-construction time. |
+| A bare identifier string, e.g. `"minperiod"` | `var minperiod` | Value is read from a named per-star vartools variable — typically one loaded from a list file via `run_filelist`. |
+| Any other string, e.g. `"tspan/200"` | `expr tspan/200` | Evaluated as a math expression using vartools' built-in expression engine, per light curve. |
+| A numpy array, `PerLC`, or `pd.Series` | *(handled automatically)* | A different value for each light curve in a batch run. See [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+
+The identifier rule is: if the string matches `[A-Za-z_]\w*` it is treated as a variable name; otherwise it is treated as an expression.
+
+!!! note "Defining variables for the `expr` form"
+    The `expr` keyword evaluates an expression against vartools' internal variable registry at the time each light curve is processed. Variables such as `tspan` are *not* built-in; they must be defined by prior commands in the same pipeline. Use `cmd.stats` to compute per-star statistics and `cmd.expr` to derive new variables from them:
+
+    ```python
+    cmd.stats("t", "min,max")                         # → STATS_t_MIN_0, STATS_t_MAX_0
+    cmd.expr("tspan=STATS_t_MAX_0-STATS_t_MIN_0")     # → tspan
+    ```
+
+    The `var` form similarly requires the named variable to exist in the per-star variable registry. This is most naturally supplied via `run_filelist` with a list file that includes per-star columns for `minp` and `maxp`.

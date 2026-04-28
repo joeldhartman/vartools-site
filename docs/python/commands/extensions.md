@@ -38,20 +38,44 @@ pipe = (vt.Pipeline()
 
 All typed-wrapper pipelines automatically run in **subprocess mode** (library/in-process mode does not support dynamically loaded extensions).
 
+---
+
 ### `magadd` — add a constant to magnitudes
+
+**Syntax**
+
+```python
+cmd.magadd(value, lib_path=None)
+```
+
+**Description**
+
+Add a scalar offset to every magnitude in the light curve. The offset can be a fixed constant, a per-LC value from the input list, a previously computed output statistic, or an analytic expression. This is also the canonical template extension included in the source tree to demonstrate how to write user-defined VARTOOLS extensions.
+
+CLI equivalent: [`-magadd`](../../cli/extensions.md#-magadd).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `str` | Bare number → `fix value`; string → split as `"fix v"`, `"list [column N]"`, `"fixcolumn NAME"`, or `"expr EXPR"`. |
+| `lib_path` | `str`, optional | Path to `magadd.so` / `magadd.la`. Omit when installed and auto-loaded. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `Magadd_addval_N` | The offset value applied for that LC. |
+
+**Examples**
 
 ```python
 from pyvartools.commands import magadd
 pipe = vt.Pipeline().magadd(5.0)                      # fix 5.0
 pipe = vt.Pipeline().magadd("fixcolumn MeanMag_0")    # from prior stats column
 ```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `value` | `float` or `str` | Bare number → `fix value`; string → split as `"fix v"`, `"list [column N]"`, `"fixcolumn NAME"`, or `"expr EXPR"`. |
-| `lib_path` | `str`, optional | Path to `magadd.so` / `magadd.la`. |
-
-**Examples**
 
 ```python
 # Add 0.5 mag to every observation of EXAMPLES/2; the two rms calls show the
@@ -64,7 +88,45 @@ result = (vt.Pipeline()
 print(result.vars["RMS_0"], result.vars["RMS_2"])
 ```
 
+---
+
 ### `hatpiflag` — HATPI binary flag combiner
+
+**Syntax**
+
+```python
+cmd.hatpiflag(fiphot_string_flag_var, rejbadframe_mask_var,
+              TFA_outlier_mask_var, pointing_outlier_flag_var,
+              output_flag_var, lib_path=None)
+```
+
+**Description**
+
+Combine four per-observation HATPI quality indicators (fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag) into a single bit-packed flag variable suitable for HATPI photometry pipelines. Each input contributes a different bit to the output:
+
+- bits 0–3 (values 1, 2, 4, 8): set from the fiphot string flag — `X` (bad photometry) sets bit 0, `C` (saturated/hot) sets bit 1, `A` (asteroid) sets bit 2, `S` (satellite) sets bit 3 (`H`/`I`/`J`/`K` set combinations of bits 1–3).
+- bit 4 (value 16): set when the bad-frame mask flags the point as rejected.
+- bit 5 (value 32): set when the TFA-outlier mask flags the point as an outlier.
+- bit 6 (value 64): set when the pointing-outlier flag is 1.
+
+CLI equivalent: [`-hatpiflag`](../../cli/extensions.md#-hatpiflag).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fiphot_string_flag_var` | `str` | Name of the LC vector of one-character string flags from fiphot. |
+| `rejbadframe_mask_var` | `str` | Bad-frame mask vector (0 = rejected, 1 = keep). |
+| `TFA_outlier_mask_var` | `str` | TFA outlier mask vector (0 = outlier, 1 = keep). |
+| `pointing_outlier_flag_var` | `str` | Pointing outlier flag vector (1 = outlier, 0 = ok). |
+| `output_flag_var` | `str` | Name of the LC vector to receive the combined binary flag. |
+| `lib_path` | `str`, optional | Path to `hatpiflag.so` / `hatpiflag.la`. |
+
+**Output**
+
+`hatpiflag` writes its result into the named output LC vector (`output_flag_var`); it does not produce summary statistics directly. Use a downstream `stats` call to summarise the flag.
+
+**Examples**
 
 ```python
 from pyvartools.commands import hatpiflag
@@ -72,10 +134,6 @@ pipe = (vt.Pipeline()
         .hatpiflag("fiphot_flag", "rejbadframe_mask",
               "tfa_outlier_mask", "pointing_outlier_flag", "quality_flag"))
 ```
-
-Combines four per-observation inputs (fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag) into a single bit-packed flag written to a new output variable.
-
-**Examples**
 
 ```python
 # Read a 7-column LC (t/mag/err + four HATPI flag columns) and combine the
@@ -97,7 +155,67 @@ batch = (vt.Pipeline()
                         })
 ```
 
+---
+
 ### `fastchi2` — Palmer (2009) fast chi² periodogram
+
+**Syntax**
+
+```python
+cmd.fastchi2(Nharm, freqmax, freqmin=None, detrendorder=None,
+             t0=None, timespan=None, oversample=None, chimargin=None,
+             Npeak=None, norefitpeak=False,
+             save_per=False, save_model=False,
+             omodelvariable=None, lib_path=None)
+```
+
+**Description**
+
+Compute the Fast χ² periodogram using Palmer's algorithm, which searches for the best-fitting multi-harmonic sinusoidal model at each trial frequency. Each parameter accepts one of three sources: a number (emitted as `fix N`), or a string `"fix V"` / `"list [column N]"` / `"fixcolumn NAME"` / `"expr EXPR"`.
+
+CLI equivalent: [`-fastchi2`](../../cli/extensions.md#-fastchi2).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Nharm` | value-spec | Number of harmonics in the model (1 = fundamental only, 2 = +first overtone, …). |
+| `freqmax` | value-spec | Maximum search frequency (cycles/day). |
+| `freqmin` | value-spec, optional | Minimum search frequency (default 0). |
+| `detrendorder` | value-spec, optional | Polynomial order for pre-detrending (default 0). |
+| `t0` | value-spec, optional | Reference epoch for detrending. |
+| `timespan` | value-spec, optional | Total time span used for the Nyquist frequency. |
+| `oversample` | value-spec, optional | Oversampling factor for the periodogram grid. |
+| `chimargin` | value-spec, optional | χ² margin for selecting periodogram peaks to refine. |
+| `Npeak` | int, optional | Number of peaks to report. |
+| `norefitpeak` | bool | Skip the fine peak search; emit raw periodogram peaks only. |
+| `save_per` | `bool`, `str`, or `Output` | Periodogram output file. `True` captures as `result.files["fastchi2_per_N"]`. |
+| `save_model` | `bool`, `str`, or `Output` | Best-fit harmonic model output file. |
+| `omodelvariable` | `str`, optional | Name of an LC vector to store the model curve. |
+| `lib_path` | `str`, optional | Path to `fastchi2.so` / `fastchi2.la`. |
+
+**Output**
+
+Per peak `k` (1 to `Npeak`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `FastChi2_Period_k_N` | Best period of peak `k`. |
+| `FastChi2_Chi2_k_N` | χ² at the peak. |
+| `FastChi2_RChi2_k_N` | Reduced χ² at the peak. |
+
+When the corresponding `save_*` keyword is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["fastchi2_per_N"]` | DataFrame: frequency vs. χ² periodogram. |
+| `result.files["fastchi2_model_N"]` | DataFrame: best-fit harmonic model evaluated at the observed times. |
+
+**References**
+
+Cite Palmer 2009, ApJ, 695, 496.
+
+**Examples**
 
 ```python
 from pyvartools.commands import fastchi2
@@ -105,22 +223,6 @@ pipe = (vt.Pipeline()
         .fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
              oversample=4, Npeak=3, save_per=True))
 ```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `Nharm` | value-spec | Number of harmonics in the model. |
-| `freqmax` | value-spec | Maximum search frequency (cycles/day). |
-| `freqmin` | value-spec, optional | Minimum search frequency (default 0). |
-| `detrendorder` | value-spec, optional | Polynomial order for pre-detrending. |
-| `t0`, `timespan`, `oversample`, `chimargin` | value-spec, optional | Pre-search knobs; see the CLI help for semantics. |
-| `Npeak` | int, optional | Number of peaks to report. |
-| `norefitpeak` | bool | Skip the fine peak search. |
-| `save_per`, `save_model` | `Output`-spec | Periodogram / model-LC output. |
-| `omodelvariable` | str, optional | Name of a variable to store the model curve. |
-
-“value-spec” = a number (emitted as `fix N`), or a string `"fix V"` / `"list [column N]"` / `"fixcolumn NAME"` / `"expr EXPR"`.
-
-**Examples**
 
 ```python
 # Run Palmer's Fast chi^2 periodogram on EXAMPLES/2; search 0.1–10 cyc/day
@@ -131,7 +233,56 @@ result = lc.fastchi2(Nharm=1, freqmax=10.0, freqmin=0.1,
                      lib_path="USERLIBS/src/.libs/fastchi2.so")
 ```
 
+---
+
 ### `splinedetrend` — basis-spline / poly / harmonic detrending
+
+**Syntax**
+
+```python
+cmd.splinedetrend(detrendvecs, sigmaclip=None,
+                  save_model=False, save_coeffs=False,
+                  omodelvariable=None, lib_path=None)
+```
+
+**Description**
+
+Fit a multivariate linear model to the light-curve magnitudes against one or more auxiliary variables (e.g. time, CCD *x*/*y* position, CCD temperature). Cross-terms between variables are not included.
+
+Three basis types are supported per detrending variable: `spline:knotspacing:order` (B-spline basis using GSL `gsl_bspline_eval`), `poly:order` (polynomial), and `harm:nharm` (harmonic series; `nharm=0` for fundamental only with period = 2× variable range). Append `:groupbygap:gapsize` to split the fit at gaps in the variable larger than `gapsize`.
+
+CLI equivalent: [`-splinedetrend`](../../cli/extensions.md#-splinedetrend).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `detrendvecs` | `str` or `list` | Single comma-joined string or a list of `VAR:<spline:knotspacing:order \| poly:order \| harm:nharm>[:groupbygap:gapsize]` specs. |
+| `sigmaclip` | value-spec, optional | Sigma-clip threshold; outliers above this σ level are excluded from the fit (the model is still evaluated and subtracted at clipped points). |
+| `save_model` | `bool`, `str`, or `Output` | Best-fit model output file. `True` captures as `result.files["splinedetrend_model_N"]`. |
+| `save_coeffs` | `bool`, `str`, or `Output` | Linear basis coefficients output file. |
+| `omodelvariable` | `str`, optional | Comma-separated `outvar[:inputvar]` list specifying per-variable model contributions to store as LC vectors. |
+| `lib_path` | `str`, optional | Path to `splinedetrend.so` / `splinedetrend.la`. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `Splinedetrend_MedianMagnitude_N` | Median magnitude added back to the detrended LC. |
+| `Splinedetrend_NOutliers_N` | Number of clipped outliers. |
+| `Splinedetrend_NDataGroups_N` | Number of fit groups created by `groupbygap`. |
+| `Splinedetrend_NFitParamsTotal_N` | Total free-parameter count of the model. |
+
+When the corresponding `save_*` keyword is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["splinedetrend_model_N"]` | Best-fit model evaluated at the observed times. |
+| `result.files["splinedetrend_coeffs_N"]` | Linear basis coefficients. |
+
+**Examples**
 
 ```python
 from pyvartools.commands import splinedetrend
@@ -139,15 +290,6 @@ pipe = (vt.Pipeline()
         .splinedetrend(["t:spline:0.1:3", "x:poly:2", "y:poly:2"],
                   sigmaclip=4.0, save_model=True))
 ```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `detrendvecs` | str or list | Single comma-joined string or a list of `VAR:<spline:knotspacing:order \| poly:order \| harm:nharm>[:groupbygap:gapsize]` specs. |
-| `sigmaclip` | value-spec, optional | Sigma-clip threshold. |
-| `save_model` / `save_coeffs` | `Output`-spec | Model / coefficient output. |
-| `omodelvariable` | str, optional | Comma-separated `outvar[:inputvar]` list. |
-
-**Examples**
 
 The canonical example (a TESS sector-1 LC for GAIA DR2 6479535620075955328) reads several auxiliary columns (`x`, `y`, `temp`) from a FITS file. Because that requires a non-default `-inputlcformat` flag while loading the LC inside vartools, the cleanest Python equivalent invokes vartools directly via `subprocess`.
 
@@ -171,7 +313,64 @@ subprocess.run([
 ], check=True)
 ```
 
+---
+
 ### `ftuneven` — complex Fourier transform of unevenly-sampled data
+
+**Syntax**
+
+```python
+cmd.ftuneven(output_vectors=None, output_file=None,
+             outputvectorsandfile=None,
+             freqauto=False, freqrange=None,
+             freqvariable=None, freqfile=None,
+             ft_sign=None, tt_zero=None,
+             changeinputvectors=None, lib_path=None)
+```
+
+**Description**
+
+Compute the complex Fourier transform of an unevenly sampled time series using Scargle's method. Returns the real and imaginary components plus the absolute-square power spectrum (equivalent to the Lomb-Scargle periodogram). **Input and output frequencies are in radians per unit time.**
+
+Exactly one output mode (`output_vectors`, `output_file`, or both via `outputvectorsandfile`) and one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. `freqrange` is a `(min, max, step)` tuple of value-specs.
+
+CLI equivalent: [`-ftuneven`](../../cli/extensions.md#-ftuneven).
+
+**Parameters**
+
+Output mode (choose one):
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `output_vectors` | tuple of 4 `str`, optional | Names of LC vectors `(freq, FTreal, FTimag, periodogram)`; all LC vectors are resized to the transform length. |
+| `output_file` | `bool`, `str`, or `Output`, optional | Write per-LC files (default name `BASELC.ftuneven`; four whitespace columns: freq, FT_real, FT_imag, periodogram). |
+| `outputvectorsandfile` | tuple/dict, optional | Do both simultaneously. |
+
+Frequency source (choose one):
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `freqauto` | `bool` | Determine frequencies automatically from the time baseline and cadence. |
+| `freqrange` | `(min, max, step)` tuple of value-specs | Uniform grid. |
+| `freqvariable` | `str` | Read frequencies from an existing LC vector. |
+| `freqfile` | `str` | Read frequencies from the first column of an ASCII file (used identically for every LC). |
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ft_sign` | `int` or `str`, optional | Sign of the transform: `−1` (default) = forward; `+1` = inverse. |
+| `tt_zero` | `float` or `str`, optional | Time origin (default 0). |
+| `changeinputvectors` | tuple of 3 `str`, optional | Apply the transform to vectors other than `t`/`mag`: `(tvec, data_real_vec, data_imag_vec)`. |
+| `lib_path` | `str`, optional | Path to `ftuneven.so` / `ftuneven.la`. |
+
+**Output**
+
+`ftuneven` writes its results into the named LC vectors and/or per-LC output files; it does not produce summary statistics directly.
+
+**References**
+
+Cite Scargle 1989, ApJ, 343, 874.
+
+**Examples**
 
 ```python
 from pyvartools.commands import ftuneven
@@ -185,10 +384,6 @@ pipe = (vt.Pipeline()
 pipe = vt.Pipeline().ftuneven(output_file=True, freqauto=True)
 ```
 
-Exactly one output mode (`output_vectors`, `output_file`, or both via the `outputvectorsandfile` path) and one frequency source (`freqauto`, `freqrange`, `freqvariable`, or `freqfile`) must be specified. `freqrange` is a `(min, max, step)` tuple of value-specs.
-
-**Examples**
-
 ```python
 # Compute Scargle's complex Fourier transform of EXAMPLES/2 over a uniform
 # frequency grid (radians per unit time), writing the FT to a per-LC file.
@@ -198,7 +393,62 @@ result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
                      lib_path="USERLIBS/src/.libs/ftuneven.so")
 ```
 
+---
+
 ### `stitch` — stitch multi-segment light curves at offsets
+
+**Syntax**
+
+```python
+cmd.stitch(stitch_variables, uncertainty_variables, mask_variables,
+           lcnum_var, method="median",
+           refnum_var=None, groupbytime=None, fitonly=False,
+           save_fitted_parameters=False, shifts_file=None,
+           add_stitchparams_fitsheader=False, lib_path=None)
+```
+
+**Description**
+
+Designed for use with the `-l "combinelcs"` (or `-i "combinelcs"`) input mode, `-stitch` fits for and removes additive offsets between distinct light-curve segments (e.g. observations from different telescopes, cameras, or fields).
+
+`method` is one of `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`.
+
+CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `stitch_variables` | `str` or `list` of `str` | Magnitude variable(s) to stitch (typically `"mag"`). |
+| `uncertainty_variables` | `str` or `list` of `str` | Uncertainties for each magnitude variable (typically `"err"`). |
+| `mask_variables` | `str` or `list` of `str` | Mask vector(s); points with `mask = 0` are *excluded* from the fit (1 = include). |
+| `lcnum_var` | `str` | Variable identifying which input segment each observation belongs to (typically set by the `lcnumvar` keyword of `combinelcs`). |
+| `method` | `str` | `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. |
+| `refnum_var` | `str`, optional | Further subdivide segments by a second grouping variable. |
+| `groupbytime` | `float` or `str`, optional | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
+| `fitonly` | `bool` | Compute the shifts but do not subtract them. |
+| `save_fitted_parameters` | `bool`, `str`, or `Output` | Write per-source shift files. |
+| `shifts_file` | `str`, optional | Read previously determined shifts and/or write new ones for incremental re-processing of large datasets. |
+| `add_stitchparams_fitsheader` | `bool` | Add stitch parameters to the FITS header (when applicable). |
+| `lib_path` | `str`, optional | Path to `stitch.so` / `stitch.la`. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `Stitch_NLCGroups_N` | Number of LC segment groups. |
+| `Stitch_NTimeGroups_N` | Number of time-bin groups. |
+| `Stitch_NFitParamsTotal_N` | Total free-parameter count of the stitch fit. |
+
+When `save_fitted_parameters` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["stitch_fitted_parameters_N"]` | Per-source shift file (suffix `.stitch`). |
+
+**Examples**
 
 ```python
 from pyvartools.commands import stitch
@@ -211,10 +461,6 @@ pipe = (vt.Pipeline()
         .stitch(["mag_ap1", "mag_ap2"], ["err_ap1", "err_ap2"],
            ["mask_ap1", "mask_ap2"], "lcnum", method="poly 3"))
 ```
-
-`method` is one of `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. See the constructor docstring for the full list of optional keywords (`refnum_var`, `fitonly`, `add_stitchparams_fitsheader`, `shifts_file`, etc.).
-
-**Examples**
 
 `-stitch` is most useful with the `-l ... combinelcs` input mode, which combines multiple files into a single in-memory LC. The cleanest way to drive that from pyvartools is `Pipeline.run_combinelc()` for a single combined LC or `run_combinelcs()` for many groups; both default to emitting `lcnumvar lcnum`, which `-stitch` consumes.
 
@@ -235,7 +481,86 @@ result = (vt.Pipeline()
 print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 ```
 
+---
+
 ### `jktebop` — detached eclipsing-binary model
+
+**Syntax**
+
+```python
+cmd.jktebop(mode,
+            Period, T0, r1_r2, r2_r1, M2_M1, J2_J1,
+            i=None, bimpact=None,
+            esinomega=0.0, ecosomega=0.0,
+            LD1_law=None, LD1_coeffs=None,
+            LD2_law=None, LD2_coeffs=None,
+            gravdark1=None, gravdark2=None,
+            reflection1=None, reflection2=None,
+            L3=None, tidallag=None,
+            vary_Period=False, vary_T0=False, vary_r1_r2=False,
+            vary_r2_r1=False, vary_M2_M1=False, vary_J2_J1=False,
+            vary_i=False, vary_bimpact=False,
+            vary_esinomega=False, vary_ecosomega=False,
+            vary_LD1=False, vary_LD2=False,
+            correctlc=False, save_model=False,
+            save_curve=False, curve_xaxis="jd", curve_step=None,
+            lib_path=None)
+```
+
+**Description**
+
+Fit or inject a JKTEBOP detached eclipsing-binary light-curve model. Use `mode="inject"` to add the model to the light curve, or `mode="fit"` to optimise the parameters. Pass `vary_*=True` to free the corresponding parameter during fitting.
+
+Every mandatory parameter (`Period`, `T0`, `r1_r2`, `r2_r1`, `M2_M1`, `J2_J1`, `i` **or** `bimpact`, `esinomega`, `ecosomega`) is a value-spec; the corresponding `vary_*=True` flag frees that parameter in the fit. Optional physical parameters: `gravdark1/2` (default 1.0), `reflection1/2` (computed if absent or ≤ 0), `L3` (third light, default 0), `tidallag` (default 0). Limb-darkening laws are `"linear"`, `"quad"`, `"log"`, `"sqrt"`; `LD2_law="lockLD1"` forces the secondary to share the primary's coefficients.
+
+CLI equivalent: [`-jktebop`](../../cli/extensions.md#-jktebop).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `str` | `"inject"` or `"fit"`. |
+| `Period` | value-spec | Orbital period in days. |
+| `T0` | value-spec | Central time of a primary eclipse. |
+| `r1_r2` | value-spec | Sum of stellar radii divided by the semi-major axis (`r1+r2`). |
+| `r2_r1` | value-spec | Ratio of stellar radii (`r2/r1`). |
+| `M2_M1` | value-spec | Mass ratio. |
+| `J2_J1` | value-spec | Surface brightness ratio. |
+| `i` | value-spec, optional | Orbital inclination in degrees (90° = edge-on). |
+| `bimpact` | value-spec, optional | Impact parameter at primary eclipse (alternative to `i`; 0 = central, 1 = grazing). |
+| `esinomega`, `ecosomega` | value-spec | *e* sin ω and *e* cos ω. |
+| `LD1_law` | `str` | `"linear"`, `"quad"`, `"log"`, or `"sqrt"`. |
+| `LD1_coeffs` | tuple of 1 or 2 floats/strings | Limb-darkening coefficients. |
+| `LD2_law` | `str` | `"lockLD1"`, `"linear"`, `"quad"`, `"log"`, or `"sqrt"`. |
+| `LD2_coeffs` | tuple, optional | Used only when `LD2_law` is not `"lockLD1"`. |
+| `gravdark1`, `gravdark2` | value-spec, optional | Gravity-darkening coefficients (default 1.0). |
+| `reflection1`, `reflection2` | value-spec, optional | Reflection coefficients (computed if absent). |
+| `L3` | value-spec, optional | Third light (default 0). |
+| `tidallag` | value-spec, optional | Tidal lag in degrees (default 0). |
+| `vary_*` | `bool` | Free the corresponding parameter during fitting. |
+| `correctlc` | `bool` | Subtract the best-fit model from the LC. |
+| `save_model` | `bool`, `str`, or `Output` | Write the model evaluated at the observed times. |
+| `save_curve` | `bool`, `str`, or `Output` | Write a uniformly sampled model curve. |
+| `curve_xaxis` | `"jd"` or `"phase"` | Axis for the saved curve. |
+| `curve_step` | `float`, optional | Step size for the saved curve. |
+| `lib_path` | `str`, optional | Path to `jktebop.so` / `jktebop.la`. |
+
+**Output**
+
+`jktebop` produces fit-statistic columns (parameter values and uncertainties) prefixed by the parameter name. The exact column set depends on which parameters are varied; consult the live `vartools -L jktebop.so -help -jktebop` output for an authoritative list.
+
+When the corresponding `save_*` keyword is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["jktebop_model_N"]` | Model evaluated at the observed times (suffix `.jktebop.model`). |
+| `result.files["jktebop_curve_N"]` | Uniformly sampled model curve in JD or phase. |
+
+**References**
+
+Cite Southworth et al. 2004, MNRAS, 351, 1277; Popper & Etzel 1981, AJ, 86, 102; Etzel 1981, *Photometric and Spectroscopic Binary Systems*, 111; Nelson & Davis 1972, ApJ, 174, 617.
+
+**Examples**
 
 ```python
 from pyvartools.commands import jktebop
@@ -250,10 +575,6 @@ pipe = (vt.Pipeline()
             LD2_law="lockLD1",
             correctlc=True, save_model=True))
 ```
-
-Every mandatory parameter (`Period`, `T0`, `r1_r2`, `r2_r1`, `M2_M1`, `J2_J1`, `i` **or** `bimpact`, `esinomega`, `ecosomega`) is a value-spec; pass the corresponding `vary_*=True` to free that parameter in the fit. Optional parameters: `gravdark1/2`, `reflection1/2`, `L3`, `tidallag`. `save_curve`, `curve_xaxis="jd"|"phase"` and `curve_step` emit a dense model curve.
-
-**Examples**
 
 ```python
 # Inject a JKTEBOP detached EB signal (P=2.5d, R2/R1=0.5, J2/J1=0.3, i=89 deg,
@@ -275,7 +596,88 @@ result = (vt.Pipeline()
                nbins=200, nfreq=5000, npeaks=1)).run(lc)
 ```
 
+---
+
 ### `macula` — Kipping (2012) spot model
+
+**Syntax**
+
+```python
+cmd.macula(mode,
+           Prot, istar, kappa2, kappa4,
+           c1, c2, c3, c4, d1, d2, d3, d4, blend,
+           spots,
+           vary_Prot=False, vary_istar=False, ...,
+           fluxinput=False, fluxoutput=False, correctlc=False,
+           save_model=False, save_curve=False,
+           curve_step=None, tdelv=False,
+           lib_path=None)
+```
+
+**Description**
+
+Fit or inject Kipping's Macula analytic model for starspot modulation. Use `mode="inject"` to add the model signal to the light curve, or `mode="fit amoeba"` (Nelder-Mead simplex) / `mode="fit lm"` (Levenberg-Marquardt) to optimise the parameters. Pass `vary_*=True` to mark a global parameter free during fitting.
+
+Each of the 13 global parameters (`Prot`, `istar`, `kappa2`, `kappa4`, `c1`–`c4`, `d1`–`d4`, `blend`) is a keyword-argument value-spec with a matching `vary_<name>` flag. `spots` is a list of dicts, one per active spot, each providing value-specs for the eight per-spot parameters (`Lambda0`, `Phi0`, `alphamax`, `fspot`, `tmax`, `life`, `ingress`, `egress`). Individual spot parameters can be marked free by passing a `(value, True)` tuple (or a `"vary_<name>": True` entry in the dict).
+
+CLI equivalent: [`-macula`](../../cli/extensions.md#-macula).
+
+**Parameters**
+
+Stellar parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `str` | `"inject"`, `"fit amoeba"`, or `"fit lm"`. |
+| `Prot` | value-spec | Equatorial rotation period (LC time units). |
+| `istar` | value-spec | Stellar inclination (radians). |
+| `kappa2`, `kappa4` | value-spec | Quadratic / quartic differential-rotation coefficients. |
+| `c1`–`c4` | value-spec | Stellar limb-darkening coefficients. |
+| `d1`–`d4` | value-spec | Spot limb-darkening coefficients. |
+| `blend` | value-spec | Blend parameter. |
+
+Per-spot dict keys (one entry in `spots` per active spot):
+
+| Key | Description |
+|-----|-------------|
+| `Lambda0` | Longitude at maximum spot size (radians). |
+| `Phi0` | Latitude at maximum spot size (radians). |
+| `alphamax` | Maximum angular radius (radians). |
+| `fspot` | Spot-to-star flux contrast. |
+| `tmax` | Reference epoch of maximum spot size. |
+| `life` | Spot lifetime, FWHM (LC time units). |
+| `ingress` | Spot growth duration. |
+| `egress` | Spot decay duration. |
+
+Output / control flags:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `vary_<name>` | `bool` | Free the corresponding global parameter during fitting. |
+| `fluxinput`, `fluxoutput` | `bool` | Toggle flux vs. magnitude input/output (default: magnitudes). |
+| `correctlc` | `bool` | Subtract the model from the LC. |
+| `save_model` | `bool`, `str`, or `Output` | Write the model evaluated at the observed times (suffix `.macula.model`). |
+| `save_curve` | `bool`, `str`, or `Output` | Write the model on a uniformly sampled time grid. |
+| `curve_step` | `float`, optional | Grid spacing for the saved curve. |
+| `tdelv` | `bool` | Include predicted transit-depth variations in the saved model. |
+| `lib_path` | `str`, optional | Path to `macula.so` / `macula.la`. |
+
+**Output**
+
+`macula` produces fit-statistic columns for each varied parameter (best-fit value and uncertainty) when run in `"fit"` mode. The exact column set depends on which parameters are varied; consult the live `vartools -L macula.so -help -macula` output for an authoritative list.
+
+When the corresponding `save_*` keyword is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["macula_model_N"]` | Model evaluated at the observed times. |
+| `result.files["macula_curve_N"]` | Uniformly sampled model curve. |
+
+**References**
+
+Cite Kipping 2012, arXiv:1209.2985.
+
+**Examples**
 
 ```python
 from pyvartools.commands import macula
@@ -293,10 +695,6 @@ pipe = (vt.Pipeline()
            }],
            save_model=True))
 ```
-
-`mode` is `"inject"` or `"fit amoeba"` / `"fit lm"`. Each of the 13 global parameters (`Prot`, `istar`, `kappa2`, `kappa4`, `c1–c4`, `d1–d4`, `blend`) is a keyword-argument value-spec with a matching `vary_<name>` flag. `spots` is a list of dicts, one per active spot, each providing value-specs for the eight per-spot parameters (`Lambda0`, `Phi0`, `alphamax`, `fspot`, `tmax`, `life`, `ingress`, `egress`). Individual spot parameters can be marked free by passing a `(value, True)` tuple (or a `"vary_<name>": True` entry in the dict).
-
-**Examples**
 
 ```python
 # Inject a single spotted-star light curve into EXAMPLES/3 (Macula's

@@ -25,6 +25,8 @@ This page documents the VARTOOLS commands that transform, filter, reformat, or i
 
 Bin the light curve in time (or in phase if a `-Phase` command has already been applied). All light curve vectors are binned together by default.
 
+Python equivalent: [`binlc`](../python/commands/manipulation.md#binlc-bin-in-time).
+
 **Parameters**
 
 | Parameter | Description |
@@ -78,6 +80,8 @@ vartools -i EXAMPLES/2 \
 **Description**
 
 Replace the formal per-point measurement uncertainties in the light curve with the RMS of the light curve. This is useful when formal errors are unavailable or unreliable.
+
+Python equivalent: [`changeerror`](../python/commands/manipulation.md#changeerror-rescale-measurement-uncertainties).
 
 **Parameters**
 
@@ -136,6 +140,8 @@ Weighted_Mean_Mag_2 =  10.35142
 **Description**
 
 Convert the time system of the light curve between Modified Julian Date (MJD), Julian Date (JD), Heliocentric Julian Date (HJD), and Barycentric Julian Date (BJD). BJD conversion requires VARTOOLS to be linked to the JPL NAIF cspice library. The internal precision near J2000.0 is approximately 0.1 milliseconds.
+
+Python equivalent: [`converttime`](../python/commands/manipulation.md#converttime-time-system-conversion).
 
 **Parameters**
 
@@ -205,6 +211,8 @@ mag = mag_constant - 2.5 * log10(ref_flux + diff_flux) + offset
 
 This command produces no statistics output to stdout; call `-rms` or `-chi2` separately if statistics are needed.
 
+Python equivalent: [`difffluxtomag`](../python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions).
+
 **Parameters**
 
 | Parameter | Description |
@@ -253,6 +261,8 @@ Rescale magnitude uncertainties across an ensemble of light curves by fitting a 
 
 The output includes the average rescale factor for each light curve, defined as `sqrt(chi2_after / chi2_before)`.
 
+Python equivalent: [`ensemblerescalesig`](../python/commands/manipulation.md#rescalesig-ensemblerescalesig-rescale-per-point-uncertainties).
+
 **Parameters**
 
 | Parameter | Description |
@@ -294,6 +304,8 @@ Evaluate an analytic expression and assign the result to a named variable. If th
 If the variable already exists, its type is preserved regardless of the keyword.
 
 The expression can reference any existing light curve vectors (`t`, `mag`, `err`, other named columns), scalars from prior commands, or output columns identified by their header names. The expression engine supports aggregate functions like `mean(mag)`, `stddev(mag, t>53730)`, `pct(mag, 95.0)`, etc. See the [Analytic Expressions](expressions.md) reference for the full list of supported operators, scalar functions, aggregate functions, and constants.
+
+Python equivalent: [`expr`](../python/commands/manipulation.md#expr-analytic-expression).
 
 **Parameters**
 
@@ -392,6 +404,8 @@ Compute the Fast Fourier Transform of a light curve vector using the GSL functio
 
 Use `"NULL"` for either input component to substitute a zero vector. Use `"NULL"` for either output component to discard that component.
 
+Python equivalent: [`FFT`](../python/commands/manipulation.md#fft-ifft-fast-fourier-transform).
+
 **Parameters**
 
 | Parameter | Description |
@@ -458,6 +472,8 @@ EXAMPLES/2  10.11155   0.02901   0.00028 66186
 **Description**
 
 Compute the Inverse Fast Fourier Transform of a light curve vector using the GSL function `gsl_fft_complex_backward()`. The parameter conventions are identical to those of `-FFT`, with input treated as frequency-domain data and output as time-domain data.
+
+Python equivalent: [`IFFT`](../python/commands/manipulation.md#fft-ifft-fast-fourier-transform).
 
 **Parameters**
 
@@ -527,6 +543,8 @@ mag = mag_constant - 2.5 * log10(flux) + offset
 
 This command produces no output to stdout.
 
+Python equivalent: [`fluxtomag`](../python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions).
+
 **Parameters**
 
 | Parameter | Description |
@@ -566,6 +584,8 @@ vartools -i EXAMPLES/kplr000757076-2009166043257_llc.fits \
 **Description**
 
 Perform a row-by-row match of an external data file to the light curve, merging columns from the file into the light curve. The match is performed on a specified variable (by default the time `t`). Float/double columns are matched within the tolerance set by `-jdtol`; all other types are matched exactly.
+
+Python equivalent: [`match`](../python/commands/manipulation.md#match-match-against-a-catalog).
 
 **Parameters**
 
@@ -621,6 +641,8 @@ M37.0.0171.fits 53725.180789999999 10.081899999999999 0.0013500000000000001
 **Description**
 
 Replace the time axis of the light curve with its phase and sort by phase. The phase is defined as `((t - T0) mod P) / P`, running from 0 to 1 (or from `startphase` to `startphase + 1`). After `-Phase`, time-based binning commands like `-binlc` operate in phase space.
+
+Python equivalent: [`Phase`](../python/commands/manipulation.md#phase-phase-fold-the-light-curve).
 
 **Parameters**
 
@@ -683,6 +705,8 @@ vartools -i EXAMPLES/3.transit -oneline \
 **Description**
 
 Resample the light curve onto a new time base by interpolating all light curve vectors. The default output grid runs from the first to the last observed time with a step equal to the minimum observed time separation. String-type columns (e.g. image IDs) are always resampled with the `"nearest"` method.
+
+Python equivalent: [`resample`](../python/commands/manipulation.md#resample-resample-onto-a-new-time-grid).
 
 **Parameters**
 
@@ -747,6 +771,8 @@ vartools -i EXAMPLES/1 -resample splinemonotonic \
 
 Rescale the magnitude uncertainties of each light curve independently so that χ²/dof = 1 for that light curve. The rescale factor applied to each light curve is included in the output table. Unlike `-ensemblerescalesig`, this operates per-light-curve without fitting an ensemble relation.
 
+Python equivalent: [`rescalesig`](../python/commands/manipulation.md#rescalesig-ensemblerescalesig-rescale-per-point-uncertainties).
+
 **Parameters**
 
 | Parameter | Description |
@@ -785,6 +811,8 @@ Weighted_Mean_Mag_2   = 10.35137
 **Description**
 
 Sort the light curve. By default it is sorted by time. If any subsequent command requires time-sorted data and the light curve was re-sorted by another variable, it will be automatically re-sorted by time at the start of that command.
+
+Python equivalent: [`sortlc`](../python/commands/manipulation.md#sortlc-sort-observations).
 
 **Parameters**
 

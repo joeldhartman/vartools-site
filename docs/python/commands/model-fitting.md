@@ -4,7 +4,9 @@ Parametric models fit to a light curve: transits, starspots, microlensing, gener
 
 ---
 
-## `linfit` — Linear combination fitting
+### `linfit` — Linear combination fitting
+
+**Syntax**
 
 ```python
 cmd.linfit(function, paramlist,
@@ -15,16 +17,42 @@ cmd.linfit(function, paramlist,
            model_nameformat=None, fitmask=None)
 ```
 
-Fit a linear combination of analytic basis functions. `function` is a vartools expression string; `paramlist` is a comma-separated list of free parameter names and initial values.  `fitmask` is the name of a mask variable; observations where the variable is non-zero are excluded from the fit (CLI token: `fitmask`). `save_model` accepts `bool`, `str`, or `Output` — see [Auxiliary output files](index.md#auxiliary-output-files); the model file is captured as `result.files["linfit_model_N"]`.
+**Description**
+
+Fit a function that is linear in its free parameters to each light curve using least squares. `function` is a vartools expression string (e.g. `'a1*t^2+a2*t+a3'`); `paramlist` is a comma-separated list of free parameter names (e.g. `'a1,a2,a3'`). Parameter names must not conflict with built-in vector variables (`t`, `mag`, `err`, …). Optional sigma-clipping rejection and refit is available, the best-fit model can be subtracted from the LC (`correct_lc=True`), and the model can be written to disk via `save_model`.
+
+CLI equivalent: [`-linfit`](../../cli/model-fitting.md#-linfit).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `modelvar` | `str` or `None` | Variable name used to store the best-fit model values on the light curve. |
+| `function` | `str` | Analytic function to fit (e.g. `'a*(t-t0)^2+b*(t-t0)+c'`). |
+| `paramlist` | `str` | Comma-separated list of free parameter names (e.g. `'a,b,c'`). |
+| `modelvar` | `str` or `None` | Variable name used to store the best-fit model values on the light curve (vector variable for use by later commands). |
 | `reject` | `float` or `None` | Sigma-clipping threshold: fit, clip outliers beyond this threshold (in σ), then refit. |
 | `reject_usemad` | `bool` | Use MAD instead of standard deviation for the scatter estimate during rejection. |
 | `reject_iter` | `bool` | Iteratively reject and refit until no more points are clipped. |
 | `reject_fixednum` | `int` or `None` | Maximum number of rejection/refit iterations (requires `reject_iter=True`). |
+| `correct_lc` | `bool` | Subtract the best-fit model from the light curve before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["linfit_model_N"]`; a path string writes to that directory without capturing; `Output(path, capture=True)` does both. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `model_nameformat` | `str` or `None` | Format string for the model output filename (e.g. `"%s.linfit.model"`). |
+| `fitmask` | `str` or `None` | Name of a mask variable; only points with `maskvar > 0` are included in the fit. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position. For each free parameter `<p>` in `paramlist`:
+
+| Column | Description |
+|--------|-------------|
+| `Linfit_<p>_N` | Best-fit value of parameter `<p>`. |
+| `Linfit_err<p>_N` | 1-σ uncertainty in `<p>` (from the covariance matrix). |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["linfit_model_N"]` | DataFrame: time-sampled best-fit model values for the light curve. |
 
 **Examples**
 
@@ -44,7 +72,9 @@ print(result.vars["Linfit_c_2"])   # constant offset
 
 ---
 
-## `nonlinfit` — Non-linear least-squares fitting
+### `nonlinfit` — Non-linear least-squares fitting
+
+**Syntax**
 
 ```python
 cmd.nonlinfit(function, paramlist,
@@ -62,28 +92,60 @@ cmd.nonlinfit(function, paramlist,
               fitmask=None)
 ```
 
-Fit an arbitrary analytic function using Nelder-Mead (`"amoeba"`) or MCMC (`"mcmc"`). `paramlist` has the form `name:initial[:step[:min:max]], ...`.  `fitmask` excludes non-zero-masked points from the fit. `save_model` accepts `bool`, `str`, or `Output` — see [Auxiliary output files](index.md#auxiliary-output-files); the model file is captured as `result.files["nonlinfit_model_N"]`. MCMC chains are captured as `result.files["nonlinfit_chains_N"]`.
+**Description**
+
+Fit an arbitrary analytic function that is non-linear in its free parameters to each light curve. Two optimisers are supported: `"amoeba"` (downhill simplex / Nelder-Mead, fast greedy local minimisation) and `"mcmc"` (differential-evolution Markov chain Monte Carlo, full posterior exploration). Parameters that enter the model linearly may be moved out of the non-linear search and fit by linear least squares (`linfit_params`), which is faster and more numerically stable. Optional Gaussian-process covariance kernels (`squareexp`, `exp`, `matern`) handle correlated errors; arbitrary priors and constraints can be added.
+
+`paramlist` has the form `name=initial:step[:min:max], ...` for `"amoeba"`, or supplies initial values and proposal step sizes for `"mcmc"`.
+
+CLI equivalent: [`-nonlinfit`](../../cli/model-fitting.md#-nonlinfit).
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `linfit_params` | `str` or `None` | Space-separated list of parameter names to solve analytically (linear sub-problem solved exactly at each step). |
+| `function` | `str` | Analytic function to fit (e.g. `'a+b*exp(-(t-c)^2/(2*d^2))'`). |
+| `paramlist` | `str` | Comma-separated parameters with initial guesses and step sizes (e.g. `'c=5.0:2.0,d=10.0:8.0'`). |
+| `optimizer` | `str` | `"amoeba"` (Nelder-Mead, default) or `"mcmc"` (differential-evolution MCMC). |
+| `linfit_params` | `str` or `None` | Comma- or space-separated names of parameters that enter linearly; solved analytically at each step. Not included in MCMC posteriors. |
 | `errors` | `str` or `None` | Expression or variable name providing per-point measurement errors (overrides the default error column). |
-| `covariance` | `str` or `None` | Covariance model tokens, e.g. `"squareexp amp_v rho_v"` (passed verbatim after the `covariance` keyword). |
-| `priors` | `str` or `None` | Prior expression string (passed verbatim after the `priors` keyword). |
-| `constraints` | `str` or `None` | Constraint expression string (passed verbatim after `constraints`). |
-| `amoeba_tolerance` | `float` or `None` | Convergence tolerance for the amoeba optimizer. |
+| `covariance` | `str` or `None` | Gaussian-process kernel tokens, e.g. `"squareexp amp_v rho_v"`, `"exp amp rho"`, `"matern amp rho nu"`. Linear-only fitting is not permitted with `covariance`. |
+| `priors` | `str` or `None` | Comma-separated list of prior expressions, each evaluating to `-2 ln P` (e.g. `'(t0-4.0)^2/3.0^2'`). |
+| `constraints` | `str` or `None` | Comma-separated list of constraint expressions (e.g. `'sigma>0'`). |
+| `amoeba_tolerance` | `float` or `None` | Δχ² convergence tolerance for the amoeba optimizer. |
 | `amoeba_maxsteps` | `int` or `None` | Maximum number of steps for the amoeba optimizer. |
 | `mcmc_naccept` | `int` or `None` | Number of accepted links to collect (mutually exclusive with `mcmc_nlinkstotal`). |
 | `mcmc_nlinkstotal` | `int` or `None` | Total number of MCMC links (accepted + rejected). |
-| `mcmc_fracburnin` | `float` or `None` | Fraction of links to discard as burn-in. |
-| `mcmc_eps` | `float` or `None` | Initial step size for the MCMC proposal distribution. |
+| `mcmc_fracburnin` | `float` or `None` | Fraction of links to discard as burn-in (default 0.1). |
+| `mcmc_eps` | `float` or `None` | Initial step size for the MCMC proposal distribution (default 0.001). |
 | `mcmc_skipamoeba` | `bool` | Skip the initial amoeba pre-optimisation in MCMC mode. |
-| `mcmc_maxmemstore` | `int` or `None` | Maximum number of chain links to hold in memory simultaneously. |
-| `mcmc_outchains` | `bool`, `str`, or `Output` | Write MCMC chain files. Captured as `result.files["nonlinfit_chains_N"]`. |
+| `mcmc_maxmemstore` | `int` or `None` | Maximum number of chain links (or GB; default 4) to hold in memory simultaneously. |
+| `mcmc_outchains` | `bool`, `str`, or `Output` | Write MCMC chain files. `True` captures as `result.files["nonlinfit_chains_N"]`. |
 | `mcmc_chains_format` | `str` or `None` | Naming format string for chain output files. |
 | `mcmc_chains_printevery` | `int` or `None` | Write every Nth accepted link to the chain file. |
+| `correct_lc` | `bool` | Subtract the best-fit model from the light curve before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["nonlinfit_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `model_nameformat` | `str` or `None` | Format string for the model output filename. |
 | `modelvar` | `str` or `None` | Variable name used to store the best-fit model values on the light curve. |
+| `fitmask` | `str` or `None` | Name of a mask variable; only points with `maskvar > 0` are included in the fit. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `Nonlinfit_<p>_N` | Best-fit value of each non-linear parameter and (for `linfit_params` parameters) each linear coefficient. |
+| `Nonlinfit_<p>_err_N` | 1-σ uncertainty in each parameter. For `amoeba` derived from the covariance matrix at the optimum; for `mcmc` taken from the posterior. |
+| `Nonlinfit_Chi2_N` | χ² of the best-fit model. |
+| `Nonlinfit_Npts_N` | Number of light-curve points used in the fit. |
+
+When `save_model` or `mcmc_outchains` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["nonlinfit_model_N"]` | DataFrame: time-sampled best-fit model. |
+| `result.files["nonlinfit_chains_N"]` | DataFrame: MCMC chain links (when `optimizer="mcmc"` and `mcmc_outchains` is set). |
 
 **Examples**
 
@@ -124,7 +186,9 @@ result = pipe.run(lc)
 
 ---
 
-## `decorr` — Decorrelation
+### `decorr` — Decorrelation
+
+**Syntax**
 
 ```python
 cmd.decorr(correct_lc=True, zeropointterm=1, subtractfirstterm=0,
@@ -132,7 +196,42 @@ cmd.decorr(correct_lc=True, zeropointterm=1, subtractfirstterm=0,
            maskpoints=None)
 ```
 
-Decorrelates the light curve against external trend vectors (polynomial fit). `global_files` is a list of `(filename, polynomial_order)` tuples for external trend files; `lc_columns` is a list of `(column_number, polynomial_order)` tuples for light-curve-internal trends. `save_model` accepts `bool`, `str`, or `Output` — see [Auxiliary output files](index.md#auxiliary-output-files); the model file is captured as `result.files["decorr_model_N"]`.
+**Description**
+
+Decorrelate the light curve against external trend vectors and/or light-curve-internal columns using polynomial regression. `global_files` is a list of `(filename, polynomial_order)` tuples for external trend files (each formatted `JD signal_value`); `lc_columns` is a list of `(column_number, polynomial_order)` tuples for light-curve-internal trends.
+
+CLI equivalent: [`-decorr`](../../cli/model-fitting.md#-decorr).
+
+!!! warning "Deprecated"
+    The underlying `-decorr` command is deprecated as of VARTOOLS 1.3. Use [`linfit`](#linfit-linear-combination-fitting) instead.
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `correct_lc` | `bool` | Apply the decorrelation to the light curve (`True`) or just compute and output coefficients without modifying it (`False`). |
+| `zeropointterm` | `int` | `1` to include a zero-point offset term in the fit; `0` to omit it. |
+| `subtractfirstterm` | `int` | `1` to decorrelate against `(signal − signal[0])` rather than `signal` directly (useful for detrending against JD). |
+| `global_files` | list of `(str, int)` or `None` | List of `(filename, polynomial_order)` tuples for external trend files. |
+| `lc_columns` | list of `(int, int)` or `None` | List of `(column_number, polynomial_order)` tuples for light-curve-internal trends. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["decorr_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `maskpoints` | `str` or `None` | Mask variable; only points with `maskvar > 0` contribute to the fit. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position. The exact set of `Decorr_*` columns depends on the number of `global_files` and `lc_columns` terms requested; each polynomial coefficient is reported with its 1-σ error, plus an overall χ²:
+
+| Column | Description |
+|--------|-------------|
+| `Decorr_<term>_<order>_N` | Best-fit polynomial coefficient for each trend term and order. |
+| `Decorr_err<term>_<order>_N` | 1-σ uncertainty in the coefficient. |
+| `Decorr_chi2_N` | χ² of the decorrelation fit. |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["decorr_model_N"]` | DataFrame: time-sampled best-fit decorrelation model. |
 
 **Examples**
 
@@ -151,7 +250,9 @@ print(batch.vars[["Name", "RMS_0", "RMS_2"]])
 
 ---
 
-## `MandelAgolTransit` — Mandel-Agol transit model
+### `MandelAgolTransit` — Mandel-Agol transit model
+
+**Syntax**
 
 ```python
 cmd.MandelAgolTransit(P0, T00, r0=0.1, a0=10.0, inclination=90.0,
@@ -168,6 +269,14 @@ cmd.MandelAgolTransit(P0, T00, r0=0.1, a0=10.0, inclination=90.0,
                       save_phcurve=False, save_jdcurve=False)
 ```
 
+**Description**
+
+Fit a Mandel & Agol (2002) transit model to the light curve. Initial values for the period and transit centre can be entered directly or seeded from a preceding `BLS` / `BLSFixPer` run (`P0="bls"` or `"blsfixper"`). Quadratic or non-linear (Claret) limb darkening is supported. Each model parameter has an explicit `fit*` flag (`0` = fixed, `1` = free). Optional simultaneous radial-velocity fitting is enabled by passing `rv_file`.
+
+CLI equivalent: [`-MandelAgolTransit`](../../cli/model-fitting.md#-mandelagoltransit).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `P0`, `T00` | `float` or `str` | Initial period (days) and transit epoch (BJD). `P0` also accepts `"bls"` or `"blsfixper"` to seed the transit model from a prior BLS / BLSFixPer — see the admonition below. |
@@ -175,21 +284,53 @@ cmd.MandelAgolTransit(P0, T00, r0=0.1, a0=10.0, inclination=90.0,
 | `a0` | `float` | Initial semi-major axis in stellar radii. |
 | `inclination` | `float` | Initial orbital inclination in degrees. Used when `bimpact` is `None`. |
 | `bimpact` | `float` or `None` | Initial impact parameter. When set, replaces `inclination` in the CLI (`"b" bimpact` instead of `"i" inclination`). |
-| `ld_type` | `str` | Limb-darkening law: `"quad"` or `"nonlin"`. |
+| `e0`, `omega0`, `mconst0` | `float` | Initial eccentricity, argument of periastron (degrees), and out-of-transit magnitude (negative `mconst0` ⇒ estimate from the data). |
+| `ld_type` | `str` | Limb-darkening law: `"quad"` (2 coefficients) or `"nonlin"` (4 Claret coefficients). |
 | `ld_coeffs` | list | Initial limb-darkening coefficients. Default `[0.3, 0.3]`. |
-| `fitephem` | `int` | Fit the transit epoch and period together (0 = fixed, 1 = free).  The CLI `fitephem` flag controls both simultaneously — there is no separate period-only flag. |
-| `fitr`, `fita`, `fitinclterm`, etc. | `int` | Toggle fitting of each parameter (0 = fixed, 1 = free). |
+| `fitephem` | `int` | Fit the transit epoch and period together (0 = fixed, 1 = free). The CLI `fitephem` flag controls both simultaneously. |
+| `fitr`, `fita`, `fitinclterm`, `fite`, `fitomega`, `fitmconst` | `int` | Toggle fitting of each parameter (0 = fixed, 1 = free). |
+| `fitldcoeffs` | list of `int` or `None` | Toggle fitting of each limb-darkening coefficient. |
 | `rv_file` | `str` or `None` | Path to an RV data file (columns: JD, RV, RV-error). When provided, simultaneous RV fitting is enabled. |
 | `rv_model_file` | `str` or `None` | Output path for the best-fit RV model. |
-| `K0` | `float` or `None` | Initial RV semi-amplitude (km/s). |
-| `gamma0` | `float` or `None` | Initial systemic RV (km/s). |
-| `fitK`, `fitgamma` | `int` | Fit K and γ respectively (0 = fixed, 1 = free). |
+| `K0`, `gamma0` | `float` or `None` | Initial RV semi-amplitude (km/s) and systemic RV (km/s). |
+| `fitK`, `fitgamma` | `int` | Fit `K` and `γ` respectively (0 = fixed, 1 = free). |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Best-fit transit model on the input cadence. `True` captures as `result.files["MandelAgolTransit_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `modelvar` | `str` or `None` | Variable name used to store the best-fit model on the light curve (requires `save_model` to be set). |
-| `save_phcurve` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["MandelAgolTransit_phcurve_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
-| `save_jdcurve` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["MandelAgolTransit_jdcurve_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["MandelAgolTransit_phcurve_N"]`. |
+| `save_jdcurve` | `bool`, `str`, or `Output` | JD-sampled model curve. `True` captures as `result.files["MandelAgolTransit_jdcurve_N"]`. |
 
 !!! tip "Back-reference seeding from BLS / BLSFixPer"
     When `P0="bls"` (or `"blsfixper"`) is used after a prior `-BLS` / `-BLSFixPer` in the chain, pyvartools pulls Period, Tc, Depth, and Qtran from the prior result and seeds four fields at once: `P0 = BLS.Period_1`, `T00 = BLS.Tc_1`, `r0 = sqrt(BLS.Depth_1)`, `a0 = 1 / (π · BLS.Qtran_1)`. Any of those four values you pass explicitly override the seeded default. This resolves equally in a single `Pipeline` or across chain steps; in batch chains each LC gets its own seed values. Missing prior BLS → `LookupError`.
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `MandelAgolTransit_Period_N` | Best-fit orbital period (days). |
+| `MandelAgolTransit_T0_N` | Best-fit mid-transit epoch. |
+| `MandelAgolTransit_r_N` | Best-fit `Rp/R★`. |
+| `MandelAgolTransit_a_N` | Best-fit `a/R★`. |
+| `MandelAgolTransit_inclination_N` or `MandelAgolTransit_bimpact_N` | Best-fit inclination (deg) or impact parameter. |
+| `MandelAgolTransit_e_N`, `MandelAgolTransit_omega_N` | Best-fit eccentricity and argument of periastron (when fit). |
+| `MandelAgolTransit_mconst_N` | Best-fit out-of-transit magnitude. |
+| `MandelAgolTransit_ldcoeff<i>_N` | Best-fit limb-darkening coefficients. |
+| `MandelAgolTransit_chi2_N` | χ² of the best-fit model. |
+| `MandelAgolTransit_K_N`, `MandelAgolTransit_gamma_N` | Best-fit RV semi-amplitude (km/s) and systemic velocity (only when `rv_file` is given). |
+
+When `save_*` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["MandelAgolTransit_model_N"]` | DataFrame: time-sampled best-fit transit model. |
+| `result.files["MandelAgolTransit_phcurve_N"]` | DataFrame: model phase curve sampled on `[0, 1]`. |
+| `result.files["MandelAgolTransit_jdcurve_N"]` | DataFrame: model curve sampled in JD space. |
+
+**References**
+
+Mandel, K. & Agol, E. 2002, ApJ, 580, L171.
 
 **Examples**
 
@@ -219,7 +360,9 @@ phcurve = result.files["MandelAgolTransit_phcurve_0"]  # phase-folded model
 
 ---
 
-## `SoftenedTransit` — Softened (trapezoidal) transit
+### `SoftenedTransit` — Softened (trapezoidal) transit
+
+**Syntax**
 
 ```python
 cmd.SoftenedTransit(init_params="bls", fitephem=1, fiteta=1,
@@ -229,17 +372,51 @@ cmd.SoftenedTransit(init_params="bls", fitephem=1, fiteta=1,
                     fit_harm_nharm=None, fit_harm_nsubharm=None)
 ```
 
-Fits a softened trapezoid transit model. `init_params` can be `"bls"` or `"blsfixper"` to initialise from a prior BLS / BLSFixPer result, `"ls"` or `"aov"` to seed the period from the corresponding periodogram, or a tuple `(P0, T00, eta0, delta0, mconst0, cval0)`.
+**Description**
+
+Fit a Protopapas, Jiménez & Alcock (2005) "softened" trapezoidal transit model. `init_params` can be `"bls"` or `"blsfixper"` to initialise from a prior BLS / BLSFixPer result, `"ls"` or `"aov"` to seed the period from the corresponding periodogram, or a tuple `(P0, T00, eta0, delta0, mconst0, cval0)` of explicit numeric initial values.
+
+CLI equivalent: [`-SoftenedTransit`](../../cli/model-fitting.md#-softenedtransit).
 
 !!! tip "Back-reference seeding from BLS / BLSFixPer"
     `init_params="bls"` (or `"blsfixper"`) seeds four fields from the prior result: period, T0, eta (= Qtran), and delta (= Depth). This works both in a single `Pipeline` and across chain steps. Batch-chain mode is **not** supported for the multi-field `"bls"` / `"blsfixper"` case (would require per-LC propagation of four fields); use a single `Pipeline` invocation for batch runs. `"ls"` and `"aov"` seed only the period and work in both single- and batch-chain modes. Missing prior command → `LookupError`.
 
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `fit_harm` | `int` | Harmonic fitting flag. `0` = no harmonic component (default). When > 0, a harmonic series is fitted simultaneously. |
-| `fit_harm_method` | `str` or `None` | Method for harmonic fitting, e.g. `"aov"`. Only used when `fit_harm > 0`. |
+| `init_params` | `str` or tuple | `"bls"` / `"blsfixper"` (multi-field seed), `"ls"` / `"aov"` (period-only seed), or a tuple `(P0, T00, eta0, delta0, mconst0, cval0)` of explicit values. |
+| `fitephem`, `fiteta`, `fitcval`, `fitdelta`, `fitmconst` | `int` | Fit each model parameter (0 = fixed, 1 = free). `fitephem` controls period and T0 simultaneously. |
+| `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["SoftenedTransit_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `fit_harm` | `int` | Harmonic fitting flag. `0` = no harmonic component (default); when > 0, a harmonic series is fitted simultaneously. |
+| `fit_harm_method` | `str` or `None` | Source of the harmonic period: `"aov"`, `"ls"`, `"bls"`, `"list"`, or `"fix"`. Only used when `fit_harm > 0`. |
 | `fit_harm_nharm` | `int` or `None` | Number of harmonics for the harmonic component. |
 | `fit_harm_nsubharm` | `int` or `None` | Number of sub-harmonics for the harmonic component. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `SoftenedTransit_Period_N` | Best-fit orbital period (days). |
+| `SoftenedTransit_T0_N` | Best-fit mid-transit epoch. |
+| `SoftenedTransit_eta_N` | Best-fit transit-duration parameter. |
+| `SoftenedTransit_cval_N` | Best-fit softening parameter. |
+| `SoftenedTransit_delta_N` | Best-fit transit depth. |
+| `SoftenedTransit_mconst_N` | Best-fit out-of-transit magnitude. |
+| `SoftenedTransit_chi2perdof_N` | Reduced χ² of the best-fit model. |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["SoftenedTransit_model_N"]` | DataFrame: time-sampled best-fit softened-transit model. |
+
+**References**
+
+Protopapas, P., Jiménez, R. & Alcock, C. 2005, MNRAS, 362, 460.
 
 **Examples**
 
@@ -262,7 +439,9 @@ model = result.files["SoftenedTransit_model_1"]   # SoftenedTransit is at index 
 
 ---
 
-## `Starspot` — Starspot model
+### `Starspot` — Starspot model
+
+**Syntax**
 
 ```python
 cmd.Starspot(period="ls",
@@ -273,7 +452,16 @@ cmd.Starspot(period="ls",
              correct_lc=False, save_model=False)
 ```
 
-Fits a Dorren (1987) two-spot model to photometric variability.
+**Description**
+
+Fit a Dorren (1987) single-spot model — a circular, uniform-temperature starspot — to a photometric light curve. Initial parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987 (spot fractional radius, latitude in radians, longitude in degrees, stellar inclination, spot contrast, phase offset). Set `mconst0` negative to estimate the unspotted magnitude automatically.
+
+CLI equivalent: [`-Starspot`](../../cli/model-fitting.md#-starspot).
+
+!!! warning "Deprecated"
+    The underlying `-Starspot` command is deprecated as of VARTOOLS 1.3. Use the `macula` extension command instead.
+
+**Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -284,9 +472,37 @@ Fits a Dorren (1987) two-spot model to photometric variability.
 | `i0` | `float` | Initial stellar inclination in degrees (default `85.0`). |
 | `chi0` | `float` | Initial spot contrast (default `30.0`). |
 | `psi00` | `float` | Initial spot phase offset (default `0.0`). |
-| `mconst0` | `float` | Initial magnitude offset (default `0.0`). |
+| `mconst0` | `float` | Initial magnitude offset (default `0.0`; negative ⇒ estimate from data). |
 | `fit_period` | `int` | Fit the period (0 = fixed, 1 = free; default `1`). |
 | `fit_a`, `fit_b`, `fit_alpha`, `fit_i`, `fit_chi`, `fit_psi`, `fit_mconst` | `int` | Fit each model parameter (0 = fixed, 1 = free; all default `1`). |
+| `correct_lc` | `bool` | Subtract the best-fit spot model from the LC before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["Starspot_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `Starspot_Period_N` | Best-fit rotation period (days). |
+| `Starspot_a_N` | Best-fit spot fractional radius. |
+| `Starspot_b_N` | Best-fit spot latitude (radians). |
+| `Starspot_alpha_N` | Best-fit spot longitude (degrees). |
+| `Starspot_inclination_N` | Best-fit stellar inclination (degrees). |
+| `Starspot_chi_N` | Best-fit spot contrast. |
+| `Starspot_psi0_N` | Best-fit spot phase offset. |
+| `Starspot_mconst_N` | Best-fit unspotted magnitude. |
+| `Starspot_chi2perdof_N` | Reduced χ² of the best-fit model. |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["Starspot_model_N"]` | DataFrame: time-sampled best-fit starspot model. |
+
+**References**
+
+Dorren 1987, ApJ, 320, 756.
 
 **Examples**
 
@@ -315,7 +531,9 @@ model = result.files["Starspot_model_1"]   # Starspot is at index 1
 
 ---
 
-## `microlens` — Microlensing model
+### `microlens` — Microlensing model
+
+**Syntax**
 
 ```python
 cmd.microlens(f0=None, f1=None, u0=None, t0=None, tmax=None,
@@ -327,10 +545,47 @@ cmd.microlens(f0=None, f1=None, u0=None, t0=None, tmax=None,
               tmax_step=None, tmax_novary=False)
 ```
 
-Fits a standard Paczynski microlensing light curve. Each parameter (`f0`, `f1`, `u0`, `t0`, `tmax`) can be a float (free-fit initial value), `"auto"` (vartools auto-estimate), a string passthrough (e.g. `"fixcolumn colname"`, `"list column 3"`), or `None` (omit). Use `{name}_step` to set the initial step size and `{name}_novary=True` to hold a parameter fixed during fitting.
+**Description**
+
+Fit a Wozniak (2001) point-source single-lens microlensing model to the light curve using a downhill-simplex optimiser. Each parameter (`f0`, `f1`, `u0`, `t0`, `tmax`) can be a float (free-fit initial value), `"auto"` (vartools auto-estimate), a string passthrough (e.g. `"fixcolumn colname"`, `"list column 3"`), or `None` (omit). Use `{name}_step` to set the initial step size and `{name}_novary=True` to hold a parameter fixed during fitting.
+
+CLI equivalent: [`-microlens`](../../cli/model-fitting.md#-microlens).
 
 !!! tip "Back-reference via `fixcolumn`"
     Each of `f0`, `f1`, `u0`, `t0`, `tmax` accepts `"fixcolumn NAME"` to pull the initial value from an output column of a prior command. This resolves identically in a single `Pipeline` and across chain steps. In the chained form the column *name* (not a numeric column index) is required. Missing column in the prior result → `LookupError`.
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `f0`, `f1`, `u0`, `t0`, `tmax` | `float`, `str`, or `None` | Initial values for the five model parameters. Float = free-fit initial value; `"auto"` = vartools auto-estimate; string passthrough (e.g. `"fixcolumn colname"`, `"list column 3"`); `None` = omit. |
+| `f0_step`, `f1_step`, `u0_step`, `t0_step`, `tmax_step` | `float` or `None` | Initial step sizes for the downhill simplex (per parameter). |
+| `f0_novary`, `f1_novary`, `u0_novary`, `t0_novary`, `tmax_novary` | `bool` | Hold the corresponding parameter fixed at its initial value. |
+| `correct_lc` | `bool` | Subtract the best-fit microlens model from the LC before passing to the next command. |
+| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["microlens_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `Microlens_f0_N` | Best-fit baseline flux. |
+| `Microlens_f1_N` | Best-fit lensed-source flux. |
+| `Microlens_u0_N` | Best-fit minimum impact parameter. |
+| `Microlens_t0_N` | Best-fit Einstein-radius crossing time. |
+| `Microlens_tmax_N` | Best-fit time of peak magnification. |
+| `Microlens_chi2perdof_N` | Reduced χ² of the best-fit model. |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["microlens_model_N"]` | DataFrame: time-sampled best-fit microlens model. |
+
+**References**
+
+Wozniak, P. R. et al. 2001, AcA, 51, 175.
 
 **Examples**
 

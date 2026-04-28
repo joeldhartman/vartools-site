@@ -4,22 +4,40 @@ Commands that reject outliers, smooth the light curve, or remove ensemble-level 
 
 ---
 
-## `clip` — Sigma clipping
+### `clip` — Sigma clipping
+
+**Syntax**
 
 ```python
 cmd.clip(sigclip, iterative=True, niter=None, median=False,
          markclip=None, noinitmark=False, maskpoints=None)
 ```
 
+**Description**
+
+Sigma-clip outliers from the light curve. Points with errors `≤ 0` or NaN magnitude values are always removed. If `sigclip ≤ 0`, sigma-clipping is disabled but invalid points are still dropped. With `iterative=True` (the default) the clipping loop repeats until no further points are removed; pass `iterative=False` for a single pass, or set `niter` to clip a fixed number of times. Use `median=True` to clip relative to the median rather than the mean. The `markclip` keyword tags points instead of removing them — surviving points are set to `1`, clipped points to `0` — leaving the LC length unchanged.
+
+CLI equivalent: [`-clip`](../../cli/filtering.md#-clip).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `sigclip` | `float` or `str` | Clipping threshold in units of standard deviation. Accepts a number, variable name, or expression string. |
+| `sigclip` | `float` or `str` | Clipping threshold in units of the standard deviation. Accepts a number, variable name, or expression string. |
 | `iterative` | `bool` | Repeat clipping until no points are removed (default `True`). |
 | `niter` | `int`, `str`, or `None` | Clip at most this many times (overrides `iterative`). Accepts a number, variable name, or expression. |
 | `median` | `bool` | Clip relative to the median instead of the mean. |
-| `markclip` | `str` or `None` | Variable name to record clipping mask (1 = kept, 0 = clipped). |
+| `markclip` | `str` or `None` | Variable name to record the clipping mask (`1` = kept, `0` = clipped). The light curve length is unchanged when this is set. |
+| `noinitmark` | `bool` | Treat existing values of the `markclip` variable as an initial mask: only points with `markclip = 1` are considered for further clipping. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded from the clipping statistics. |
 
-CLI equivalent: `-clip <sigclip|var|expr> <iter|var|expr> [niter <N|var|expr>] [median] ...`
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `Nclip_N` | Number of points removed by the clip step. |
 
 **Examples**
 
@@ -40,13 +58,31 @@ print(result.vars["RMS_2"])      # RMS after clipping
 
 ---
 
-## `medianfilter` — Median filtering
+### `medianfilter` — Median filtering
+
+**Syntax**
 
 ```python
 cmd.medianfilter(time, method="median", replace=False)
 ```
 
-Apply a sliding-window median (or mean) filter with window width `time`. `replace=True` writes the smoothed values back into the magnitude column.
+**Description**
+
+Apply a sliding-window high-pass or low-pass filter to the light curve. By default the local median magnitude (computed over points within `time` of each observation) is **subtracted** from each point — a high-pass filter. Set `method="average"` or `method="weightedaverage"` to use the running mean instead. Pass `replace=True` to **replace** each point with the running statistic rather than subtracting it, converting the operation to a low-pass filter.
+
+CLI equivalent: [`-medianfilter`](../../cli/filtering.md#-medianfilter).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `time` | `float` or `str` | Half-window width in the same units as the time coordinate. Accepts var/expr forms. |
+| `method` | `str` | Local statistic: `"median"` (default), `"average"` (running mean), or `"weightedaverage"` (uncertainty-weighted mean). |
+| `replace` | `bool` | When `True`, replace each point with the running statistic (low-pass filter). When `False` (default), subtract the statistic (high-pass filter). |
+
+**Output**
+
+`medianfilter` modifies the light curve in place and produces no per-LC statistics columns. With `replace=False` the magnitude of each point is replaced by `mag − running_statistic`; with `replace=True` it is replaced by the running statistic itself. Downstream commands operate on the filtered light curve.
 
 **Examples**
 
@@ -73,7 +109,9 @@ print(result.vars["Chi2_6"])   # after low-pass filter
 
 ---
 
-## `harmonicfilter` — Harmonic series subtraction
+### `harmonicfilter` — Harmonic series subtraction
+
+**Syntax**
 
 ```python
 cmd.harmonicfilter(period="ls", nharm=3, nsubharm=0, save_model=False,
@@ -81,23 +119,57 @@ cmd.harmonicfilter(period="ls", nharm=3, nsubharm=0, save_model=False,
                    maskpoints=None)
 ```
 
+**Description**
+
+Fit and (by default) subtract a truncated Fourier series at one or more *known* periods, whitening the light curve against those periods. The model has the form
+
+```
+sum_i [ sum_{k=0}^{Nharm}(a_{i,k} sin(2π(k+1) f_i t) + b_{i,k} cos(2π(k+1) f_i t))
+      + sum_{k=0}^{Nsubharm}(c_{i,k} sin(2π f_i t/(k+1)) + d_{i,k} cos(2π f_i t/(k+1))) ]
+```
+
+By default the whitened light curve is passed downstream; pass `fitonly=True` to fit without subtracting. Use `harmonicfilter` when you know the period(s) you want to remove. For full-band filtering without a known period use the `fourierfilter` command.
+
 `cmd.Killharm(...)` is accepted as a backward-compatible synonym (it invokes
 the same vartools command under the ``-Killharm`` token and produces output
 columns under the legacy ``Killharm_*`` prefix; the new class produces
 ``HarmonicFilter_*``).  New code should use `cmd.harmonicfilter`.
 
+CLI equivalent: [`-harmonicfilter`](../../cli/filtering.md#-harmonicfilter).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `period` | `float` or `str` | Period to fit. Can be a number or `"ls"`, `"aov"`, `"bls"`, `"both"`, `"injectharm"`, `"fixcolumn NAME"`, or `"fix val1 val2..."` for multiple periods. |
-| `nharm` | `int` | Number of harmonics. |
-| `nsubharm` | `int` | Number of sub-harmonics. |
+| `nharm` | `int` | Number of higher harmonics (frequencies `2f₀, 3f₀, … (Nharm+1)f₀`). |
+| `nsubharm` | `int` | Number of sub-harmonics (frequencies `f₀/2, f₀/3, … f₀/(Nsubharm+1)`). |
 | `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["harmonicfilter_model_N"]` (or `"Killharm_model_N"` when called as `cmd.Killharm`). See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `fitonly` | `bool` | Fit the model but do not subtract it (statistics are still computed). |
 | `output_format` | `str` or `None` | Coefficient output format: `"outampphase"`, `"outampradphase"`, `"outRphi"`, or `"outRradphi"`. |
 | `clip` | `float` or `None` | Sigma-clipping threshold: fit, clip outliers, then refit. |
+| `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded from the fit. |
 
 !!! tip "Back-references work across chain steps"
     `period` accepts `"ls"`, `"aov"`, `"bls"`, `"both"`, `"injectharm"`, and `"fixcolumn NAME"`. For `"aov"`, the most recent prior `-aov` *or* `-aov_harm` wins (whichever ran later). All of these resolve equally inside a single `Pipeline` or across chain boundaries. `"both"` supplies two periods (LS + AOV) and works in a single-LC chain, but raises `NotImplementedError` in batch-chain mode — use a single `Pipeline` invocation for batch `"both"` fitting. Missing prior command → `LookupError`.
+
+**Output**
+
+Suffix `N` is the pipeline command index; per-period coefficients carry an extra index `k` for the period when more than one is fit:
+
+| Column | Description |
+|--------|-------------|
+| `HarmonicFilter_Mean_Mag_N` | Mean magnitude after the fit. |
+| `HarmonicFilter_Period_k_N` | Period(s) used in the fit. |
+| `HarmonicFilter_*coeff*_k_N` | Per-period harmonic coefficients in one of four representations (`{Sin,Cos}coeff`, `{Amplitude,Phase}`, `R/Phi`, etc.) selected by `output_format`. |
+
+When called via the legacy `Killharm` synonym, columns appear under the `Killharm_*` prefix.
+
+When `save_model` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["harmonicfilter_model_N"]` | DataFrame: time, original magnitude, and the best-fit harmonic model. (`result.files["Killharm_model_N"]` when invoked via `cmd.Killharm`.) |
 
 **Examples**
 
@@ -129,7 +201,9 @@ result = lc.harmonicfilter(period="fix 0.514333", nharm=10, nsubharm=0,
 
 ---
 
-## `restricttimes` / `restoretimes` — Time windowing
+### `restricttimes` / `restoretimes` — Time windowing
+
+**Syntax**
 
 ```python
 cmd.restricttimes(mode="JDrange", minJD=None, maxJD=None,
@@ -138,9 +212,41 @@ cmd.restricttimes(mode="JDrange", minJD=None, maxJD=None,
 cmd.restoretimes(prior_command=1)
 ```
 
-`restricttimes` discards observations outside a time window or list. `restoretimes` undoes a prior restriction.
+**Description**
 
-Modes: `"JDrange"` (min/max), `"JDlist"` (file of times), `"expr"` (boolean expression).
+`restricttimes` filters observations from the light curve based on time, string IDs, or an analytic expression. By default only points **matching** the criterion are kept; pass `exclude=True` to **remove** matching points instead. Available modes are `"JDrange"` (a single JD interval applied to every LC), `"JDrangebylc"` (per-LC interval), `"JDlist"`/`"imagelist"` (read times or string IDs from a file), and `"expr"` (keep points where a boolean expression evaluates to `> 0`). With `markrestrict` set, points are tagged rather than removed: kept points get `markrestrict=1`, dropped points get `0`, and the light curve length is preserved.
+
+`restoretimes` re-attaches points removed by a prior `restricttimes` command (referenced by 1-based pipeline index). Restored points are appended and the light curve is re-sorted by time. `restoretimes` cannot be used together with a `markrestrict`-style restriction.
+
+CLI equivalent: [`-restricttimes`](../../cli/filtering.md#-restricttimes) and [`-restoretimes`](../../cli/filtering.md#-restoretimes).
+
+**Parameters** (`restricttimes`)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `str` | One of `"JDrange"`, `"JDrangebylc"`, `"JDlist"`, `"imagelist"`, `"expr"`. |
+| `minJD`, `maxJD` | `float`, `str`, or `None` | JD bounds for `"JDrange"` / `"JDrangebylc"`. |
+| `JDfilename` | `str` or `None` | File with allowed JD values (`"JDlist"`) or string IDs (`"imagelist"`). |
+| `expression` | `str` or `None` | Boolean expression for `"expr"` mode (kept where `>0`). |
+| `exclude` | `bool` | Invert the selection — remove matching points instead of keeping them. |
+| `markrestrict` | `str` or `None` | Variable name to mark kept (`1`) and dropped (`0`) points instead of removing them. |
+| `noinitmark` | `bool` | Treat existing `markrestrict` values as an initial mask. |
+
+**Parameters** (`restoretimes`)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `prior_command` | `int` | 1-based index of the `restricttimes` step to undo. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `RestrictTimes_MinJD_N` / `RestrictTimes_MaxJD_N` | When `mode="JDrange"` or `"JDrangebylc"`, the JD range applied to this light curve. |
+
+`restoretimes` emits no statistics columns — it modifies the active light curve in place by re-appending the previously removed points.
 
 **Examples**
 
@@ -194,7 +300,9 @@ For a phased illustration, the next figure shows `EXAMPLES/3.transit` phased on 
 
 ---
 
-## `TFA` — Trend Filtering Algorithm
+### `TFA` — Trend Filtering Algorithm
+
+**Syntax**
 
 ```python
 cmd.TFA(trendlist, dates_file, pixelsep, correct_lc=True,
@@ -205,15 +313,51 @@ cmd.TFA(trendlist, dates_file, pixelsep, correct_lc=True,
         outfitmask=None)
 ```
 
+**Description**
+
+Run the Trend Filtering Algorithm (Kovács, Bakos & Noyes 2005) on the light curves. TFA fits each LC as a linear combination of a set of template (basis) light curves and subtracts the fit, yielding a detrended LC. A light-curve list (`run_filelist`) is required, and the `x`/`y` pixel positions of each LC must be available as columns in the list. Trend stars within `pixelsep` of the source are excluded to avoid self-filtering.
+
+CLI equivalent: [`-TFA`](../../cli/filtering.md#-tfa).
+
+**Parameters**
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `trendlist` | `str` | Path to a file listing the trend (template) light curves, one per line. |
-| `dates_file` | `str` | Path to the dates file (one epoch per line, matching the observation cadence). |
-| `pixelsep` | `float` | Maximum pixel separation for selecting trend stars. Stars further than this threshold are excluded. |
+| `trendlist` | `str` | Path to a file listing the trend (template) light curves. Each row: `trendname trendx trendy`. |
+| `dates_file` | `str` | Path to the dates file (column 1: filename/id; column 2: JD). |
+| `pixelsep` | `float` | Maximum pixel separation for selecting trend stars. Templates closer than this to the source are excluded. |
 | `correct_lc` | `bool` | Subtract the TFA model from the light curve. Default `True`. |
-| `save_coeffs` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["TFA_coeffs_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_coeffs` | `bool`, `str`, or `Output` | Per-LC trend coefficients. `True` captures as `result.files["TFA_coeffs_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_model` | `bool`, `str`, or `Output` | Per-LC TFA model. `True` captures as `result.files["TFA_model_N"]`. |
 | `xycol` | `(int, int)` or `None` | Column numbers `(xcol, ycol)` for pixel coordinates in the trend list. |
-| `clip` | `float` or `None` | Sigma-clipping threshold during TFA fitting. |
+| `clip` | `float` or `None` | Sigma-clipping threshold during TFA fitting (default 5σ when set). |
+| `usemedian` | `bool` | Use median instead of mean as the clipping reference. |
+| `useMAD` | `bool` | Use MAD instead of standard deviation for the clipping scatter. |
+| `readformat` | `tuple` or `None` | `(Nskip, jdcol, magcol)` non-default light-curve read format. |
+| `trend_coeff_priors` | `str` or `None` | Path to a Gaussian-prior file for trend coefficients. |
+| `weight_by_template_stddev` | `bool` | Weight points by `1/ave_template_stddev` instead of `1/err`. |
+| `fitmask` | `str` or `None` | Mask variable; only points where `fitmask = 1` are included in the trend fit. The model is still evaluated and subtracted at excluded points. |
+| `outfitmask` | `str` or `None` | Variable name to record the post-clipping fit mask. |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `TFA_MeanMag_N` | Out-of-fit mean magnitude. |
+| `TFA_RMS_N` | Post-filter RMS. |
+
+When `save_*` keywords are set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["TFA_coeffs_N"]` | DataFrame: trend coefficients for each template. |
+| `result.files["TFA_model_N"]` | DataFrame: the TFA model evaluated at each observation. |
+
+**References**
+
+Kovács, Bakos & Noyes 2005, MNRAS, 356, 557.
 
 **Examples**
 
@@ -231,7 +375,9 @@ batch = (vt.Pipeline()
 
 ---
 
-## `TFA_SR` — TFA with signal reconstruction
+### `TFA_SR` — TFA with signal reconstruction
+
+**Syntax**
 
 ```python
 cmd.TFA_SR(trendlist, dates_file, pixelsep, dotfafirst=1,
@@ -240,12 +386,38 @@ cmd.TFA_SR(trendlist, dates_file, pixelsep, dotfafirst=1,
            correct_lc=True, decorr_params=None, ...)
 ```
 
-Simultaneous TFA detrending and signal reconstruction. `signal_mode` controls the signal model: `"bin"` (phase-binned), `"signal"` (from file), or `"harm"` (harmonic series with `signal_params=(nharm, nsubharm)`).
+**Description**
+
+Run TFA in Signal Reconstruction (SR) mode. TFA-SR iteratively applies TFA and fits a signal model to the light curve, allowing the algorithm to preserve astrophysical signal that would otherwise be partially filtered out by plain TFA. The signal model is selected by `signal_mode`: `"bin"` (phase-binned), `"signal"` (read from a per-LC signal file), or `"harm"` (truncated Fourier series with `signal_params=(Nharm, Nsubharm)`). Most other parameters mirror `TFA` — see that command for the shared keywords.
+
+CLI equivalent: [`-TFA_SR`](../../cli/filtering.md#-tfa_sr).
+
+**Parameters** (in addition to those of `TFA`)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
+| `dotfafirst` | `int` | `1` = apply TFA first each iteration, then fit the signal to the residual; `0` = subtract the signal first, then apply TFA. |
+| `tfathresh` | `float` | Iteration stops when the fractional RMS change falls below this threshold. |
+| `maxiter` | `int` | Maximum number of TFA-SR iterations. |
+| `signal_mode` | `str` | Signal-model type: `"bin"`, `"signal"`, or `"harm"`. |
+| `signal_params` | varies | For `"bin"`: `nbins` (`int`). For `"signal"`: filename (`str`). For `"harm"`: `(Nharm, Nsubharm)` tuple. |
 | `signal_period` | `float`, `str`, or `None` | Period sub-option for `"bin"` or `"harm"` signal modes. Float emits `"period" val`; string keyword `"ls"`, `"aov"`, or `"bls"` inherits the best period from the most recent matching prior command. The keyword resolves equally in a single `Pipeline` and across chain steps. Missing prior command → `LookupError`. |
-| `decorr_params` | `str` or `None` | Raw token string for simultaneous EPD decorrelation, e.g. `"0 2 col1 1 col2 2"` (iterative_flag Nlcterms lccolumn1 lcorder1 ...). |
+| `decorr_params` | `str` or `None` | Raw token string for simultaneous EPD decorrelation, e.g. `"0 2 col1 1 col2 2"` (`iterativeflag Nlcterms lccolumn1 lcorder1 ...`). |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `TFA_SR_MeanMag_N` | Out-of-fit mean magnitude. |
+| `TFA_SR_RMS_N` | Post-filter RMS. |
+
+When `save_*` keywords are set, file keys mirror those of `TFA` (`result.files["TFA_coeffs_N"]`, `result.files["TFA_model_N"]`).
+
+**References**
+
+Kovács, Bakos & Noyes 2005, MNRAS, 356, 557.
 
 !!! warning "Known issue"
     The current wrapper emits the `xycol` block *before* the positional `pixelsep` value, which the CLI rejects. Until that is fixed in pyvartools, examples that need `xycol` should drop down to `subprocess.run`.
@@ -279,7 +451,9 @@ subprocess.run([
 
 ---
 
-## `SYSREM` — Systematic noise removal
+### `SYSREM` — Systematic noise removal
+
+**Syntax**
 
 ```python
 cmd.SYSREM(ninput_color, ninput_airmass, initial_airmass_file,
@@ -288,10 +462,49 @@ cmd.SYSREM(ninput_color, ninput_airmass, initial_airmass_file,
            useweights=1, col=None)
 ```
 
-Tamuz et al. (2005) SYSREM algorithm. Removes systematic effects correlated with colour and airmass across an ensemble of light curves. `save_model` accepts `bool`, `str`, or `Output` — see [Auxiliary output files](index.md#auxiliary-output-files). The model is captured as `result.files["SYSREM_model_N"]`.
+**Description**
+
+Run the SYSREM PCA-like algorithm of Tamuz, Mazeh & Zucker (2005) to identify and remove ensemble trends from a set of light curves. SYSREM iteratively fits a small number of "color"-like (per-star) and "airmass"-like (per-image) terms to the residuals and subtracts them. This command requires a light-curve list (`run_filelist`) and automatically sets the `-readall` option.
+
+CLI equivalent: [`-SYSREM`](../../cli/filtering.md#-sysrem).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ninput_color` | `int` | Number of initial "color"-like (per-star) trends. Values are read from the input light-curve list. |
+| `col` | `int` or `None` | Column in the input list for the first color term (subsequent terms follow in order). |
+| `ninput_airmass` | `int` | Number of initial "airmass"-like (per-image) trends. |
+| `initial_airmass_file` | `str` | File with initial airmass trends (column 1: JD; subsequent columns: trend values). |
+| `sigma_clip1` | `float` | σ-clipping threshold for the mean-magnitude calculation. |
+| `sigma_clip2` | `float` | σ-clipping threshold for which points contribute to the airmass/color terms. |
+| `saturation` | `float` | Magnitudes brighter than this value do not contribute to the fit. |
+| `correct_lc` | `bool` | Subtract the SYSREM model from each light curve. |
+| `save_model` | `bool`, `str`, or `Output` | Per-LC model. `True` captures as `result.files["SYSREM_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_trends` | `bool`, `str`, or `Output` | Single global trend file (the converged airmass/color trend vectors for the run). |
+| `useweights` | `int` | `1` to weight observations by their formal uncertainties; `0` to weight uniformly. |
 
 !!! warning "Known issue: `save_trends`"
     The CLI form of `-SYSREM` writes the converged trend vectors to a single **file path**, not a directory; the current wrapper treats `save_trends` as a directory-style `Output` spec and so cannot drive the trend-output flag correctly. Use `subprocess.run` to capture the trend file until this is fixed.
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `SYSREM_MeanMag_N` | Mean magnitude after SYSREM. |
+| `SYSREM_RMS_N` | Post-filter RMS. |
+
+When `save_model` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["SYSREM_model_N"]` | DataFrame: per-LC SYSREM model (`JD mag mag_model sig clip`). |
+
+**References**
+
+Tamuz, Mazeh & Zucker 2005, MNRAS, 356, 1466.
 
 **Examples**
 

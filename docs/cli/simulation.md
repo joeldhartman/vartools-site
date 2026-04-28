@@ -59,6 +59,8 @@ For every numerical parameter, supply the value using one of:
 - `"expr" expression` — Evaluate an analytic expression per light curve.
 - `"list" ["column" col]` — Read the value from the input light curve list. By default the next available column is used; use `"column" col` to specify explicitly.
 
+Python equivalent: [`addnoise`](../python/commands/simulation.md#addnoise-add-synthetic-noise).
+
 ### Noise models
 
 #### `"white"` — Pure white (uncorrelated) noise
@@ -188,6 +190,8 @@ A_1*cos(2*π*(t/P + φ_1))
     + sum_{k=2}^{Nsubharm+1} A_k*cos(2*π*(t/k/P + φ_k))
 ```
 
+Python equivalent: [`Injectharm`](../python/commands/simulation.md#injectharm-inject-a-harmonic-signal).
+
 **Period source**
 
 | Keyword | Description |
@@ -313,6 +317,8 @@ The phased RR-Lyrae LC at the highest fundamental amplitude (0.25 mag) and at a 
 
 Add a Mandel-Agol limb-darkened transit signal to the light curve.
 
+Python equivalent: [`Injecttransit`](../python/commands/simulation.md#injecttransit-inject-a-transit-signal).
+
 **Parameters**
 
 For each physical parameter, the source of the value must be specified. The keyword prefix determines the source:
@@ -384,6 +390,8 @@ vartools -i EXAMPLES/3 -oneline -randseed 1 \
 **Description**
 
 Replicate the current light curve `Ncopies` times in memory. Each copy is processed independently by all subsequent VARTOOLS commands. Data from commands preceding `-copylc` is replicated in the output table for each copy. Each copy has the suffix `_copy$copycommandnum.$copynum` appended to its name, where `$copycommandnum` is the index of the `-copylc` command and `$copynum` runs from `0` to `Ncopies - 1`.
+
+Python equivalent: [`copylc`](../python/commands/simulation.md#copylc-duplicate-the-light-curve-in-memory).
 
 **Parameters**
 

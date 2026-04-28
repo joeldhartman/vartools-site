@@ -17,6 +17,8 @@ Commands for fitting analytic models to light curves, from simple harmonic serie
 
 Fit a function that is linear in its free parameters to each light curve using least squares.
 
+Python equivalent: [`linfit`](../python/commands/model-fitting.md#linfit-linear-combination-fitting).
+
 **Parameters**
 
 - `function` — Analytic function to fit (e.g., `'a1*t^2+a2*t+a3'`).
@@ -83,6 +85,8 @@ Linfit_errc_2 = 3.2584974556662493e-05
 **Description**
 
 Fit a function that is nonlinear in its free parameters to each light curve. Two optimisers are supported: `amoeba` (downhill simplex / Nelder-Mead, fast greedy local minimisation) and `mcmc` (differential-evolution Markov chain Monte Carlo, full posterior exploration). Parameters that enter the model linearly may be moved out of the nonlinear search and fit by linear least squares (`linfit`), which is faster and more numerically stable. Optional Gaussian-process covariance kernels (`squareexp`, `exp`, `matern`) handle correlated errors; arbitrary priors and constraints can be added.
+
+Python equivalent: [`nonlinfit`](../python/commands/model-fitting.md#nonlinfit-non-linear-least-squares-fitting).
 
 **Parameters**
 
@@ -166,6 +170,8 @@ vartools -i EXAMPLES/3 \
 
 Fit a Mandel and Agol (2002) transit model to the light curve. Initial parameters can come from a preceding `-BLS` run or be entered directly.
 
+Python equivalent: [`MandelAgolTransit`](../python/commands/model-fitting.md#mandelagoltransit-mandel-agol-transit-model).
+
 **Initial parameters** (when not using `"bls"` or `"blsfixper"`)
 
 | Parameter | Description |
@@ -241,6 +247,8 @@ MandelAgolTransit_chi2_1    = 27.06054
 
 Fit a Protopapas, Jimenez and Alcock (2005) "softened" transit model to the light curve. Initial parameters may come from a preceding `-BLS` or `-BLSFixPer` run, or be entered directly.
 
+Python equivalent: [`SoftenedTransit`](../python/commands/model-fitting.md#softenedtransit-softened-trapezoidal-transit).
+
 **Parameters**
 
 - `P0`, `T00`, `eta0`, `delta0`, `mconst0` — Initial period, time of transit, transit duration parameter, depth, and out-of-transit magnitude (use a negative value for `mconst0` to estimate it from the data).
@@ -306,6 +314,8 @@ SoftenedTransit_chi2perdof_1 = 27.04335183
 
 Fit a simple (Wozniak 2001) microlensing model to the light curve using a downhill simplex optimizer.
 
+Python equivalent: [`microlens`](../python/commands/model-fitting.md#microlens-microlensing-model).
+
 **Parameters**
 
 For each of the five model parameters (`f0`, `f1`, `u0`, `t0`, `tmax`), optionally specify:
@@ -368,6 +378,8 @@ Microlens_chi2perdof_0 = 4.4674961258953
 
 Fit a single, circular, uniform-temperature starspot model to the light curve using the Dorren (1987) model. Parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987. Set `mconst0` negative to estimate it automatically from the data. Fit flags (`fitP`, `fita`, etc.) are `1` to vary and `0` to fix the corresponding parameter.
 
+Python equivalent: [`Starspot`](../python/commands/model-fitting.md#starspot-starspot-model).
+
 **Citation:** Dorren 1987, ApJ, 320, 756.
 
 **Examples**
@@ -417,6 +429,8 @@ Starspot_chi2perdof_1  = 26.58796
     This command is deprecated as of VARTOOLS 1.3. Use [`-linfit`](model-fitting.md#-linfit) instead.
 
 Decorrelate the light curves against specified external or light-curve-specific signals using polynomial regression.
+
+Python equivalent: [`decorr`](../python/commands/model-fitting.md#decorr-decorrelation).
 
 **Parameters**
 

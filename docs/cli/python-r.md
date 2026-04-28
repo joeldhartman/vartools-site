@@ -23,6 +23,8 @@ when VARTOOLS was built (see the [Installation](../install.md) page).
 
 Execute arbitrary R code on each light curve. VARTOOLS embeds the user-supplied code in an R function and calls it once per light curve (or once for all light curves with `"process_all_lcs"`). Light-curve variables are passed to R as native R vectors.
 
+Python equivalent: [`R`](../python/commands/python-r.md#r-run-r-code).
+
 !!! note "Environment requirement"
     The `R_HOME` environment variable must be set before calling VARTOOLS. Find the correct value with `R RHOME`. Adding `export R_HOME=$(R RHOME)` to your `.bashrc` is recommended.
 

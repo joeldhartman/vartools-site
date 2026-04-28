@@ -53,6 +53,8 @@ single call.
 
 Compute the Fast χ² periodogram using Palmer's algorithm, which searches for the best-fitting multi-harmonic sinusoidal model at each trial frequency. Each parameter accepts one of three sources: `"fix"` (constant), `"list"` (input list), or `"fixcolumn"` (prior output column).
 
+Python equivalent: [`fastchi2`](../python/commands/extensions.md#fastchi2-palmer-2009-fast-chi2-periodogram).
+
 **Parameters**
 
 | Parameter | Description |
@@ -112,6 +114,8 @@ vartools -i EXAMPLES/2 -oneline -ascii \
 **Description**
 
 Compute the complex Fourier transform of an unevenly sampled time series using Scargle's method. Returns the real and imaginary components plus the absolute-square power spectrum (equivalent to the Lomb-Scargle periodogram). **Input and output frequencies are in radians per unit time.**
+
+Python equivalent: [`ftuneven`](../python/commands/extensions.md#ftuneven-complex-fourier-transform-of-unevenly-sampled-data).
 
 **Parameters**
 
@@ -178,6 +182,8 @@ Combine several per-point quality indicators into a single bit-packed flag varia
 - bit 5 (value 32): set when the TFA-outlier mask flags the point as an outlier.
 - bit 6 (value 64): set when the pointing-outlier flag is 1.
 
+Python equivalent: [`hatpiflag`](../python/commands/extensions.md#hatpiflag-hatpi-binary-flag-combiner).
+
 **Parameters**
 
 | Argument | Description |
@@ -232,6 +238,8 @@ vartools -L USERLIBS/src/.libs/hatpiflag.so \
 **Description**
 
 Fit or inject a JKTEBOP detached eclipsing-binary light-curve model. Use `"inject"` to add the model to the light curve, or `"fit"` to optimise the parameters. Append `"vary"` to any parameter to allow it to vary during fitting.
+
+Python equivalent: [`jktebop`](../python/commands/extensions.md#jktebop-detached-eclipsing-binary-model).
 
 **Parameters**
 
@@ -309,6 +317,8 @@ vartools -L USERLIBS/src/.libs/jktebop.so \
 **Description**
 
 Fit a multivariate linear model to the light-curve magnitudes against one or more auxiliary variables (e.g. time, CCD *x*/*y* position, CCD temperature). Cross-terms between variables are not included.
+
+Python equivalent: [`splinedetrend`](../python/commands/extensions.md#splinedetrend-basis-spline-poly-harmonic-detrending).
 
 **Parameters**
 
@@ -390,6 +400,8 @@ The four splinedetrend output columns report the median magnitude (which is adde
 
 Designed for use with the `-l "combinelcs"` (or `-i "combinelcs"`) input mode, `-stitch` fits for and removes additive offsets between distinct light-curve segments (e.g. observations from different telescopes, cameras, or fields).
 
+Python equivalent: [`stitch`](../python/commands/extensions.md#stitch-stitch-multi-segment-light-curves-at-offsets).
+
 **Parameters**
 
 Required arguments:
@@ -468,6 +480,8 @@ vartools -L USERLIBS/src/.libs/stitch.so \
 **Description**
 
 Fit or inject Kipping's Macula analytic model for starspot modulation. Use `"inject"` to add the model signal to the light curve, or `"fit"` with `"amoeba"` (Nelder-Mead simplex) or `"lm"` (Levenberg-Marquardt) to optimise the parameters. Append `"vary"` to any parameter to mark it as free during fitting.
+
+Python equivalent: [`macula`](../python/commands/extensions.md#macula-kipping-2012-spot-model).
 
 **Parameters**
 
@@ -584,6 +598,8 @@ The injected light curve from Example 1 with the Example 2 fitted-model curve ov
 **Description**
 
 Add a scalar offset to every magnitude in the light curve. The offset can be a fixed constant, a per-LC value from the input list, a previously computed output statistic, or an analytic expression. This is also the canonical template extension included in the source tree to demonstrate how to write user-defined VARTOOLS extensions.
+
+Python equivalent: [`magadd`](../python/commands/extensions.md#magadd-add-a-constant-to-magnitudes).
 
 **Parameters**
 

@@ -4,7 +4,9 @@ Wrappers for vartools' embedded `-python` / `-R` interpreters, used to run user 
 
 ---
 
-## `R` — Run R code
+### `R` — Run R code
+
+**Syntax**
 
 ```python
 cmd.R(command, fromfile=False, init=None, init_fromfile=False,
@@ -12,7 +14,33 @@ cmd.R(command, fromfile=False, init=None, init_fromfile=False,
       process_all_lcs=False, verbose=False, continueprocess=None)
 ```
 
-Execute inline R code or an R script on each light curve. `vars` specifies variables to pass both into and out of R; `invars`/`outvars` allow separate control. `init` is R code run once before the batch loop begins.
+**Description**
+
+Execute arbitrary R code on each light curve. VARTOOLS embeds the user-supplied code in an R function and calls it once per light curve (or once for all light curves with `process_all_lcs=True`). Light-curve variables are passed to R as native R vectors. `vars` specifies variables to pass both into and out of R; `invars`/`outvars` allow separate control. `init` is R code run once before the batch loop begins (typically used for library imports and function definitions).
+
+The `R_HOME` environment variable must be set before calling vartools (find the correct value with `R RHOME`; adding `export R_HOME=$(R RHOME)` to your `.bashrc` is recommended). Under `-parallel`, a separate R sub-process is launched per thread; initialization runs independently for each thread, and globals are not shared between threads.
+
+CLI equivalent: [`-R`](../../cli/python-r.md#-r).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `command` | `str` | Inline R code (default), or path to an R script file when `fromfile=True`. |
+| `fromfile` | `bool` | If `True`, treat `command` as a file path rather than an inline string. |
+| `init` | `str` or `None` | R code (or file path when `init_fromfile=True`) executed once before processing. Typical use: library imports and function definitions. |
+| `init_fromfile` | `bool` | If `True`, `init` is a file path. |
+| `vars` | `str` or `None` | Comma-separated list of variables passed both into and received back from R. |
+| `invars` | `str` or `None` | Variables passed into R only (alternative to `vars`). |
+| `outvars` | `str` or `None` | Variables received back from R only (alternative to `vars`). |
+| `outputcolumns` | `str` or `None` | Subset of out-vars to emit in the output statistics table as `R_<name>_N`. |
+| `process_all_lcs` | `bool` | Pass all light curves at once. Vector inputs arrive as lists of vectors; scalar inputs as lists. The output variables must also be lists with one entry per LC. |
+| `verbose` | `bool` | Allow R to print to stdout (default: R runs in `--slave` mode). |
+| `continueprocess` | `int` or `None` | Reuse the sub-process from the *N*-th prior `-R` (1-indexed). Shares R state; no initialization code may be supplied. |
+
+**Output**
+
+This command produces no output statistics by default; user-defined `outputcolumns` appear as `R_<name>_N` in `result.vars`.
 
 **Examples**
 

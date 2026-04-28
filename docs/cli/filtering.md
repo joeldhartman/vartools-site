@@ -15,6 +15,8 @@ Commands for removing outliers, applying smoothing filters, restricting the time
 
 Sigma-clip the light curves. Points with errors ≤ 0 or NaN magnitude values are always removed. If `sigclip ≤ 0`, sigma-clipping is not performed but invalid points (err ≤ 0 or NaN magnitude) are still removed. The output table includes the number of points that were clipped.
 
+Python equivalent: [`clip`](../python/commands/filtering.md#clip-sigma-clipping).
+
 **Parameters**
 
 - `sigclip` — Clipping threshold in units of the standard deviation.
@@ -62,6 +64,8 @@ Npoints_2      =  3852
 ```
 
 Apply a running high-pass or low-pass filter to the light curve.
+
+Python equivalent: [`medianfilter`](../python/commands/filtering.md#medianfilter-median-filtering).
 
 **Parameters**
 
@@ -127,6 +131,8 @@ sum_{i=1}^{Nper}(
 By default the whitened light curve is passed to the next command; use `"fitonly"` to suppress subtraction. Use [`-fourierfilter`](#-fourierfilter) instead when you want a full-band high/low/band-pass filter without specifying periods in advance.
 
 `-Killharm` is accepted as a synonym for backward compatibility — same syntax and behaviour, but the output-column prefix is `Killharm_*` and the model-file suffix is `.killharm.model` instead of `.harmonicfilter.model`.
+
+Python equivalent: [`harmonicfilter`](../python/commands/filtering.md#harmonicfilter-harmonic-series-subtraction).
 
 **Parameters**
 
@@ -486,6 +492,8 @@ vartools -i EXAMPLES/2.simtesssample -oneline \
 
 Filter observations from the light curve based on their time values, string IDs, or an analytic expression. By default, only points **matching** the specified criterion are kept. Use `"exclude"` to **remove** matching points instead.
 
+Python equivalent: [`restricttimes`](../python/commands/filtering.md#restricttimes-restoretimes-time-windowing).
+
 **Parameters**
 
 | Parameter | Description |
@@ -560,6 +568,8 @@ vartools -i EXAMPLES/3 -stats mag pct20.0,pct80.0 \
 
 Restore observations that were filtered out by a prior `-restricttimes` command. The restored points are appended to the current light curve, and the light curve is then re-sorted by time.
 
+Python equivalent: [`restoretimes`](../python/commands/filtering.md#restricttimes-restoretimes-time-windowing).
+
 **Parameters**
 
 | Parameter | Description |
@@ -614,6 +624,8 @@ For a phase-folded illustration, the next figure shows `EXAMPLES/3.transit` phas
 
 Run the SYSREM PCA-like algorithm to identify and remove ensemble trends from a set of light curves. SYSREM iteratively fits a small number of "color"-like (per-star) and "airmass"-like (per-image) terms to the residuals. This command requires a light-curve list and automatically sets the `-readall` option.
 
+Python equivalent: [`SYSREM`](../python/commands/filtering.md#sysrem-systematic-noise-removal).
+
 **Parameters**
 
 | Parameter | Description |
@@ -667,6 +679,8 @@ vartools -l EXAMPLES/trendlist_tfa -header \
 **Description**
 
 Run the Trend Filtering Algorithm (TFA) on the light curves. TFA fits each light curve as a linear combination of a set of template (basis) light curves and subtracts the fit, yielding a filtered, detrended light curve. A light curve list (`-l`) is required, and the `x` and `y` pixel positions of each light curve must be available as columns in the list.
+
+Python equivalent: [`TFA`](../python/commands/filtering.md#tfa-trend-filtering-algorithm).
 
 **Parameters**
 
@@ -727,6 +741,8 @@ vartools -l EXAMPLES/lc_list_tfa -oneline -rms \
 **Description**
 
 Run TFA in Signal Reconstruction (SR) mode. TFA-SR iteratively applies TFA and fits a signal model to the light curve, allowing the algorithm to preserve astrophysical signal that would otherwise be partially filtered out by plain TFA. Most parameters are identical to [`-TFA`](#-tfa); the SR-specific parameters and the signal-model alternatives are described below.
+
+Python equivalent: [`TFA_SR`](../python/commands/filtering.md#tfa_sr-tfa-with-signal-reconstruction).
 
 **Parameters** (in addition to those of `-TFA`)
 

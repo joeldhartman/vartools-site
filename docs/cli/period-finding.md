@@ -26,6 +26,8 @@ Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. T
 
 For each of the three search parameters (`minp`, `maxp`, `subsample`) you may either give a fixed value on the command line, use the `"var"` keyword followed by a variable name, or use the `"expr"` keyword to evaluate an analytic expression for each light curve.
 
+Python equivalent: [`LS`](../python/commands/period-finding.md#ls-generalized-lomb-scargle).
+
 The statistic reported is:
 
 ```
@@ -113,6 +115,8 @@ Perform an Analysis of Variance (AoV) period search using phase binning. For eac
 
 The initial search uses a frequency step of `subsample/T`. The top peaks are refined to a resolution of `finetune/T`.
 
+Python equivalent: [`aov`](../python/commands/period-finding.md#aov-phase-binned-analysis-of-variance).
+
 **Parameters**
 
 | Parameter | Description |
@@ -179,6 +183,8 @@ Output: Five detected periods with `Period_1_0 = 1.23583047` (`AOV_1_0 = 18330.5
 
 Perform an AoV period search fitting a multi-harmonic model instead of phase bins. The model signal has `Nharm` harmonics. If `Nharm < 1`, the number of harmonics is automatically varied to minimize the false alarm probability (accounting for the penalty for overfitting). All other parameters are identical to `-aov`.
 
+Python equivalent: [`aov_harm`](../python/commands/period-finding.md#aov_harm-multi-harmonic-analysis-of-variance).
+
 **Parameters**
 
 | Parameter | Description |
@@ -239,6 +245,8 @@ Output: Period values and AOV_HARM, SNR, and logarithmic FAP values for 2 identi
 **Description**
 
 Run the Box-Least Squares (BLS) transit search algorithm (Kovács, Zucker & Mazeh 2002). BLS searches for periodic box-shaped (trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
+
+Python equivalent: [`BLS`](../python/commands/period-finding.md#bls-box-fitting-least-squares).
 
 Three ways to specify the allowed range of transit durations:
 
@@ -360,6 +368,8 @@ The output `*.bls.model` file contains the phased data and the best-fit trapezoi
 
 Run BLS at a single fixed period, searching only for the most transit-like signal at that period. Useful as a second pass after a full BLS or LS period search.
 
+Python equivalent: [`BLSFixPer`](../python/commands/period-finding.md#blsfixper-bls-at-a-fixed-period).
+
 **Parameters**
 
 | Parameter | Description |
@@ -453,6 +463,8 @@ Npoints_2                        =  3417
 
 Run BLS with the transit duration and a reference epoch fixed. The period is still searched over a grid from `minper` to `maxper`. Optionally the transit depth and ingress fraction (`qgress`) can be fixed as well. For `qgress`: `0` = box-shaped transit; `0.5` = V-shaped (grazing) transit.
 
+Python equivalent: [`BLSFixDurTc`](../python/commands/period-finding.md#blsfixdurtc-bls-with-fixed-transit-duration-and-epoch).
+
 **Parameters**
 
 | Parameter | Description |
@@ -513,6 +525,8 @@ Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 
 Run BLS with the period, transit duration, and reference epoch all fixed. Only the phase of the transit (within a single period) is searched. All options are similar to `-BLSFixDurTc`, except the period is also specified.
 
+Python equivalent: [`BLSFixPerDurTc`](../python/commands/period-finding.md#blsfixperdurtc-bls-with-fixed-period-duration-and-epoch).
+
 **Examples**
 
 **Example 1.** Fit a box-shaped transit to `EXAMPLES/3.transit` at a fixed period of 2.12345 days, with the duration fixed at `0.076996297` days and the transit epoch at `53727.29676321477`. The model is subtracted from the light curve and passed to the next command. The `fittrap` keyword fits a trapezoidal transit. The two `-rms` calls show how subtracting the BLS model reduces the scatter.
@@ -555,6 +569,8 @@ Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 **Description**
 
 Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm (Kurtz 1985) and optionally deconvolve it with the CLEAN algorithm (Roberts, Lehar & Dreher 1987) to remove aliasing due to the window function.
+
+Python equivalent: [`dftclean`](../python/commands/period-finding.md#dftclean-dft-power-spectrum-clean).
 
 **Parameters**
 
@@ -650,6 +666,8 @@ The transform is computed for all combinations of trial frequency (up to `maxfre
 
 The decay constant `c` (default: `1/(8π²)`) controls the trade-off between time and frequency resolution.
 
+Python equivalent: [`wwz`](../python/commands/period-finding.md#wwz-weighted-wavelet-z-transform).
+
 **Parameters**
 
 | Parameter | Description |
@@ -723,6 +741,8 @@ The transient ~0.3 cyc/day signal is clearly visible only between days 5–20 of
 **Description**
 
 Determine the minimum peak-to-peak amplitude that a signal at a given period must have to be detected by a Lomb-Scargle search with `-ln(FAP) > thresh`. The signal shape is either a Fourier series or read from a file. The threshold is computed by scaling the signal template until the LS statistic reaches the detection limit.
+
+Python equivalent: [`GetLSAmpThresh`](../python/commands/period-finding.md#getlsampthresh-minimum-detectable-amplitude).
 
 **Parameters**
 

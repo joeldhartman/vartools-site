@@ -44,10 +44,11 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-FFT` | Fast Fourier transform (evenly-sampled data) | [CLI](cli/manipulation.md#-fft) | [Python](python/commands/manipulation.md#fft-ifft-fast-fourier-transform) |
 | `-findblends` | Identify nearby variables that may blend into the target | [CLI](cli/misc.md#-findblends) | [Python](python/commands/misc.md#findblends-search-for-blended-transits) |
 | `-fluxtomag` | Convert flux to magnitude | [CLI](cli/manipulation.md#-fluxtomag) | [Python](python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions) |
+| `-fourierfilter` | Full-band Fourier high/low/band-pass filter with optional analytic filter and edge tapering | [CLI](cli/filtering.md#-fourierfilter) | — |
 | `-ftuneven` | Complex Fourier transform of unevenly sampled data (USERLIB extension) | [CLI](cli/extensions.md#-ftuneven) | [Python](python/commands/extensions.md#ftuneven-complex-fourier-transform-of-unevenly-sampled-data) |
 | `-GetLSAmpThresh` | Minimum detectable amplitude at a given period (LS-based) | [CLI](cli/period-finding.md#-getlsampthresh-minimum-detectable-amplitude) | [Python](python/commands/period-finding.md#getlsampthresh-ls-amplitude-threshold) |
 | `-hatpiflag` | Combine HATPI quality flags into a single binary flag (USERLIB extension) | [CLI](cli/extensions.md#-hatpiflag) | [Python](python/commands/extensions.md#hatpiflag-hatpi-binary-flag-combiner) |
-| `-if` | Conditional block (-if / -elif / -else / -fi) | [CLI](cli/control-flow.md#-if-elif-else-fi) | [Python](python/commands/control-flow.md#ifcmd-conditional-execution) |
+| `-if` | Conditional block (-if / -elif / -else / -fi) | [CLI](cli/control-flow.md#-if-elif-else-fi) | [Python](python/commands/control-flow.md#ifcmd-elifcmd-elsecmd-ficmd-conditional-execution) |
 | `-IFFT` | Inverse fast Fourier transform | [CLI](cli/manipulation.md#-ifft) | [Python](python/commands/manipulation.md#fft-ifft-fast-fourier-transform) |
 | `-Injectharm` | Inject a harmonic (sinusoidal) signal | [CLI](cli/simulation.md#-injectharm) | [Python](python/commands/simulation.md#injectharm-inject-a-harmonic-signal) |
 | `-Injecttransit` | Inject a Mandel-Agol transit model | [CLI](cli/simulation.md#-injecttransit) | [Python](python/commands/simulation.md#injecttransit-inject-a-transit-signal) |

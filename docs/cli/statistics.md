@@ -13,6 +13,8 @@ Commands for computing variability and scatter statistics on light curves.
 
 Calculate the RMS of the light curves. The output includes the RMS, the mean magnitude, the expected RMS (derived from the formal photometric uncertainties), and the number of points in the light curve.
 
+Python equivalent: [`rms`](../python/commands/statistics.md#rms-root-mean-square).
+
 **Parameters**
 
 - `"maskpoints" maskvar` — Optional. Only points with `maskvar > 0` are included in the calculation; all others are excluded.
@@ -45,6 +47,8 @@ EXAMPLES/2   ...
 
 Calculate the RMS after applying a moving mean filter to the light curves. Similar to [`-chi2bin`](statistics.md#-chi2bin), this measures the correlated (red) noise component by binning on specified timescales. `Nbin` filters are applied, each producing a separate RMS estimate. The note that light curves passed to the next command are **unchanged** by this command.
 
+Python equivalent: [`rmsbin`](../python/commands/statistics.md#rmsbin-binned-rms).
+
 **Parameters**
 
 - `Nbin` — Number of time bins (filters) to apply.
@@ -69,6 +73,8 @@ vartools -l EXAMPLES/lc_list -header -rmsbin 5 5.0 10.0 60.0 1440.0 14400.0
 ```
 
 Calculate chi-squared per degree of freedom (χ²/dof) for the light curves. The output includes χ²/dof and the error-weighted mean magnitude.
+
+Python equivalent: [`chi2`](../python/commands/statistics.md#chi2-chi-squared-statistic).
 
 **Parameters**
 
@@ -109,6 +115,8 @@ EXAMPLES/10      3.72218  10.87763
 
 Calculate χ²/dof after applying a moving mean filter to the light curves. As with `-rmsbin`, the light curves passed to the next command are unchanged. `Nbin` filters are used, producing `Nbin` separate estimates of χ²/dof and the error-weighted mean.
 
+Python equivalent: [`chi2bin`](../python/commands/statistics.md#chi2bin-binned-chi-squared).
+
 **Parameters**
 
 - `Nbin` — Number of filters.
@@ -134,6 +142,8 @@ vartools -l EXAMPLES/lc_list -header -chi2bin 5 5.0 10.0 60.0 1440.0 14400.0
 ```
 
 Compute one or more general statistics on one or more light-curve vectors (e.g., `t`, `mag`, `err`, or any user-defined variable). Every requested statistic is computed for every listed variable.
+
+Python equivalent: [`stats`](../python/commands/statistics.md#stats-generic-statistics).
 
 **Parameters**
 
@@ -193,6 +203,8 @@ vartools -i EXAMPLES/3 \
 
 Calculate the alarm variability statistic for each light curve. This statistic is designed to detect time-correlated variability — long runs of consecutive positive or negative residuals are penalised more heavily than randomly distributed deviations of the same RMS, making the alarm sensitive to coherent signals that other low-order moments may miss.
 
+Python equivalent: [`alarm`](../python/commands/statistics.md#alarm-alarm-statistic).
+
 **Parameters**
 
 | Parameter | Description |
@@ -223,6 +235,8 @@ vartools -i EXAMPLES/2 -header -alarm
 ```
 
 Calculate Stetson's J statistic, L statistic, and the kurtosis for each light curve. The J statistic measures time-correlated variability by comparing pairs of observations that are close in time.
+
+Python equivalent: [`Jstet`](../python/commands/statistics.md#jstet-stetson-j-statistic).
 
 **Parameters**
 
@@ -266,6 +280,8 @@ EXAMPLES/10   0.25784   0.92806   0.23929
 ```
 
 Calculate the discrete auto-correlation function (Edelson and Krolik 1988, ApJ, 333, 646) for each light curve. The results are written to files in `outdir` with the suffix `.autocorr` (i.e., `outdir/$basename.autocorr`).
+
+Python equivalent: [`autocorrelation`](../python/commands/statistics.md#autocorrelation-autocorrelation-function).
 
 !!! note "Cross-reference"
     For period-finding using autocorrelation-based methods, see the [Period Finding](period-finding.md) page.
