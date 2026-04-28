@@ -162,7 +162,7 @@ Returns a [`BatchResult`](results.md) object.
 
 ---
 
-### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
 
 Run the pipeline on a collection of light curve files on disk. No Python I/O is performed — vartools reads the files directly. This is the most efficient method for large surveys.
 
@@ -177,6 +177,8 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
 | `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-init_lc_vars). |
 | `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables read from list file columns. See [Per-star variables](#per-star-variables-inlistvars). |
+| `combinelcs` | `bool` | If `True`, append `combinelcs` to the `-l` flag — vartools then treats each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
+| `lcnumvar` | `str` or `None` | Only used when `combinelcs=True`. Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
@@ -184,9 +186,44 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 
 Returns a [`BatchResult`](results.md) object.
 
+#### Example — `combinelcs=True` with a pre-built list file
+
+The list file holds one *group* per line — paths within a group are joined by commas, and vartools combines each group into a single in-memory light curve.
+
+```python
+# Build a tiny groups.txt on the fly that pairs EXAMPLES/2 with EXAMPLES/3.
+import tempfile, os
+list_path = os.path.join(tempfile.mkdtemp(), "groups.txt")
+with open(list_path, "w") as f:
+    f.write("EXAMPLES/2,EXAMPLES/3\n")
+    f.write("EXAMPLES/4,EXAMPLES/5\n")
+
+batch = vt.Pipeline().rms().run_filelist(list_path, combinelcs=True)
+print(batch.vars)   # one row per line in the list file
+```
+
 ---
 
-### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, lcnumvar=None, delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+
+Single-group convenience wrapper around `run_combinelcs()`. Combines *files* into one in-memory light curve, runs the pipeline, and returns a single [`Result`](results.md) (not a `BatchResult`).
+
+```python
+# Combine two segments of the same star and run an LS period search on the
+# combined LC.  EXAMPLES/2 stands in for "telescope A"; we pass it twice
+# just to exercise the combine path.
+result = (vt.Pipeline()
+          .rms()
+          .LS(0.5, 10.0, 1e-3, npeaks=1)
+          ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2"])
+print(result.vars["LS_Period_1_1"])
+```
+
+All keyword arguments forward to `run_combinelcs()`; see that method for details.
+
+---
+
+### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
 
 Run the pipeline using vartools `-l … combinelcs` mode. Each entry in *groups* is a list of file paths that vartools combines into a single in-memory light curve before passing it to the command chain. The result contains one row in `batch.vars` per group.
 
@@ -203,14 +240,14 @@ This is the natural entry point for multi-telescope stitching workflows — for 
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. |
 | `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. |
 | `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables. See [Per-star variables](#per-star-variables-inlistvars). |
-| `lcnumvar` | `str` or `None` | If given, pass `lcnumvar <name>` after `combinelcs` in the `-l` flag. vartools creates a per-observation integer variable recording which source file each point came from. |
+| `lcnumvar` | `str` or `None` | Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out of emitting the `lcnumvar` qualifier. |
 | `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
 | `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
 
-PerLC array parameters are not supported with `run_combinelcs()` — a `ValueError` is raised if any command in the pipeline carries a `PerLC` attribute.
+PerLC array parameters are supported: each PerLC must have one value per group (`len(groups)`). The values are appended as additional columns to the temporary list file and wired up via `-inlistvars`, exactly as in `run_batch()`/`run_filelist()`. A length mismatch raises `ValueError`.
 
 Returns a [`BatchResult`](results.md) object.
 
@@ -231,13 +268,12 @@ batch = vt.Pipeline().rms().run_combinelcs(groups)
 print(batch.vars)   # one row per group
 ```
 
-#### Example — track which file each point came from
+#### Example — opt out of the per-point file index
+
+By default `run_combinelcs()` passes `lcnumvar lcnum` to vartools, creating an integer variable `lcnum` per observation. Pass `lcnumvar=None` to suppress it:
 
 ```python
-batch = vt.Pipeline().rms().run_combinelcs(
-    groups,
-    lcnumvar="lcnum",   # vartools creates an integer variable "lcnum" per observation
-)
+batch = vt.Pipeline().rms().run_combinelcs(groups, lcnumvar=None)
 ```
 
 #### Example — multi-telescope stitch + period search
@@ -249,7 +285,7 @@ batch = (vt.Pipeline()
         .expr("mask=0")
         .stitch("mag", "err", "mask", "lcnum", method="median",
            lib_path="USERLIBS/src/.libs/stitch.so")
-        .LS(0.5, 10.0, 1e-3, npeaks=1)).run_combinelcs(groups, lcnumvar="lcnum", nthreads=2)
+        .LS(0.5, 10.0, 1e-3, npeaks=1)).run_combinelcs(groups, nthreads=2)
 
 print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)
 ```
@@ -607,6 +643,7 @@ This is all automatic — no manual list file or `-inlistvars` specification is 
 
 - **`run_batch()` and `run_filelist()` (list of paths) only.** `run()` and `run_file()` process a single light curve and raise `ValueError` if any per-LC array is present.
 - **`run_filelist()` with a pre-built list file (a single path string) is not supported.** pyvartools cannot safely append extra columns to a list file it did not create. Pass a Python list of paths instead and let the pipeline write the list file.
+- **`run_filelist(combinelcs=True)` is not supported.** When the user supplies a comma-joined list file directly, pyvartools cannot safely append extra value columns to it; a `ValueError` is raised. Use `run_combinelcs()` instead — it builds the list file itself and accepts PerLC values (one per group).
 - The array length must equal the number of light curves. A `ValueError` with a clear message is raised if it does not.
 
 !!! tip "Need per-LC values on unsupported parameters?"

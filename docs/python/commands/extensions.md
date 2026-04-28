@@ -216,22 +216,23 @@ pipe = (vt.Pipeline()
 
 **Examples**
 
-`-stitch` is most useful with the `-l ... combinelcs` input mode, which combines multiple files into a single in-memory LC. pyvartools' `Pipeline.run_filelist()` does not currently expose `combinelcs`, so the cleanest way to use `-stitch` from Python is via `subprocess`.
+`-stitch` is most useful with the `-l ... combinelcs` input mode, which combines multiple files into a single in-memory LC. The cleanest way to drive that from pyvartools is `Pipeline.run_combinelc()` for a single combined LC or `run_combinelcs()` for many groups; both default to emitting `lcnumvar lcnum`, which `-stitch` consumes.
 
 ```python
-import subprocess
+import pyvartools as vt
+from pyvartools.commands import stitch
+
 # Combine EXAMPLES/2 and EXAMPLES/2.shifted (= EXAMPLES/2 with +0.3 mag) into a
 # single LC and remove the inter-segment offset by median.  The two -rms calls
 # show the offset before and after stitching.
-subprocess.run([
-    "vartools",
-    "-l", "EXAMPLES/lc_list_stitch", "combinelcs", "lcnumvar", "lcnum",
-    "-L", "USERLIBS/src/.libs/stitch.so",
-    "-expr", "mask=mag*0+1",
-    "-rms",
-    "-stitch", "mag", "err", "mask", "lcnum", "median",
-    "-rms", "-oneline",
-], check=True)
+result = (vt.Pipeline()
+          .expr("mask=mag*0+1")
+          .rms()
+          .stitch("mag", "err", "mask", "lcnum", method="median",
+                  lib_path="USERLIBS/src/.libs/stitch.so")
+          .rms()
+          ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"])
+print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 ```
 
 ### `jktebop` — detached eclipsing-binary model

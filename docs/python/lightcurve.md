@@ -91,6 +91,35 @@ lc3 = vt.LightCurve.from_arrays(aux={"phase": phase_arr, "flux": flux_arr})
 
 ---
 
+### `LightCurve.from_files(paths, name='', lcnum_col='lcnum', sort=True, **read_kwargs)`
+
+Read several light-curve files and combine them into a single `LightCurve`. Each file is loaded via [`from_file`](#lightcurvefrom_filepath-formatnone-t_colbjd-mag_colmag-err_colerr-hdu1-name), the resulting frames are concatenated, and an integer `lcnum_col` is filled in (0 for the first file, 1 for the second, …). The combined frame is time-sorted by default.
+
+This is the Python-side counterpart to vartools' `-l ... combinelcs` mode — useful when you want to feed a single combined LC to `Pipeline.run(lc)` or to any non-batch entry point. (For vartools' built-in combine path, see [`Pipeline.run_combinelc()` / `run_combinelcs()`](pipeline.md#run_combinelcfiles-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-columnsnone-init_lc_varsnone-inlistvarsnone-lcnumvarlcnum-delimiter-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse--result).)
+
+```python
+lc = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"])
+print(list(lc._df.columns))        # ['t', 'mag', 'err', 'lcnum']
+print(lc._df["lcnum"].max())       # 1
+
+# Preserve file order instead of time-sorting:
+lc2 = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"], sort=False)
+
+# Rename the source-file column:
+lc3 = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"], lcnum_col="segment")
+```
+
+For FITS inputs with non-default column names, forward the keyword arguments to `from_file`:
+
+```python
+# lc = vt.LightCurve.from_files(
+#     ["sectorA.fits", "sectorB.fits"],
+#     t_col="BJD_TDB", mag_col="MAG", err_col="ERR_MAG",
+# )
+```
+
+---
+
 ### `LightCurve.from_dataframe(df, name='')`
 
 Wrap an existing `pd.DataFrame`. Any DataFrame is accepted — columns named `t`,

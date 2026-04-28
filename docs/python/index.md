@@ -261,6 +261,8 @@ print(result.vars["LS_Period_1_long"])
 | `pipe.run_file(path)` | file path | `Result` |
 | `pipe.run_batch(lcs)` | list of `LightCurve` | `BatchResult` |
 | `pipe.run_filelist(paths)` | list of paths or path to list-file | `BatchResult` |
+| `pipe.run_filelist(paths, combinelcs=True)` | list-file lines of comma-joined paths | `BatchResult` |
+| `pipe.run_combinelc(files)` | list of files combined into one LC | `Result` |
 | `pipe.run_combinelcs(groups)` | list of file-path groups | `BatchResult` |
 
 All run methods accept `capture_lc=True` to include the output light curve in
