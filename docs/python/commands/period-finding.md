@@ -749,7 +749,7 @@ CLI equivalent: [`-dftclean`](../../cli/period-finding.md#-dftclean-dft-power-sp
 | `npeaks` | `int` or `None` | Number of peaks to find in the *clean* spectrum. |
 | `finddirtypeaks` | `int` or `None` | Number of peaks to find in the *dirty* spectrum. |
 | `finddirtypeaks_clip`, `finddirtypeaks_clipiter` | `float`, `int` | Sigma-clipping for dirty-peak SNR (default: iterative 5σ). |
-| `outcbeam` | `bool`, `str`, or `Output` | Write the CLEAN beam to a file (the file is written to the output directory but is not currently captured into `result.files`). |
+| `outcbeam` | `bool`, `str`, or `Output` | Write the CLEAN beam to a file. `True` captures as `result.files["dftclean_cbeam_N"]`. |
 | `useampspec` | `bool` | Compute SNR on the amplitude spectrum instead of the power spectrum. |
 | `verboseout` | `bool` | Include the mean and stddev of the spectrum (before and after clipping) in the output. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
@@ -776,6 +776,7 @@ When `save_*` keywords are set:
 | `result.files["dftclean_dspec_N"]` | DataFrame: dirty power spectrum (frequency vs. power). |
 | `result.files["dftclean_cspec_N"]` | DataFrame: CLEAN power spectrum. |
 | `result.files["dftclean_wfunc_N"]` | DataFrame: window function. |
+| `result.files["dftclean_cbeam_N"]` | DataFrame: CLEAN beam (when `outcbeam=True`). |
 
 **References**
 

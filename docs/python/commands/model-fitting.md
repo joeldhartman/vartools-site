@@ -156,8 +156,7 @@ When `save_model` is set:
 | File key | Description |
 |----------|-------------|
 | `result.files["nonlinfit_model_N"]` | DataFrame: time-sampled best-fit model. |
-
-`mcmc_outchains` writes per-LC chain files named `<lcname>.mcmc` to the supplied directory; these files are written but are not currently captured into `result.files`.
+| `result.files["nonlinfit_chains_N"]` | DataFrame: MCMC chain (when `mcmc_outchains=True`); one row per accepted link. |
 
 **Examples**
 

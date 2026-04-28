@@ -104,7 +104,7 @@ CLI equivalent: [`-Injectharm`](../../cli/simulation.md#-injectharm).
 | `amplitude` | `float` or `str` | Per-harmonic amplitude. Float → `"ampfix val"`. Bare-identifier string → `"ampvar name"`; other strings → `"ampexpr expr"` (e.g. `"amplogrand 0.01 0.1"`). |
 | `nharm` | `int` | Number of harmonics including the fundamental (≥ 1). The CLI receives `Nharm = nharm − 1`. |
 | `phase` | `float` or `str` | Initial phase of each harmonic (0–1). Same float / var / expr forms as `amplitude` (uses `phasefix` / `phasevar` / `phaseexpr`); `"phaserand"` is accepted as a string for a uniform random draw. |
-| `nsubharm` | `int` | Number of sub-harmonics after the fundamental. Sub-harmonic specs use the default `ampfix 0.0 phasefix 0.0` (use `cmd.Raw()` for non-trivial sub-harmonic injection). |
+| `nsubharm` | `int` | Number of sub-harmonics. Each sub-harmonic uses the same `amplitude` / `phase` spec as the fundamental. Pass `cmd.Raw()` if you need per-sub-harmonic amplitudes or phases. |
 | `save_model` | `bool`, `str`, or `Output` | Write the injected model as a `.injectharm.model` file. `True` captures as `result.files["Injectharm_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 
 **Output**
