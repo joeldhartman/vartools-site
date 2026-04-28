@@ -171,6 +171,7 @@ cmd.resample(method="linear",
              left=None, right=None,
              nbreaks=None, order=None,
              file_times=None, file_column=None,
+             list_column=None, t_column=None,
              gaps=None,
              tstart=None, tstop=None, delt=None, Npoints=None)
 ```
@@ -190,8 +191,10 @@ CLI equivalent: [`-resample`](../../cli/manipulation.md#-resample).
 | `right` | `float` or `None` | First-derivative boundary condition at the right edge of the spline. |
 | `nbreaks` | `int` or `None` | Number of interior break points for B-spline fitting. Only for `method="bspline"`. If `< 2`, breaks are increased until χ²/dof ≤ 1 (can be slow). |
 | `order` | `int` or `None` | Polynomial order of the B-spline (only for `method="bspline"`). |
-| `file_times` | `str` or `None` | Path to a file containing times (emits `"file" "fix" path`), or a string starting with `"list"` for list-column mode (e.g. `"list column 2"`). |
-| `file_column` | `int` or `None` | Column number in the times file. Only used with the `"fix"` form (path given). |
+| `file_times` | `str` or `None` | Source for the new time grid. Either: (a) a path string → resample to the times in that file (CLI `file fix <path>`), or (b) the literal `"list"` → resample, *per LC*, to the times in a file whose path is read from a column of the input list file (CLI `file list`). |
+| `file_column` | `int` or `None` | **Legacy alias** for `t_column` in path mode. Prefer `t_column`. |
+| `list_column` | `int` or `None` | Only with `file_times="list"`. 1-based column number in the *input list file* that holds the per-LC time-grid filename (CLI `listcolumn`). When omitted, vartools consumes the next available list-file column. |
+| `t_column` | `int` or `None` | 1-based column number in the *time-grid file* that holds the time values. Maps to CLI `column` (path mode) or `tcolumn` (list mode). Defaults to `1`. |
 | `gaps` | `str` or `None` | Gap-handling spec, e.g. `"percentile_sep 80 bspline"` — switches interpolation method beyond a separation threshold. |
 | `tstart`, `tstop` | `float`, `str`, or `None` | Start and stop of the new time grid. Accepts variable/expression/per-LC forms. |
 | `delt` | `float`, `str`, or `None` | Time step of the new grid. |
@@ -215,6 +218,22 @@ result2 = lc.resample(method="splinemonotonic",
 
 # B-spline with 20 break points, order 3
 result3 = lc.resample(method="bspline", nbreaks=20, order=3, Npoints=500)
+
+# List-form back-resampling: bin to a coarse grid, then resample back
+# onto each LC's *original* time grid.  list_column=1 says read the
+# time-grid filename from column 1 of the list file (the LC path
+# itself); t_column=1 says read times from column 1 of that file.
+import os, tempfile
+list_path = os.path.join(tempfile.mkdtemp(), "lclist.txt")
+with open(list_path, "w") as f:
+    f.write("EXAMPLES/2\n")
+batch = (vt.Pipeline()
+         .binlc(method="average", binsize=0.05)
+         .resample(method="linear",
+                   file_times="list", list_column=1, t_column=1)
+         .rms()
+         ).run_filelist(list_path, capture_lc=True)
+print(batch.vars[["Name", "RMS_2"]])
 ```
 
 ---
