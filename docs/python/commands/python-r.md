@@ -1,6 +1,6 @@
 # Calling Python or R
 
-Wrappers for vartools' embedded `-python` / `-R` interpreters, used to run user code on each light curve from within a pipeline.  Note that pyvartools does not yet ship a typed wrapper for `-python` — use `Raw` (see [Miscellaneous](misc.md)) or write a custom `VartoolsCommand` subclass.
+Wrappers for vartools' embedded `-python` / `-R` interpreters, used to run user code on each light curve from within a pipeline.
 
 ---
 
@@ -67,33 +67,26 @@ batch = (vt.Pipeline()
                         columns={"t": 1, "mag": 2, "err": 3})
 ```
 
-**Example 3.** ARIMA modelling using R's `forecast` package. After saving the original `mag`, we bin and resample the LC onto a uniform grid (ARIMA needs evenly-sampled data), call `auto.arima`, and subtract the residuals to obtain the smoothed model `mag_arima`. The model is then resampled back to the original time grid and the original `mag` is restored. Requires `tseries` and `forecast` to be installed in R.
-
-The pyvartools `resample` wrapper does not yet expose the
-`-resample linear file list listcolumn 1 tcolumn 1` form needed for the
-back-resampling step in this example, so the cleanest Python equivalent
-goes through `subprocess`:
+**Example 3.** ARIMA modelling using R's `forecast` package. After saving the original `mag`, we bin and resample the LC onto a uniform grid (ARIMA needs evenly-sampled data), call `auto.arima`, and subtract the residuals to obtain the smoothed model `mag_arima`. The model is then resampled back to the original time grid (using the [list-form `resample`](manipulation.md#resample-resample-onto-a-new-time-grid)) and the original `mag` is restored. Requires `tseries` and `forecast` to be installed in R.
 
 ```python
-import subprocess
-subprocess.run([
-    "vartools", "-l", "EXAMPLES/lc_list",
-    "-inputlcformat", "t:1,mag:2,err:3",
-    "-header",
-    "-savelc",
-    "-binlc", "average", "binsize", "0.05", "taverage",
-    "-resample", "linear", "delt", "fix", "0.05",
-    "-R",
-    ("mag_ts <- ts(mag, start=1, end=length(t), frequency=1); "
-     "arima_model <- auto.arima(mag_ts); "
-     "mag_arima <- mag - as.vector(arima_model$residuals);"),
-    "init", "library(tseries); library(forecast);",
-    "invars", "mag,t", "outvars", "mag_arima",
-    "-resample", "linear", "file", "list", "listcolumn", "1", "tcolumn", "1",
-    "-restorelc", "1", "vars", "mag",
-    "-o", "EXAMPLES/OUTDIR1", "nameformat", "%s.arimamodel",
-    "columnformat", "t,mag,mag_arima",
-], check=True)
+batch = (vt.Pipeline()
+         .savelc()
+         .binlc(method="average", binsize=0.05, time_output="taverage")
+         .resample(method="linear", delt=0.05)
+         .R(("mag_ts <- ts(mag, start=1, end=length(t), frequency=1); "
+             "arima_model <- auto.arima(mag_ts); "
+             "mag_arima <- mag - as.vector(arima_model$residuals);"),
+            init="library(tseries); library(forecast);",
+            invars="mag,t", outvars="mag_arima")
+         .resample(method="linear",
+                   file_times="list", list_column=1, t_column=1)
+         .restorelc(1, vars="mag")
+         .o("EXAMPLES/OUTDIR1",
+            nameformat="%s.arimamodel",
+            columnformat="t,mag,mag_arima")
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 The resulting `*.arimamodel` files contain `t`, the original `mag`, and the smoothed `mag_arima`:
@@ -105,5 +98,139 @@ The resulting `*.arimamodel` files contain `t`, the original `mag`, and the smoo
 
 ![ARIMA forecast plot for EXAMPLES/2](../../assets/examples/R_arimaforecast_2.png)
 ![ARIMA residuals plot for EXAMPLES/2](../../assets/examples/R_arimaresiduals_2.png)
+
+---
+
+### `python` — Run Python code
+
+**Syntax**
+
+```python
+cmd.python(command, fromfile=False, init=None, init_fromfile=False,
+           vars=None, invars=None, outvars=None, outputcolumns=None,
+           process_all_lcs=False, skipfail=False, continueprocess=None,
+           inprocess=False, namespace=None)
+```
+
+**Description**
+
+Execute arbitrary Python code on each light curve (or once for the whole batch with `process_all_lcs=True`). vartools embeds the user-supplied code inside a generated function and dispatches it to a per-thread Python sub-process (one sub-process per `-parallel` worker), shovelling the named light-curve and per-star variables across a Unix socket. Numeric LC vectors arrive as `numpy.ndarray` objects; string columns arrive as Python `list`s. `numpy` is automatically imported in the worker's namespace.
+
+CLI equivalent: [`-python`](../../cli/python-r.md#-python).
+
+!!! note "subprocess vs in-process"
+    The default path runs the user code in a vartools-spawned Python sub-process — fully isolated from the calling pyvartools interpreter, so neither sub-process libpython nor user globals leak across the boundary. Setting `inprocess=True` (Stage-2 feature, currently raises `NotImplementedError`) is intended to share the host interpreter's namespace so user code can see the caller's imports/globals; that path lands in a follow-up commit.
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `command` | `str` | Inline Python code, or — with `fromfile=True` — a path to a `.py` file containing the body. |
+| `fromfile` | `bool` | Treat `command` as a file path (emits CLI `fromfile <path>`). |
+| `init` | `str` or `None` | Initialisation Python (inline string, or a file path with `init_fromfile=True`) executed once per Python worker before per-LC processing. Use this for `import` statements and helper-function definitions. |
+| `init_fromfile` | `bool` | Treat `init` as a file path (emits `init file <path>`). |
+| `vars` | `str` or `None` | Comma-separated list of vartools variables passed both into and back out of Python (round-trip). Mutually exclusive with `invars`/`outvars` per the CLI grammar. |
+| `invars` | `str` or `None` | Variables to pass into Python only. |
+| `outvars` | `str` or `None` | Variables to receive back from Python only. |
+| `outputcolumns` | `str` or `None` | Subset of out-vars to emit in the per-star statistics table; each becomes `PYTHON_<name>_N`. |
+| `process_all_lcs` | `bool` | Send the whole batch to Python in one call. Vector invars arrive as a list of `numpy.ndarray`s (length `Nlc`); scalar invars as a numpy array of length `Nlc`. Outputs must follow the same shape. |
+| `skipfail` | `bool` | If a per-LC Python exception is raised, skip the remaining pipeline processing for that LC instead of aborting the run. |
+| `continueprocess` | `int` or `None` | Reuse the Python sub-process from the *N*-th prior `-python` (1-indexed), preserving its module-level state. Mutually exclusive with `init`. To share variables across calls, declare them `global` in the user code. |
+| `inprocess` | `bool` | **Stage-2 feature.** When `True`, executes user code in the host (pyvartools-side) Python interpreter rather than a vartools sub-process, sharing `sys.modules` and a caller-supplied globals dict. Currently raises `NotImplementedError`; the kwarg lives on the API now so calling code can be written against the final shape. |
+| `namespace` | `dict` or `None` | Only used when `inprocess=True`. Globals dict for the user code (default: caller's `__main__.__dict__`). |
+
+**Output**
+
+Per command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `PYTHON_<varname>_N` | One column per name in `outputcolumns`. The runtime type is whatever the user code wrote into the named outvar (numeric scalar → float column; string → string column). |
+
+User code can also modify any LC vector named in `vars` / `outvars`; modifications are written back to the LC and visible to subsequent pipeline commands.
+
+**References**
+
+The embedded Python interpreter is a feature of vartools 1.41+. For details on the sub-process / socket protocol, see `src/runpython.c` in the vartools source tree.
+
+**Examples**
+
+**Example 1.** Compute the variance of the magnitudes for each light curve in `EXAMPLES/lc_list`.  `mag` arrives as a numpy array; `b` is a Python float written back as `PYTHON_b_0` in the per-star table.
+
+```python
+batch = (vt.Pipeline()
+         .python("b = numpy.var(mag)",
+                 invars="mag", outvars="b", outputcolumns="b")
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+print(batch.vars[["Name", "PYTHON_b_0"]])
+```
+
+**Example 2.** Same as Example 1 but using `process_all_lcs=True` to send the whole batch to Python at once.  `mag` arrives as a list of numpy arrays and the output `b` must also be a list (one entry per LC).
+
+```python
+code = (
+    "b = []\n"
+    "for arr in mag: b.append(float(numpy.var(arr)))\n"
+)
+batch = (vt.Pipeline()
+         .python(code,
+                 invars="mag", outvars="b", outputcolumns="b",
+                 process_all_lcs=True)
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+```
+
+**Example 3.** Use `matplotlib.pyplot` to make a `.png` plot for each light curve with a sufficiently strong LS detection.  The plotting function lives in a separate file (`EXAMPLES/plotlc.py`) loaded via `init_fromfile=True`; the wrapper command then calls it inside an `if` block conditioned on the LS false-alarm probability.  Modelled on the CLI `-python` Example 2.
+
+```python
+# Mirror of the CLI Example 2.  vartools must be compiled against a
+# Python that can `import matplotlib`.
+batch = (vt.Pipeline()
+         .LS(0.1, 100., 0.1, npeaks=1)
+         .ifcmd("Log10_LS_Prob_1_0<-100")
+             .Phase("ls", phasevar="ph")
+             .python("plotlc(Name, 'EXAMPLES/', t, ph, mag, LS_Period_1_0)",
+                     init="EXAMPLES/plotlc.py", init_fromfile=True)
+         .ficmd()
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+```
+
+The plot below is the actual `EXAMPLES/2.png` produced by `plotlc()` — LC vs time on the top panel, phase-folded at the LS period on the bottom:
+
+![EXAMPLES/2.png produced by plotlc.py](../../assets/examples/python_ex2.png)
+
+**Example 4.** Same as Example 3, but use `process_all_lcs=True` so the whole list goes through one `-python` call. With `process_all_lcs` enabled, vector inputs (`t`, `ph`, `mag`) arrive as lists of numpy arrays; scalar inputs (`Name`, `LS_Period_1_0`) arrive as numpy arrays of length `Nlc`, so the user code loops over each light curve manually.
+
+```python
+code = (
+    "for i in range(0, len(mag)):\n"
+    "    plotlc(Name[i], 'EXAMPLES/', t[i], ph[i], mag[i], LS_Period_1_0[i])\n"
+)
+batch = (vt.Pipeline()
+         .LS(0.1, 100., 0.1, npeaks=1)
+         .Phase("ls", phasevar="ph")
+         .python(code,
+                 init="EXAMPLES/plotlc.py", init_fromfile=True,
+                 process_all_lcs=True)
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+```
+
+**Example 5.** Reuse Python state across two `-python` calls in the same pipeline using `continueprocess`. The first call defines a module-global cached value; the second reads it. To survive across calls (which run inside per-call wrapper functions), mutable state must be declared `global`.
+
+```python
+batch = (vt.Pipeline()
+         .python("global _shared_mult\n_shared_mult = 1000.0",
+                 invars="mag", outvars="mag")
+         .python("global _shared_mult\n"
+                 "b = _shared_mult * float(numpy.var(mag))",
+                 continueprocess=1,
+                 invars="mag", outvars="b", outputcolumns="b")
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+print(batch.vars[["Name", "PYTHON_b_1"]])
+```
 
 ---
