@@ -606,7 +606,7 @@ Conditional columns (added only when the input is set):
 
 When `save_model` is set, vartools writes a per-LC ASCII file with the columns `Time  Mag_lc  Err  Mag_model`. The file suffix is `.jktebop`.
 
-> The `save_curve` (CLI: `ocurve`) keyword is accepted but the underlying USERLIB extension currently leaves curve output unimplemented (the C code marks the branch *TBD*); no curve file is produced.
+When `save_curve` is set, vartools writes a uniformly-sampled model curve. With `curve_xaxis="phase"` (default `"jd"`) the file has columns `#Phase Mag_model`; with `curve_xaxis="jd"` it has `#Time Mag_model Phase`. The step size is `curve_step` (default 0.01 days for JD mode, 0.01 in fractional phase for phase mode). The file suffix is `.jktebopcurve` and the captured key is `result.files["jktebop_curve_N"]`.
 
 **References**
 
@@ -646,6 +646,25 @@ result = (vt.Pipeline()
                    lib_path="USERLIBS/src/.libs/jktebop.so")
           .BLS(1.0, 5.0, rmin=0.01, rmax=0.1,
                nbins=200, nfreq=5000, npeaks=1)).run(lc)
+```
+
+```python
+# Capture the uniformly-sampled phase-folded model curve (one row per
+# 0.01-phase step) into result.files["jktebop_curve_0"].
+lc = vt.LightCurve.from_file("EXAMPLES/3")
+r = (vt.Pipeline()
+     .jktebop("inject",
+              Period=2.5, T0=53727.0,
+              r1_r2=0.15, r2_r1=0.5, M2_M1=0.6, J2_J1=0.3,
+              i=89.0,
+              esinomega=0.0, ecosomega=0.0,
+              LD1_law="quad", LD1_coeffs=(0.3, 0.3),
+              LD2_law="lockLD1",
+              save_curve=True, curve_xaxis="phase", curve_step=0.01,
+              lib_path="USERLIBS/src/.libs/jktebop.so")
+     ).run(lc)
+curve = r.files["jktebop_curve_0"]   # 2 columns: phase, model magnitude
+print(curve.shape, curve.head(3))
 ```
 
 ---
