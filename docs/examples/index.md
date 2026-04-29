@@ -19,3 +19,21 @@ current working directory.
 | RR Lyrae recovery | [rrlyrae-recovery.md](rrlyrae-recovery.md) | Fit a real RR Lyrae template and inject it at halving amplitudes to test LS vs. multi-harmonic AoV recovery. |
 | Batch variability | [batch-variability.md](batch-variability.md) | Parallel run of LS / AoV / AoV-harm / BLS / autocorrelation on a list of LCs. |
 | Kepler FITS | [kepler-fits.md](kepler-fits.md) | Read a Kepler long-cadence FITS file, convert flux to magnitude, and run LS. |
+
+## Run them as a notebook
+
+All seven Python examples above are also packaged as a single Jupyter
+notebook,
+[`python/examples/pyvartools_tour.ipynb`][nb], which you can read in the
+browser via GitHub's notebook renderer or download with the **Raw** /
+**Download raw file** button on that page. The notebook contains the same
+code shown on the example pages plus the matplotlib steps used to produce
+the figures, so you can run any example end-to-end and reproduce its plot
+inline.
+
+The notebook starts with a configuration cell where you must set
+`VARTOOLS_ROOT` to your local vartools source tree before any other cell
+will run. See `python/examples/README.md` in the source repo for full
+launch instructions.
+
+[nb]: https://github.com/joeldhartman/vartools/blob/master/python/examples/pyvartools_tour.ipynb

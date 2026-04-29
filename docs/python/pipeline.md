@@ -24,6 +24,16 @@ reaching for in several situations:
 - **Reading light curves directly from disk** — `run_file()` and
   `run_filelist()` hand file paths straight to vartools with no Python I/O,
   which is the most efficient option when light curves are already on disk.
+- **Streaming output and resume for long surveys** — `run_batch()` and
+  `run_filelist()` accept a `stats_file=PATH` kwarg to flush the stats
+  table to disk as each light curve completes, plus `resume=True` to
+  pick up where a killed run left off.  See
+  [Streaming output and resume](#streaming-output-and-resume).
+- **Static command-line validation** — `Pipeline.validate()` parses the
+  assembled command line through vartools (`-headeronly`) without
+  processing any data, returning the list of output columns the run
+  would produce or raising `PipelineValidationError` with the parser's
+  message.  Useful for fast turnaround during pipeline construction.
 
 A `Pipeline` holds an ordered sequence of command objects and translates them
 into a vartools command-line string when a run method is called. If
@@ -137,7 +147,7 @@ Returns a [`Result`](results.md) object.
 
 ---
 
-### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, init_lc_vars=None, inlistvars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, init_lc_vars=None, inlistvars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a list of light curves in memory. All light curves are written to temporary files and processed in a single vartools invocation using `-l`.
 
@@ -155,6 +165,10 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
 | `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `stats_file` | `str` or `None` | If set, also stream the stats table to this file as each light curve completes. The file content matches `result.vars` and can be reloaded by a subsequent `resume=True` call. See [Streaming output and resume](#streaming-output-and-resume). |
+| `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. With `"append"` the existing file is preserved and only new rows are added; `resume=True` sets this automatically when an existing file is detected. |
+| `stats_file_buffer_lines` | `int` or `None` | Forwarded to vartools as `-bufferlines N`.  Sets the maximum number of light curves whose results vartools queues before flushing in `-parallel` mode.  Default `None` → vartools auto-scales to a value that's safe for the given thread count.  Setting it below `nthreads` caps effective parallelism at this value (threads beyond it stall waiting for a free slot).  Has no effect when `nthreads=1`.  See [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
+| `resume` | `bool` | If `True` and `stats_file` exists, parse it, skip any light curves whose row is already present, and append rows for the remaining ones. The pipeline's column layout is validated against the file via [`validate()`](#validate); a mismatch raises `PipelineValidationError`. Pipelines containing `-copylc` cannot be resumed. Default `False`. |
 
 Extra columns in the first `LightCurve` are used to construct a `-inputlcformat` flag automatically; all light curves in the batch are assumed to share the same column structure. See [Additional columns](#additional-columns-inputlcformat).
 
@@ -162,7 +176,7 @@ Returns a [`BatchResult`](results.md) object.
 
 ---
 
-### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a collection of light curve files on disk. No Python I/O is performed — vartools reads the files directly. This is the most efficient method for large surveys.
 
@@ -183,6 +197,10 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
 | `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `stats_file` | `str` or `None` | Stream the stats table to this file as each row is produced. See [Streaming output and resume](#streaming-output-and-resume). |
+| `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. |
+| `stats_file_buffer_lines` | `int` or `None` | Forwarded to vartools as `-bufferlines N`.  Should be `>= nthreads`; see the run_batch entry and [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
+| `resume` | `bool` | Resume from a partial `stats_file`, skipping already-completed light curves. See [Streaming output and resume](#streaming-output-and-resume). Pipelines containing `-copylc` cannot be resumed. Default `False`. |
 
 Returns a [`BatchResult`](results.md) object.
 
@@ -289,6 +307,163 @@ batch = (vt.Pipeline()
 
 print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)
 ```
+
+---
+
+## `validate()`
+
+```text
+validate(nthreads=1, randseed=None, skipmissing=False, jdtol=None,
+         matchstringid=False, timeout=30) → list[str]
+```
+
+Pass the assembled command line through vartools' own parser without
+processing any light curves and return the list of expected output column
+names.  Internally this runs the binary with `-headeronly`, which validates
+the syntax and exits.  Useful for catching argument errors quickly during
+pipeline construction (turnaround is sub-second), and for inspecting the
+exact column layout the run will produce.
+
+```python
+pipe = vt.Pipeline().LS(0.1, 10.0, 0.1, npeaks=3).rms()
+cols = pipe.validate()
+# ['Name', 'LS_Period_1_0', 'Log10_LS_Prob_1_0', ..., 'RMS_1', ...]
+```
+
+A bad command line raises `PipelineValidationError` with the parser's
+stderr attached so you can see exactly what vartools rejected:
+
+```python
+try:
+    bad_pipe.validate()
+except vt.PipelineValidationError as e:
+    print(e.stderr)   # vartools usage block
+    print(e.argv)     # full argv that was run, for reproduction
+```
+
+`validate()` runs vartools once per call, so it's intended for
+construction-time / debug use rather than tight inner loops.  The
+[resume path](#streaming-output-and-resume) calls it internally to check
+that a partial stats file was produced by the same pipeline that's now
+trying to resume from it.
+
+---
+
+## Streaming output and resume
+
+`run_batch()` and `run_filelist()` accept `stats_file=PATH` to write the
+per-light-curve stats table to disk as each light curve completes,
+alongside the in-memory `BatchResult`.  The file is a space-delimited
+table with a `#`-prefixed header line (one row per light curve, identical
+column order to `result.vars`).  Each row is flushed to disk as soon as
+vartools finishes that light curve, so a long-running batch leaves a
+partial-but-recoverable file behind even if the process is killed.
+
+```text
+#Name LS_Period_1_0 Log10_LS_Prob_1_0 ... Print__vtpy_seq__0_1
+EXAMPLES/1 0.97817996 -5612.03157 ... 0
+EXAMPLES/2 1.23534018 -4222.27256 ... 1
+...
+```
+
+Easy to load:
+
+```python
+import pandas as pd
+df = pd.read_csv("survey.stats", sep=r"\s+", engine="python")
+df = df.rename(columns={df.columns[0]: df.columns[0].lstrip("#")})
+```
+
+`awk`, `gnuplot`, and `pandas` all consume this format directly without
+extra preprocessing.
+
+#### Flush cadence in parallel runs
+
+When `nthreads > 1`, vartools queues per-light-curve output in a small
+internal ring instead of writing each row directly.  This is what lets
+multiple threads keep computing while one of them takes its turn on
+the output mutex.  Rows reach the file when a thread finishes a light
+curve, finds the ring full, drains it, then pushes its own result on.
+
+`stats_file_buffer_lines` controls how big that ring is.  The
+trade-off has a sharp inflection at `stats_file_buffer_lines ==
+nthreads`:
+
+* **`stats_file_buffer_lines >= nthreads`** — every thread always has
+  somewhere to put its result.  Full parallel throughput; rows reach
+  the file in bursts up to the buffer size whenever the ring fills.
+* **`stats_file_buffer_lines < nthreads`** — only that many threads
+  can have results in flight at once.  Threads beyond it stall
+  waiting for a slot to free up.  **Effective parallelism caps at
+  `stats_file_buffer_lines`** — wall-clock matches a run with
+  `nthreads=stats_file_buffer_lines`.
+
+The most common case where this matters: you set
+`stats_file_buffer_lines=1` for a true real-time log of a long-running
+batch.  That works correctly but serialises the run — you trade
+throughput for live visibility.
+
+```python
+# I want every LC's row on disk as soon as it's computed, throughput
+# is secondary (e.g. monitoring an overnight survey)
+pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=1,
+               stats_file_buffer_lines=1)
+
+# Default — vartools auto-scales the buffer to ~2x nthreads when you
+# leave this unset, so full parallel throughput is preserved without
+# you having to tune anything.
+pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=8)
+
+# Only set an explicit value if you have a specific reason — for
+# example, to bound peak memory when each row is large.
+pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=64,
+               stats_file_buffer_lines=128)
+```
+
+When `nthreads=1` the buffer ring is bypassed entirely and each row is
+flushed as it finishes regardless of this setting.
+
+```python
+pipe = vt.Pipeline().LS(0.1, 10.0, 0.1, npeaks=1).rms()
+
+# 10000 LCs, write rows to disk as they're produced.
+result = pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=8)
+```
+
+If that run is killed partway through, re-launch with `resume=True`:
+
+```python
+result = pipe.run_batch(big_lcs, stats_file="survey.stats", resume=True,
+                        nthreads=8)
+```
+
+Resume will:
+
+1. Validate the partial file's column layout against the current pipeline
+   via `validate()`.  A mismatch (different commands, different `npeaks`,
+   etc.) raises `PipelineValidationError` with both column lists side by
+   side.
+2. Read the rows already in the file, identify their input-list positions
+   from the per-row sequence number that pyvartools embeds in every
+   streamed file, and skip those LCs.
+3. Run vartools on only the unprocessed LCs, appending their rows to the
+   file and remapping their sequence numbers so the on-disk file stays
+   aligned with the original input order.
+4. Return a `BatchResult` whose `vars` DataFrame combines the pre-existing
+   rows with the freshly-computed ones.
+
+Caveats:
+
+* `capture_lc=True` and `result.files` only cover the **freshly-run**
+  light curves — resumed positions get `None` entries.  If you want the
+  full set, re-run from scratch (or keep `save_*=True` files on disk so
+  you can stitch them back together yourself).
+* Pipelines containing `-copylc` are rejected — one input row produces
+  multiple output rows in that case, breaking the seq-based identity used
+  for resume.  Drop `copylc` or re-run from scratch.
+* `-randseed time` means the new rows from the resume run aren't
+  bit-identical to what would have been produced in the original run.
+  Same caveat as anywhere randomness is used.
 
 ---
 

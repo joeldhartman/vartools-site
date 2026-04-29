@@ -92,23 +92,23 @@ for k in range(2, 12):  # harmonic indices 2..11
     phi = float(row[f"HarmonicFilter_Per1_Harm_Phi_{k}_1_0"])
     Rphi.append((R, phi))
 
-# Step 2: inject at 10 halving amplitudes and try to recover
+# Step 2: inject at 10 halving amplitudes and try to recover.
+# Injectharm's harmonic_amps_rel / harmonic_phases_rel kwargs emit the
+# ampfix/amprel + phasefix/phaserel pair per harmonic, scaling each
+# overtone relative to the fundamental.
+amps_rel = [R for R, _ in Rphi]
+phases_rel = [phi for _, phi in Rphi]
+
 rows = []
 for i in range(10):
     amp = 0.25 * (0.5 ** i)
 
-    # Use Raw to emit the amprel/phaserel harmonic block Injectharm's
-    # typed wrapper does not cover.
-    inject_args = ["-Injectharm", "fix", "0.514333", "10",
-                   "ampfix", str(amp), "phaserand"]
-    for R, phi in Rphi:
-        inject_args += ["ampfix", str(R), "amprel",
-                        "phasefix", str(phi), "phaserel"]
-    inject_args += ["0", "0"]  # no sub-harmonics, no model output
-
     lc = vt.LightCurve.from_file("EXAMPLES/4")
     result = (vt.Pipeline()
-            .Raw(inject_args)
+            .Injectharm(period=0.514333, amplitude=amp, phase="rand",
+                        nharm=11,
+                        harmonic_amps_rel=amps_rel,
+                        harmonic_phases_rel=phases_rel)
             .LS(0.1, 10.0, 0.01, npeaks=2, save_periodogram=False)
             .aov_harm(nharm=2, minp=0.1, maxp=10.0, subsample=0.1,
                      finetune=0.01, npeaks=2, save_periodogram=False)).run(lc)
@@ -161,6 +161,7 @@ recovery fails will vary run-to-run because the injection phase is random;
 add `-randseed time` to the CLI (or use a fixed seed) if you want
 reproducible runs.
 
-The Python version uses `cmd.Raw(...)` for the injection because the
-typed `cmd.Injectharm` wrapper doesn't expose the `amprel` / `phaserel`
-multi-harmonic syntax — the gap is called out in `Injectharm`'s docstring.
+The injection uses the `harmonic_amps_rel` / `harmonic_phases_rel` kwargs
+on `cmd.Injectharm` to scale each overtone relative to the fundamental
+amplitude — equivalent to the CLI's `ampfix R amprel phasefix phi
+phaserel` per-harmonic block.
