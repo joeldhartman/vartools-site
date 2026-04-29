@@ -137,7 +137,7 @@ lc = vt.LightCurve.from_file("EXAMPLES/3")
 result = (vt.Pipeline()
         .Injectharm(period="logrand 1.0 5.0",
                    amplitude="amplogrand 0.001 0.1",
-                   nharm=0, phase="phaserand",
+                   nharm=1, phase="phaserand",
                    save_model=True)
         .LS(0.5, 10.0, 0.1, npeaks=1)).run(lc)
 print(result.vars["Injectharm_Period_0"])   # injected period

@@ -334,6 +334,7 @@ A bad command line raises `PipelineValidationError` with the parser's
 stderr attached so you can see exactly what vartools rejected:
 
 ```python
+bad_pipe = vt.Pipeline().add(...)         # construct one with a parser bug
 try:
     bad_pipe.validate()
 except vt.PipelineValidationError as e:
@@ -370,7 +371,7 @@ Easy to load:
 
 ```python
 import pandas as pd
-df = pd.read_csv("survey.stats", sep=r"\s+", engine="python")
+df = pd.read_csv(...)                      # load survey.stats produced above
 df = df.rename(columns={df.columns[0]: df.columns[0].lstrip("#")})
 ```
 
@@ -405,18 +406,18 @@ throughput for live visibility.
 
 ```python
 # I want every LC's row on disk as soon as it's computed, throughput
-# is secondary (e.g. monitoring an overnight survey)
-pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=1,
+# is secondary (e.g. monitoring an overnight survey).
+pipe.run_batch(..., stats_file="survey.stats", nthreads=1,
                stats_file_buffer_lines=1)
 
 # Default — vartools auto-scales the buffer to ~2x nthreads when you
 # leave this unset, so full parallel throughput is preserved without
 # you having to tune anything.
-pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=8)
+pipe.run_batch(..., stats_file="survey.stats", nthreads=8)
 
 # Only set an explicit value if you have a specific reason — for
 # example, to bound peak memory when each row is large.
-pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=64,
+pipe.run_batch(..., stats_file="survey.stats", nthreads=64,
                stats_file_buffer_lines=128)
 ```
 
@@ -425,15 +426,13 @@ flushed as it finishes regardless of this setting.
 
 ```python
 pipe = vt.Pipeline().LS(0.1, 10.0, 0.1, npeaks=1).rms()
-
-# 10000 LCs, write rows to disk as they're produced.
-result = pipe.run_batch(big_lcs, stats_file="survey.stats", nthreads=8)
+result = pipe.run_batch(..., stats_file="survey.stats", nthreads=8)
 ```
 
 If that run is killed partway through, re-launch with `resume=True`:
 
 ```python
-result = pipe.run_batch(big_lcs, stats_file="survey.stats", resume=True,
+result = pipe.run_batch(..., stats_file="survey.stats", resume=True,
                         nthreads=8)
 ```
 
