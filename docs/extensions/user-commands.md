@@ -515,14 +515,18 @@ void magadd_RunCommand(ProgramData *p, void *userdata,
 
 ```bash
 # Fix: add 0.5 to every LC
-vartools -l lc_list -L USERLIBS/src/magadd.so -magadd fix 0.5 -tab
+vartools -l lc_list -L /path/to/magadd.so -magadd fix 0.5 -tab
 
 # List: read per-LC value from column 2 of the input list
-vartools -l lc_list -L USERLIBS/src/magadd.so -magadd list column 2 -tab
+vartools -l lc_list -L /path/to/magadd.so -magadd list column 2 -tab
 
 # expr: add the median magnitude
-vartools -l lc_list -L USERLIBS/src/magadd.so -magadd expr "Mag_median" -tab
+vartools -l lc_list -L /path/to/magadd.so -magadd expr "Mag_median" -tab
 ```
+
+If the extension has been installed into the vartools userlibs data
+directory, `-L` is not needed and the command flag (e.g. `-magadd`) can be
+used directly.
 
 ---
 

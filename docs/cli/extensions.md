@@ -3,27 +3,30 @@
 Extension commands are additional VARTOOLS commands that are compiled as
 separate shared-object libraries (`.so` files) and loaded at runtime. They are
 distributed in the `USERLIBS/src` subdirectory of the VARTOOLS source tree.
-After running `make` in that directory, each extension produces a `.so` file
-in `USERLIBS/src/.libs/` that must be passed to VARTOOLS with the `-L` option
-before the command itself is issued:
+After `make install`, the compiled extension libraries are placed in
+`$(PREFIX)/share/vartools/USERLIBS/` and VARTOOLS finds them automatically, so
+the command flag (e.g. `-magadd`) can be used directly:
 
 ```bash
-# Load the magadd extension and use its -magadd command to add a constant
-# offset to each light curve before measuring the RMS.
-vartools -L USERLIBS/src/.libs/magadd.so \
-    -l EXAMPLES/lc_list \
+# Add a constant offset to each light curve before measuring the RMS.
+vartools -l EXAMPLES/lc_list \
     -magadd fix 0.5 \
     -rms -tab
 ```
 
+If you want to load an extension that has not been installed (or one that
+lives outside the installed search directory) you can pass it explicitly with
+`-L`, placed before the command flag:
+
+```bash
+vartools -L /path/to/mylib.so \
+    -l EXAMPLES/lc_list \
+    -mylib ... \
+    -tab
+```
+
 The same `-L` flag can be given multiple times to load several extensions in a
 single call.
-
-!!! note "Installed extensions"
-    After `make install`, the compiled extension libraries are placed in
-    `$(PREFIX)/share/vartools/USERLIBS/` and VARTOOLS finds them automatically
-    — the explicit `-L` prefix is only needed when running from the source
-    tree or when the library lives outside the installed search directory.
 
 ---
 
@@ -85,7 +88,6 @@ Cite Palmer 2009, ApJ, 695, 496.
 
 ```bash
 vartools -i EXAMPLES/2 -oneline -ascii \
-    -L USERLIBS/src/fastchi2.so \
     -fastchi2 Nharm fix 1 freqmax fix 10.0 \
         freqmin fix 0.1 oper EXAMPLES/OUTDIR1/
 ```
@@ -151,8 +153,7 @@ Cite Scargle 1989, ApJ, 343, 874.
 **Example 1.** Compute Scargle's complex Fourier transform of `EXAMPLES/2` over a uniform grid from 0.05 to 5.0 (radians/unit time), step 0.001. The transform is written to `EXAMPLES/OUTDIR1/2.ftuneven` with four whitespace columns: frequency (rad/time), real component, imaginary component, and the absolute-square (≡ Lomb-Scargle periodogram).
 
 ```bash
-vartools -L USERLIBS/src/.libs/ftuneven.so \
-    -i EXAMPLES/2 -oneline \
+vartools -i EXAMPLES/2 -oneline \
     -ftuneven outputfile EXAMPLES/OUTDIR1 \
         freqrange minfreq fix 0.05 maxfreq fix 5.0 \
         freqstep fix 0.001
@@ -199,8 +200,7 @@ Python equivalent: [`hatpiflag`](../python/commands/extensions.md#hatpiflag-hatp
 **Example 1.** Combine the four HATPI per-observation quality vectors stored in `EXAMPLES/2.hatpiflag` into a single bit-packed flag. The file has the standard `t`/`mag`/`err` columns followed by the four extra columns (one-character fiphot string flag, reject-bad-frame mask, TFA-outlier mask, pointing-outlier flag). `-inputlcformat` reads the four flag columns under their named variables; `-hatpiflag` combines them into `quality_flag`. The `-stats` call reports summary statistics of the result.
 
 ```bash
-vartools -L USERLIBS/src/.libs/hatpiflag.so \
-    -i EXAMPLES/2.hatpiflag \
+vartools -i EXAMPLES/2.hatpiflag \
     -inputlcformat 't:1,mag:2,err:3,fiphot_flag:4:string,rejbadframe:5,tfa_mask:6,pointing_outlier:7' \
     -hatpiflag fiphot_flag rejbadframe tfa_mask pointing_outlier quality_flag \
     -stats quality_flag mean,sum,max -oneline
@@ -277,8 +277,7 @@ Cite Southworth et al. 2004, MNRAS, 351, 1277; Popper & Etzel 1981, AJ, 86, 102;
 **Example 1.** Inject a JKTEBOP detached eclipsing-binary signal into `EXAMPLES/3` and recover the primary eclipse with `-BLS`. The injected system has a 2.5-day period, T0 = 53727.0, sum of fractional radii (R1+R2)/a = 0.15, radius ratio R2/R1 = 0.5, mass ratio M2/M1 = 0.6, surface-brightness ratio J2/J1 = 0.3, inclination 89°, and a circular orbit. Both stars use a quadratic limb-darkening law with coefficients (0.3, 0.3); LD2 is locked to LD1. The injected model is written to `EXAMPLES/OUTDIR1/3.jktebop.model`.
 
 ```bash
-vartools -L USERLIBS/src/.libs/jktebop.so \
-    -i EXAMPLES/3 -oneline \
+vartools -i EXAMPLES/3 -oneline \
     -jktebop inject \
         Period fix 2.5 \
         T0 fix 53727.0 \
@@ -440,8 +439,7 @@ Optional keywords:
 **Example 1.** Combine two LC segments — `EXAMPLES/2` and `EXAMPLES/2.shifted` (which is `EXAMPLES/2` with +0.3 mag added) — into a single in-memory light curve using `combinelcs`, then fit and remove the inter-segment offset with `-stitch`. The list file `EXAMPLES/lc_list_stitch` contains the comma-separated pair of file names; `lcnumvar lcnum` stores the segment index (0 or 1) per point in the variable `lcnum`, which `-stitch` needs to identify which points belong to which segment. `-expr` creates a per-point mask that is uniformly 1 (no points masked); a real application would derive `mask` from quality flags. The two `-rms` calls show that before stitching the combined LC has an inflated RMS due to the offset, and after stitching the RMS returns to the original `EXAMPLES/2` value.
 
 ```bash
-vartools -L USERLIBS/src/.libs/stitch.so \
-    -l EXAMPLES/lc_list_stitch combinelcs lcnumvar lcnum \
+vartools -l EXAMPLES/lc_list_stitch combinelcs lcnumvar lcnum \
     -expr 'mask=mag*0+1' \
     -rms \
     -stitch mag err mask lcnum median \
@@ -527,7 +525,7 @@ Cite Kipping 2012, arXiv:1209.2985.
 **Example 1.** Simulate the light curve of a single-spotted star using Macula. We read `EXAMPLES/3` for its time sampling and uncertainties, replace the magnitudes with Gaussian noise (`mag = 10 + err·gauss()`), and inject one spot with all stellar and spot parameters fixed except `tmax`, which we set to the minimum time of the LC (computed by the prior `-stats`). The simulated LC is written to `EXAMPLES/OUTDIR1/3.maculainject`.
 
 ```bash
-vartools -i EXAMPLES/3 -L USERLIB/src/macula.so \
+vartools -i EXAMPLES/3 \
     -stats t min \
     -expr 'mag=10.0+err*gauss()' \
     -macula inject \
@@ -554,7 +552,7 @@ vartools -i EXAMPLES/3 -L USERLIB/src/macula.so \
 **Example 2.** Fit the Macula model to the simulated LC from Example 1 with the downhill-simplex optimiser. `-LS` first finds the rotation period, which then seeds `Prot`. Only `Prot` and `istar` are marked `vary`; the other parameters are held at their initial values. The fit is evaluated both at the observed times (`omodel`) and on a uniform grid for plotting (`ocurve`).
 
 ```bash
-vartools -i EXAMPLES/OUTDIR1/3.maculainject -L USERLIB/src/macula.so \
+vartools -i EXAMPLES/OUTDIR1/3.maculainject \
     -stats t min \
     -LS 0.1 100 0.1 1 0 \
     -macula fit amoeba \
@@ -617,8 +615,7 @@ Python equivalent: [`magadd`](../python/commands/extensions.md#magadd-add-a-cons
 **Example 1.** Add a constant 0.5 mag to every observation of `EXAMPLES/2`. The two `-rms` calls before and after `-magadd` show that the mean magnitude shifts by 0.5 while the RMS is unchanged.
 
 ```bash
-vartools -L USERLIBS/src/.libs/magadd.so \
-    -i EXAMPLES/2 -oneline \
+vartools -i EXAMPLES/2 -oneline \
     -rms \
     -magadd fix 0.5 \
     -rms

@@ -261,56 +261,6 @@ Print the full VARTOOLS command line as a comment at the top of the output,
 before the header. This embeds provenance information directly in the output
 file.
 
-### `-o <outdir | outname> ["nameformat" formatstring] ["columnformat" formatstring | "allcols"]`
-
-Write the (processed) light curve to a file. If `outdir` is a directory,
-output files are placed inside it using the base name of the input file. Use
-`"nameformat"` to control the output filename pattern and `"columnformat"` to
-select and format the columns written. Pass `"allcols"` in place of
-`"columnformat"` to write every light-curve-vector variable defined by
-commands before this `-o`, with a type-appropriate default `printf` format
-and a `# name1 name2 …` header line for ASCII output so downstream readers
-can recover the column names.
-
-**Examples**
-
-**Example 1.** Write phase-folded light curves with custom filename and column formats.
-
-```bash
-vartools -l EXAMPLES/lc_list -header \
-    -LS 0.1 100.0 0.1 1 0 \
-    -expr phase=t \
-    -changevariable t phase \
-    -Phase ls \
-    -o EXAMPLES/OUTDIR1 \
-        nameformat "file_%s_%05d_simout.txt" \
-        columnformat "t:%11.5f,phase:%8.5f,mag:%7.4f,err:%7.4f"
-```
-
-Output table:
-```
-#Name LS_Period_1_0 Log10_LS_Prob_1_0 LS_SNR_1_0
-EXAMPLES/1     0.97821072 -452.25157   41.33409
-EXAMPLES/2     1.23440877 -704.49194   58.45119
-EXAMPLES/3     1.14786351  -30.00548   15.74701
-EXAMPLES/4    14.81290524  -59.52748   13.11947
-EXAMPLES/5     7.40645262  -53.86771   10.01489
-EXAMPLES/6     0.96306814  -42.42348   10.53479
-EXAMPLES/7     0.32704113  -11.84669    4.77871
-EXAMPLES/8     3.07991099  -88.30735   15.34709
-EXAMPLES/9     7.23420953  -37.93155   14.15476
-EXAMPLES/10     0.96906857  -40.55309   11.32727
-```
-
-Sample output (`head -3 EXAMPLES/OUTDIR1/file_1_00001_simout.txt`):
-```
-53725.17392  0.00000 10.0850  0.0012
-53726.15280  0.00068 10.0886  0.0009
-53726.15378  0.00169 10.0918  0.0009
-```
-
-This example demonstrates the `nameformat` and `columnformat` keywords for the `-o` command. Light curves are read in from the list and `-LS` locates periods. `-expr` defines a new vector `phase` initialized to the times in the light curves; `-changevariable` causes subsequent commands to use `phase` where time would normally be used. Together with `-Phase`, this stores the light curve phase for the LS period in `phase`. The light curves are then output to `EXAMPLES/OUTDIR1`. The `nameformat` keyword gives the rule for naming the output files — the first light curve (`EXAMPLES/1`) yields output to `EXAMPLES/OUTDIR1/file_1_00001_simout.txt`, the second to `EXAMPLES/OUTDIR1/file_2_00002_simout.txt`, and so on. The `columnformat` keyword specifies how data are formatted in the output light curve: four quantities (time, phase, magnitude, error) are included with printf-style format strings. Without `columnformat`, only `t`, `mag`, and `err` would be output, formatted as `%17.9f`, `%9.5f`, and `%9.5f` respectively.
-
 ---
 
 ## Help options

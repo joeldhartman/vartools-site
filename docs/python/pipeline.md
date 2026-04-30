@@ -301,8 +301,7 @@ from pyvartools.commands import stitch
 
 batch = (vt.Pipeline()
         .expr("mask=0")
-        .stitch("mag", "err", "mask", "lcnum", method="median",
-           lib_path="USERLIBS/src/.libs/stitch.so")
+        .stitch("mag", "err", "mask", "lcnum", method="median")
         .LS(0.5, 10.0, 1e-3, npeaks=1)).run_combinelcs(groups, nthreads=2)
 
 print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)

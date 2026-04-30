@@ -10,13 +10,13 @@ vartools supports user-developed commands compiled as shared libraries (`.so` / 
 
 ## How extensions are loaded
 
-At the CLI level, an extension is loaded with `-L path/to/lib.so` placed immediately before the command flag:
+If the library has been installed into the vartools userlibs data directory (e.g. via `make install` in `USERLIBS/src/`), vartools loads it automatically and no `-L` flag is needed:
 
 ```bash
-vartools -l lc_list -L USERLIBS/src/stitch.so -stitch mag err mask lcnum median -tab
+vartools -l lc_list -stitch mag err mask lcnum median -tab
 ```
 
-If the library is installed into the vartools userlibs data directory (e.g. via `make install` in `USERLIBS/src/`), vartools loads it automatically and the `-L` flag is not needed. pyvartools mirrors both behaviours.
+If you want to load an extension that is not installed (or one that lives outside the installed search directory), pass it with `-L path/to/lib.so` placed immediately before the command flag. pyvartools mirrors both behaviours.
 
 
 ### Bundled typed wrappers
@@ -29,11 +29,17 @@ from pyvartools.commands import fastchi2, stitch
 
 # Auto-loaded extension: just use the command directly
 r = vt.fastchi2("EXAMPLES/2", Nharm=2, freqmax=24.0, freqmin=0.1)
+```
 
-# Explicit lib_path for an uninstalled extension (development tree)
+Explicit `lib_path=` is supported for libraries that are not installed in the
+default vartools userlibs directory; the path below is just an illustrative
+placeholder:
+
+```python
+...                                          # illustrative only
 pipe = (vt.Pipeline()
         .fastchi2(Nharm=2, freqmax=24.0, freqmin=0.1,
-             lib_path="USERLIBS/src/.libs/fastchi2.so"))
+             lib_path="/path/to/fastchi2.so"))
 ```
 
 All typed-wrapper pipelines automatically run in **subprocess mode** (library/in-process mode does not support dynamically loaded extensions).
@@ -83,7 +89,7 @@ pipe = vt.Pipeline().magadd("fixcolumn MeanMag_0")    # from prior stats column
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = (vt.Pipeline()
           .rms()
-          .magadd(0.5, lib_path="USERLIBS/src/.libs/magadd.so")
+          .magadd(0.5)
           .rms()).run(lc)
 print(result.vars["RMS_0"], result.vars["RMS_2"])
 ```
@@ -142,8 +148,7 @@ pipe = (vt.Pipeline()
 # `columns=` mapping.
 batch = (vt.Pipeline()
          .hatpiflag("fiphot_flag", "rejbadframe", "tfa_mask",
-                    "pointing_outlier", "quality_flag",
-                    lib_path="USERLIBS/src/.libs/hatpiflag.so")
+                    "pointing_outlier", "quality_flag")
          .stats("quality_flag", "mean,sum,max")
          ).run_filelist(["EXAMPLES/2.hatpiflag"],
                         columns={
@@ -228,8 +233,7 @@ pipe = (vt.Pipeline()
 # with one harmonic and capture the periodogram.
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = lc.fastchi2(Nharm=1, freqmax=10.0, freqmin=0.1,
-                     save_per="EXAMPLES/OUTDIR1",
-                     lib_path="USERLIBS/src/.libs/fastchi2.so")
+                     save_per="EXAMPLES/OUTDIR1")
 ```
 
 ---
@@ -298,7 +302,6 @@ subprocess.run([
     "vartools",
     "-i", "EXAMPLES/6479535620075955328_llc.fits",
     "-inputlcformat", "t:TMID_BJD,mag:IRM1,err:IRE1,x:XIC,y:YIC,temp:CCDTEMP",
-    "-L", "USERLIBS/src/.libs/splinedetrend.so",
     "-expr", "magorig=mag",
     "-splinedetrend",
     "t:spline:1.0:3:groupbygap:0.5,x:poly:1,y:poly:1,temp:poly:1",
@@ -389,8 +392,7 @@ pipe = vt.Pipeline().ftuneven(output_file=True, freqauto=True)
 # frequency grid (radians per unit time), writing the FT to a per-LC file.
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
-                     freqrange=(0.05, 5.0, 0.001),
-                     lib_path="USERLIBS/src/.libs/ftuneven.so")
+                     freqrange=(0.05, 5.0, 0.001))
 ```
 
 ---
@@ -494,8 +496,7 @@ from pyvartools.commands import stitch
 result = (vt.Pipeline()
           .expr("mask=mag*0+1")
           .rms()
-          .stitch("mag", "err", "mask", "lcnum", method="median",
-                  lib_path="USERLIBS/src/.libs/stitch.so")
+          .stitch("mag", "err", "mask", "lcnum", method="median")
           .rms()
           ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"])
 print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
@@ -642,8 +643,7 @@ result = (vt.Pipeline()
                    esinomega=0.0, ecosomega=0.0,
                    LD1_law="quad", LD1_coeffs=(0.3, 0.3),
                    LD2_law="lockLD1",
-                   save_model="EXAMPLES/OUTDIR1/",
-                   lib_path="USERLIBS/src/.libs/jktebop.so")
+                   save_model="EXAMPLES/OUTDIR1/")
           .BLS(1.0, 5.0, rmin=0.01, rmax=0.1,
                nbins=200, nfreq=5000, npeaks=1)).run(lc)
 ```
@@ -660,8 +660,7 @@ r = (vt.Pipeline()
               esinomega=0.0, ecosomega=0.0,
               LD1_law="quad", LD1_coeffs=(0.3, 0.3),
               LD2_law="lockLD1",
-              save_curve=True, curve_xaxis="phase", curve_step=0.01,
-              lib_path="USERLIBS/src/.libs/jktebop.so")
+              save_curve=True, curve_xaxis="phase", curve_step=0.01)
      ).run(lc)
 curve = r.files["jktebop_curve_0"]   # 2 columns: phase, model magnitude
 print(curve.shape, curve.head(3))
@@ -825,8 +824,7 @@ pipe = (vt.Pipeline()
                 "tmax": "fixcolumn STATS_t_MIN_0",
                 "life": 1000.0,
                 "ingress": 0.1, "egress": 0.1,
-            }],
-            lib_path="USERLIBS/src/.libs/macula.so")
+            }])
         .o("EXAMPLES/OUTDIR1/3.maculainject"))
 result = pipe.run(lc)
 ```
@@ -842,7 +840,7 @@ For user-written extensions that do not ship with vartools — or for quick one-
 
 ## Usage pattern 1 — quick one-off (`UserCommand`)
 
-`UserCommand` is the lowest-level entry point. Pass the library path, the command name, and the raw argument tokens:
+`UserCommand` is the lowest-level entry point. When the library is installed and auto-loaded, pass `None` for the path along with the command name and the raw argument tokens:
 
 ```python
 import pyvartools as vt
@@ -854,20 +852,23 @@ groups = [["EXAMPLES/1", "EXAMPLES/2"], ["EXAMPLES/3", "EXAMPLES/4"]]
 
 pipe = (vt.Pipeline()
         .expr("mask=0")
-        .add(vt.UserCommand(
-        "USERLIBS/src/.libs/stitch.so",   # path to .so
-        "stitch",                          # command name
-        "mag err mask lcnum median",       # raw args (str or list)
-    )))
+        .add(vt.UserCommand(None, "stitch", "mag err mask lcnum median")))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
-When the library is installed and auto-loaded, omit the path:
+For an extension that has not been installed, pass the absolute path to the
+`.so` file as the first argument; the path below is only an illustrative
+placeholder:
 
 ```python
+...                                          # illustrative only
 pipe = (vt.Pipeline()
         .expr("mask=0")
-        .add(vt.UserCommand(None, "stitch", "mag err mask lcnum median")))
+        .add(vt.UserCommand(
+            "/path/to/stitch.so",            # path to .so (illustrative)
+            "stitch",                         # command name
+            "mag err mask lcnum median",      # raw args (str or list)
+        )))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 ```
 
@@ -882,7 +883,8 @@ result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
 Call `.help()` or `.examples()` on any instance to print the vartools help text for the command (requires the binary and library to be loadable):
 
 ```python
-vt.UserCommand("USERLIBS/src/stitch.so", "stitch").help()
+...                                          # illustrative only
+vt.UserCommand("/path/to/stitch.so", "stitch").help()
 ```
 
 ## Usage pattern 2 — named class (`load_userlib`)
@@ -890,7 +892,10 @@ vt.UserCommand("USERLIBS/src/stitch.so", "stitch").help()
 `load_userlib()` creates a reusable `UserCommand` subclass with the library path and command name pre-bound. The returned class is functionally equivalent to a hand-written command wrapper and can be further subclassed.
 
 ```python
-Stitch = vt.load_userlib("USERLIBS/src/.libs/stitch.so")
+...                                          # illustrative only
+# Use an absolute path to the .so / .la file (the path below is just an
+# illustrative placeholder):
+Stitch = vt.load_userlib("/path/to/stitch.so")
 
 # Pipeline builder methods are generated at import time for the built-in
 # command classes, so user classes created at runtime (like this one) are
@@ -920,18 +925,22 @@ The class docstring is populated by running `vartools -L lib -help -name` at cre
 3. Any paths passed explicitly via `search_paths`.
 
 ```python
-# Auto-discover extensions installed system-wide (no matches on this host):
+# Auto-discover extensions installed system-wide:
 cmds = vt.discover_userlibs()
-print(cmds)                            # {} — nothing installed globally
-
-# Provide an explicit search path for an uninstalled / development tree:
-cmds = vt.discover_userlibs(search_paths=["USERLIBS/src/.libs"])
 print(sorted(cmds))                    # ['fastchi2', 'jktebop', ..., 'stitch']
 
 pipe = (vt.Pipeline()
         .expr("mask=0")
         .add(cmds["stitch"]("mag err mask lcnum median")))
 result = pipe.run_combinelcs(groups, lcnumvar="lcnum")
+```
+
+To search a directory that vartools doesn't know about, pass it via
+`search_paths=`; the path below is just an illustrative placeholder:
+
+```python
+...                                          # illustrative only
+cmds = vt.discover_userlibs(search_paths=["/path/to/userlibs/dir"])
 ```
 
 ## Usage pattern 4 — full Python wrapper (subclass)
@@ -965,7 +974,8 @@ pipe = (vt.Pipeline()
 Alternatively, build the base class from the factory for a one-line definition:
 
 ```python
-class Stitch(vt.load_userlib("USERLIBS/src/stitch.so", name="stitch")):
+...                                          # illustrative only
+class Stitch(vt.load_userlib("/path/to/stitch.so", name="stitch")):
     def __init__(self, variables, errors, masks, lcnum, method="median"):
         super().__init__(f"{variables} {errors} {masks} {lcnum} {method}")
 ```
