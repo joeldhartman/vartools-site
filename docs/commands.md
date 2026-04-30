@@ -44,7 +44,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-FFT` | Fast Fourier transform (evenly-sampled data) | [CLI](cli/manipulation.md#-fft) | [Python](python/commands/manipulation.md#fft-ifft-fast-fourier-transform) |
 | `-findblends` | Identify nearby variables that may blend into the target | [CLI](cli/misc.md#-findblends) | [Python](python/commands/misc.md#findblends-search-for-blended-transits) |
 | `-fluxtomag` | Convert flux to magnitude | [CLI](cli/manipulation.md#-fluxtomag) | [Python](python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions) |
-| `-fourierfilter` | Full-band Fourier high/low/band-pass filter with optional analytic filter and edge tapering | [CLI](cli/filtering.md#-fourierfilter) | — |
+| `-fourierfilter` | Full-band Fourier high/low/band-pass filter with optional analytic filter and edge tapering | [CLI](cli/filtering.md#-fourierfilter) | [Python](python/commands/filtering.md#fourierfilter-full-band-fourier-domain-filter) |
 | `-ftuneven` | Complex Fourier transform of unevenly sampled data (USERLIB extension) | [CLI](cli/extensions.md#-ftuneven) | [Python](python/commands/extensions.md#ftuneven-complex-fourier-transform-of-unevenly-sampled-data) |
 | `-GetLSAmpThresh` | Minimum detectable amplitude at a given period (LS-based) | [CLI](cli/period-finding.md#-getlsampthresh-minimum-detectable-amplitude) | [Python](python/commands/period-finding.md#getlsampthresh-ls-amplitude-threshold) |
 | `-hatpiflag` | Combine HATPI quality flags into a single binary flag (USERLIB extension) | [CLI](cli/extensions.md#-hatpiflag) | [Python](python/commands/extensions.md#hatpiflag-hatpi-binary-flag-combiner) |
@@ -67,7 +67,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-o` | Write the (possibly modified) light curve to a file | [CLI](cli/control-flow.md#-o) | [Python](python/commands/control-flow.md#o-output-light-curve) |
 | `-Phase` | Replace the time column with phase-folded coordinates | [CLI](cli/manipulation.md#-phase) | [Python](python/commands/manipulation.md#phase-phase-fold-the-light-curve) |
 | `-print` | Emit user-computed scalars as columns in the statistics table | [CLI](cli/control-flow.md#-print) | [Python](python/commands/control-flow.md#print-emit-user-computed-variables-to-the-output-table) |
-| `-python` | Run embedded Python code on each light curve | [CLI](cli/python-r.md#-python) | — |
+| `-python` | Run embedded Python code on each light curve | [CLI](cli/python-r.md#-python) | [Python](python/commands/python-r.md#python-run-python-code) |
 | `-R` | Run embedded R code on each light curve | [CLI](cli/python-r.md#-r) | [Python](python/commands/python-r.md#r-run-r-code) |
 | `-resample` | Interpolate the light curve onto a new time grid | [CLI](cli/manipulation.md#-resample) | [Python](python/commands/manipulation.md#resample-resample-onto-a-new-time-grid) |
 | `-rescalesig` | Rescale per-point errors to make χ²/dof = 1 | [CLI](cli/manipulation.md#-rescalesig) | [Python](python/commands/manipulation.md#rescalesig-ensemblerescalesig-rescale-per-point-uncertainties) |

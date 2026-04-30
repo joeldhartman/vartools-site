@@ -128,7 +128,7 @@ sum_i [ sum_{k=0}^{Nharm}(a_{i,k} sin(2π(k+1) f_i t) + b_{i,k} cos(2π(k+1) f_i
       + sum_{k=0}^{Nsubharm}(c_{i,k} sin(2π f_i t/(k+1)) + d_{i,k} cos(2π f_i t/(k+1))) ]
 ```
 
-By default the whitened light curve is passed downstream; pass `fitonly=True` to fit without subtracting. Use `harmonicfilter` when you know the period(s) you want to remove. For full-band filtering without a known period use the `fourierfilter` command.
+By default the whitened light curve is passed downstream; pass `fitonly=True` to fit without subtracting. Use `harmonicfilter` when you know the period(s) you want to remove. For full-band filtering without a known period use [`fourierfilter`](#fourierfilter-full-band-fourier-domain-filter).
 
 `cmd.Killharm(...)` is accepted as a backward-compatible synonym (it invokes
 the same vartools command under the ``-Killharm`` token and produces output
@@ -199,6 +199,152 @@ result = lc.harmonicfilter(period="fix 0.514333", nharm=10, nsubharm=0,
 ```
 
 ![M3.V006.lc — 10-harmonic Fourier-series fit](../../assets/examples/killharm_ex2.png)
+
+---
+
+### `fourierfilter` — Full-band Fourier-domain filter
+
+**Syntax**
+
+```python
+cmd.fourierfilter(mode="full", minfreq=None, maxfreq=None,
+                  filterexpr=None, freqvar=None,
+                  fullspec=False, forcefft=False,
+                  taper=None, taper_deltafreq=None, taper_beta=None,
+                  resample=None,
+                  gapbreak_type=None, gapbreak_value=None,
+                  padmode=None, padfrac=None,
+                  nowarn=False, save_fouriercoeffs=False)
+```
+
+**Description**
+
+Apply a Fourier-domain filter to the whole light curve.  A band filter and/or an analytic `filterexpr` is applied in frequency space using GSL's mixed-radix complex FFT, and the filtered light curve replaces the input.  Distinct from `harmonicfilter`, which fits a Fourier series at one or more *known* periods; use `fourierfilter` when you want to keep or reject a *frequency band* without specifying any period in advance.
+
+There are two algorithmic paths:
+
+1. **Uniform sampling (or `forcefft=True`)** — the FFT runs directly on the input samples.
+2. **`resample=<delta>`** — the LC is linearly interpolated onto a uniform grid first, FFT-filtered, IFFT-reconstructed, then interpolated back to the original sample times.  Required for non-uniformly sampled data; can be combined with `gapbreak_type`/`gapbreak_value` to filter each segment of a gapped LC independently.
+
+!!! note "Non-uniform sampling without `resample`"
+    If the LC is detected as non-uniform and `resample` is not given (and `forcefft` is not given either), the command prints a warning to stderr and **skips the filter for that LC** — the `mag` column passes through unchanged.  Subsequent LCs and subsequent pipeline commands continue normally.  Set `nowarn=True` to silence the warning in batch use.
+
+CLI equivalent: [`-fourierfilter`](../../cli/filtering.md#-fourierfilter).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `str` | One of `"full"`, `"highpass"`, `"lowpass"`, `"bandpass"`, `"bandcut"`. |
+| `minfreq` | `float` or `str`, conditional | Low-frequency cutoff (cycles per time-unit).  Required for `highpass`/`bandpass`/`bandcut`.  Accepts the var/expr/fixcolumn forms. |
+| `maxfreq` | `float` or `str`, conditional | High-frequency cutoff.  Required for `lowpass`/`bandpass`/`bandcut`. |
+| `filterexpr` | `str`, optional | Analytic filter `W(f)` multiplied into every Fourier coefficient.  The frequency variable defaults to `f`; use `freqvar` to rename. |
+| `freqvar` | `str`, optional | Override the variable name used in `filterexpr`. |
+| `fullspec` | `bool` | Compute coefficients across the full Nyquist range even when the band is narrower (useful with `save_fouriercoeffs`). |
+| `forcefft` | `bool` | Force the direct-FFT path even when sampling is not detected as uniform. |
+| `taper` | `str`, optional | Smooth-edge taper at each cut: `"linear"`, `"cosine"` (aliases `"tukey"`, `"hann"`), `"blackman"`, or `"kaiser"`. |
+| `taper_deltafreq` | `float`, conditional | Half-width of the taper window in frequency units.  Required when `taper` is given. |
+| `taper_beta` | `float`, conditional | Shape parameter for `taper="kaiser"` (≈5 ≈ Hann-like). |
+| `resample` | `float`, `str`, or `None` | Enable the resample-FFT-IFFT-resample path.  Accepts `"delmin"` (LC's minimum `dt`), a positive number (fixed `Δt`), or a string expression. |
+| `gapbreak_type` | `str`, optional | Split the resampled LC at gaps and filter each segment independently: `"fix"`, `"expr"`, `"frac_min_sep"`, `"frac_med_sep"`, or `"percentile_sep"`.  Requires `resample`. |
+| `gapbreak_value` | `float` or `str`, conditional | Threshold value for the gap-break spec. |
+| `padmode` | `str`, optional | Edge padding before the FFT: `"wrap"` (default; native FFT periodicity), `"reflect"`, or `"zero"`. |
+| `padfrac` | `float`, optional | Pad length per side as a fraction of segment length.  Default 0.5 for `reflect`/`zero`, 0 for `wrap`. |
+| `nowarn` | `bool` | Suppress per-LC runtime warnings (non-uniform advisory, gap-vs-minfreq, taper-edge overlap, etc.). |
+| `save_fouriercoeffs` | `bool`, `str`, or `Output` | Write Fourier cos/sin coefficients to a file.  `True` captures as `result.files["fourierfilter_fouriercoeffs_N"]`.  See [Auxiliary output files](index.md#auxiliary-output-files). |
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `FourierFilter_Mean_Mag_N` | Weighted mean magnitude (the FFT DC term; preserved across the filter). |
+| `FourierFilter_RMS_In_N` | RMS of the input light curve. |
+| `FourierFilter_RMS_Out_N` | RMS of the filtered light curve. |
+| `FourierFilter_Nfreqcalc_N` | Total positive-frequency FFT bins computed up to Nyquist (`Ntot/2`, summed across gap-break segments). |
+| `FourierFilter_Nfreqfilt_N` | Bins falling inside the filter pass band; equals `Nfreqcalc` for `mode="full"`. |
+
+When `save_fouriercoeffs` is set:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["fourierfilter_fouriercoeffs_N"]` | DataFrame with frequency vs. cos/sin coefficient pair (and a second pair when `filterexpr` is set, for pre/post-filter coefficients). |
+
+**Examples**
+
+These mirror the five CLI examples on the [`-fourierfilter` reference page](../../cli/filtering.md#-fourierfilter).  Examples 1–3 use the uniformly-sampled light curve `EXAMPLES/2.simuniformsample`; examples 4–5 use `EXAMPLES/2.simtesssample` — the same underlying signal as 1–3, re-sampled at TESS short-cadence (~2 min) over a single 27-day sector with a ~1-day data-downlink gap mid-sector — and exercise the `resample` and `gapbreak_*` keywords.
+
+**Example 1.** Low-pass filter at 1.0 cycles/day with a cosine taper to suppress Gibbs ringing at the cut edge.
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2.simuniformsample")
+result = (vt.Pipeline()
+          .rms()
+          .fourierfilter(mode="lowpass", maxfreq=1.0,
+                         taper="cosine", taper_deltafreq=0.1)
+          .rms()).run(lc)
+print(result.vars[["RMS_0", "FourierFilter_RMS_Out_1", "RMS_2"]])
+```
+
+![EXAMPLES/2.simuniformsample — low-pass at 1 cyc/day](../../assets/examples/fourierfilter_ex1.png)
+
+**Example 2.** Band-pass filter between 0.5 and 1.25 cycles/day — chosen to enclose the ~0.81 cyc/day injected signal.  `save_fouriercoeffs=Output(..., capture=True)` writes the Fourier coefficients to disk *and* captures them as a DataFrame in `result.files`; pass a bare path string for the write-only form.
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2.simuniformsample")
+result = lc.fourierfilter(mode="bandpass", minfreq=0.5, maxfreq=1.25,
+                          save_fouriercoeffs=vt.Output("EXAMPLES/OUTDIR1",
+                                                       capture=True))
+coeffs = result.files["fourierfilter_fouriercoeffs_0"]
+print(f"{len(coeffs)} frequency bins, columns: {list(coeffs.columns)}")
+```
+
+![EXAMPLES/2.simuniformsample — band-pass 0.5-1.25 cyc/day](../../assets/examples/fourierfilter_ex2.png)
+
+**Example 3.** Apply an analytic Gaussian filter `W(f) = exp(-(f/0.5)²)` to every Fourier coefficient on a full-band fit.  The variable `f` in the expression is in cycles per time-unit (cycles/day here); vartools' expression parser uses `^` for exponentiation.
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2.simuniformsample")
+result = (vt.Pipeline()
+          .rms()
+          .fourierfilter(mode="full", filterexpr="exp(-(f/0.5)^2)")
+          .rms()).run(lc)
+print(result.vars[["RMS_0", "FourierFilter_RMS_Out_1", "RMS_2"]])
+```
+
+![EXAMPLES/2.simuniformsample — Gaussian analytic filter](../../assets/examples/fourierfilter_ex3.png)
+
+**Example 4.** Same low-pass filter as Example 1, applied to the TESS-like LC.  The data-downlink gap makes the sampling non-uniform, so `resample="delmin"` is required: the LC is interpolated onto a uniform grid at the minimum `dt`, FFT-filtered, then interpolated back.
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2.simtesssample")
+result = (vt.Pipeline()
+          .rms()
+          .fourierfilter(mode="lowpass", maxfreq=1.0,
+                         taper="cosine", taper_deltafreq=0.1,
+                         resample="delmin")
+          .rms()).run(lc)
+print(result.vars[["RMS_0", "FourierFilter_RMS_Out_1", "RMS_2"]])
+```
+
+![EXAMPLES/2.simtesssample — low-pass with resample](../../assets/examples/fourierfilter_ex4.png)
+
+**Example 5.** High-pass filter with gap-break on the TESS-like LC.  `gapbreak_type="frac_med_sep", gapbreak_value=100` splits the light curve at any inter-sample gap wider than 100 × the median `dt`; only the ~1-day data-downlink gap qualifies, so the LC is filtered as two independent segments.  For `highpass`/`bandpass` modes all segments are anchored at the overall-LC weighted mean, so there are no inter-segment jumps.
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2.simtesssample")
+result = (vt.Pipeline()
+          .rms()
+          .fourierfilter(mode="highpass", minfreq=2.0,
+                         taper="cosine", taper_deltafreq=0.1,
+                         resample="delmin",
+                         gapbreak_type="frac_med_sep", gapbreak_value=100)
+          .rms()).run(lc)
+print(result.vars[["RMS_0", "FourierFilter_RMS_Out_1", "RMS_2"]])
+```
+
+![EXAMPLES/2.simtesssample — high-pass with gap-break](../../assets/examples/fourierfilter_ex5.png)
 
 ---
 
