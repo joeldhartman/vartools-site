@@ -287,7 +287,7 @@ Output: table with columns Name, Chi2_0, Weighted_Mean_Mag_0, SigmaRescaleFactor
 
 **Syntax**
 ```
--expr ["listvar" | "scalar" | "const"] var"="expression
+-expr ["listvar" | "scalar" | "const"] var"="expression ["outputcolumn"]
 ```
 
 **Description**
@@ -303,6 +303,8 @@ Evaluate an analytic expression and assign the result to a named variable. If th
 
 If the variable already exists, its type is preserved regardless of the keyword.
 
+The optional `outputcolumn` trailing keyword exposes the LHS variable's computed value as a column in the result table (named `Expr_<varname>_<command-index>`). It is only valid when one of `listvar`, `scalar`, or `const` was given — for the default per-observation type the value would be one-per-observation rather than a single column, so `outputcolumn` raises a parse-time error in that case. This is equivalent to chaining a separate `-print` command but keeps the command index unchanged.
+
 The expression can reference any existing light curve vectors (`t`, `mag`, `err`, other named columns), scalars from prior commands, or output columns identified by their header names. The expression engine supports aggregate functions like `mean(mag)`, `stddev(mag, t>53730)`, `pct(mag, 95.0)`, etc. See the [Analytic Expressions](expressions.md) reference for the full list of supported operators, scalar functions, aggregate functions, and constants.
 
 Python equivalent: [`expr`](../python/commands/manipulation.md#expr-analytic-expression).
@@ -313,6 +315,7 @@ Python equivalent: [`expr`](../python/commands/manipulation.md#expr-analytic-exp
 |-----------|-------------|
 | `var` | Name of the variable to create or update. Cannot be an output-column name. |
 | `expression` | Any analytic expression supported by the VARTOOLS expression evaluator. |
+| `outputcolumn` | Optional flag (no value). Promotes the LHS variable to a result-table column. Only valid with `listvar`/`scalar`/`const`. |
 
 **Example**
 
@@ -322,6 +325,9 @@ vartools -i EXAMPLES/2 -expr 'flux=10^(-0.4*(mag-25.0))' -rms -oneline
 
 # Compute per-star mean magnitude using an aggregate function
 vartools -l EXAMPLES/lc_list -expr listvar 'avg=mean(mag)' -oneline
+
+# Same as above, but expose the per-star mean as the result column Expr_avg_0
+vartools -l EXAMPLES/lc_list -expr listvar 'avg=mean(mag)' outputcolumn -oneline
 
 # Compute mean of only bright observations (mag < 10)
 vartools -i EXAMPLES/2 -expr listvar 'bright_avg=mean(mag, mag<10)' -oneline

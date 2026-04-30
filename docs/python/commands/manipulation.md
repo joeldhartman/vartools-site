@@ -243,7 +243,7 @@ print(batch.vars[["Name", "RMS_2"]])
 **Syntax**
 
 ```python
-cmd.expr(expression, vartype=None, outputcolumns=None)
+cmd.expr(expression, vartype=None, outputcolumn=False)
 ```
 
 **Description**
@@ -260,11 +260,11 @@ CLI equivalent: [`-expr`](../../cli/manipulation.md#-expr).
 |-----------|------|-------------|
 | `expression` | `str` | Expression of the form `varname=formula`. The LHS may reference any existing light-curve vector, scalar from prior commands, or output-column header name. |
 | `vartype` | `str` or `None` | Type of the LHS variable: `None` (per-observation, default), `"listvar"` (per-star), `"scalar"` (per-thread), or `"const"` (global constant). See [`vartype` and aggregate functions](#vartype-and-aggregate-functions). If the variable already exists, its type is preserved regardless of this setting. |
-| `outputcolumns` | `str` or `None` | Comma-separated list of column names to output. |
+| `outputcolumn` | `bool` | If `True`, expose the LHS variable's value as a column in the result table (named `Expr_<varname>_<command-index>`). Only valid when `vartype` is `"listvar"`, `"scalar"`, or `"const"`; passing `outputcolumn=True` with `vartype=None` raises `ValueError` at construction (the value would otherwise be per-observation, not a single column). Default `False`. |
 
 **Output**
 
-Modifies the LC in-place: creates or updates the named variable; emits no statistics columns by default. Variables listed in `outputcolumns` appear in the output table.
+Modifies the LC in-place: creates or updates the named variable. Emits no statistics columns by default. When `outputcolumn=True`, an `Expr_<varname>_<command-index>` column is added to the result table.
 
 **Examples**
 
@@ -282,6 +282,15 @@ pipe = (vt.Pipeline()
         .expr("dmag=mag-avg")
         .rms())
 result = pipe.run(lc)
+
+# Same as above but expose the per-star mean in the result table.
+# `outputcolumn=True` adds a column named `Expr_avg_<command-index>`.
+pipe = (vt.Pipeline()
+        .expr("avg=mean(mag)", vartype="listvar", outputcolumn=True)
+        .expr("dmag=mag-avg")
+        .stats("dmag", "median,stddev"))
+result = pipe.run(lc)
+print(result.vars["Expr_avg_0"])         # the per-star mean magnitude
 
 # Define a global constant and use it
 pipe = (vt.Pipeline()
