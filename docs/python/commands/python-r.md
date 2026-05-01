@@ -94,7 +94,27 @@ The resulting `*.arimamodel` files contain `t`, the original `mag`, and the smoo
 ![EXAMPLES/2 — ARIMA model overlay](../../assets/examples/R_arimamodel_2_data.png)
 ![ARIMA model residuals — EXAMPLES/2](../../assets/examples/R_arimamodel_2_resid.png)
 
-**Example 4.** Same as Example 3 but with the ARIMA fit + diagnostic plots wrapped in a function `DoArimaFitPlot` defined in `EXAMPLES/Rexample4.R`. The function writes per-LC `*.arimaforecast.png` and `*.arimaresiduals.png` files via R's `forecast` plotting helpers.
+**Example 4.** Same as Example 3 but with the ARIMA fit + diagnostic plots wrapped in a function `DoArimaFitPlot` defined in `EXAMPLES/Rexample4.R`. A `-python` step strips the directory prefix off `Name` to get the per-LC basename (a stand-in for any place where Python's string handling is more convenient than R's), then `-R` is loaded with `init_fromfile=True` so the `Rexample4.R` definitions are read once and `DoArimaFitPlot` is called per LC. The function writes per-LC `*.arimaforecast.png` and `*.arimaresiduals.png` files via R's `forecast` plotting helpers.
+
+```python
+batch = (vt.Pipeline()
+         .savelc()
+         .binlc(method="average", binsize=0.05, time_output="taverage")
+         .resample(method="linear", delt=0.05)
+         .python('lcbasename = Name.split("/")[-1]',
+                 invars="Name", outvars="lcbasename")
+         .R('mag_arima <- DoArimaFitPlot(mag, "EXAMPLES/OUTDIR1/", lcbasename)',
+            init="EXAMPLES/Rexample4.R", init_fromfile=True,
+            invars="mag,t,lcbasename", outvars="mag_arima")
+         .resample(method="linear",
+                   file_times="list", list_column=1, t_column=1)
+         .restorelc(1, vars="mag")
+         .o("EXAMPLES/OUTDIR1",
+            nameformat="%s.arimamodel",
+            columnformat="t,mag,mag_arima")
+         ).run_filelist("EXAMPLES/lc_list",
+                        columns={"t": 1, "mag": 2, "err": 3})
+```
 
 ![ARIMA forecast plot for EXAMPLES/2](../../assets/examples/R_arimaforecast_2.png)
 ![ARIMA residuals plot for EXAMPLES/2](../../assets/examples/R_arimaresiduals_2.png)
