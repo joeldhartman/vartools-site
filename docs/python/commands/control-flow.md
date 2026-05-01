@@ -60,21 +60,29 @@ print(batch.vars)
 **Syntax**
 
 ```python
-cmd.o(filename=None, nameformat=None, columnformat=None, allcols=False,
-      fits=False, noclobber=False, copyheader=False,
-      namecommand=None, namefromlist=None, delimiter=None,
-      logcommandline=False, capture=False, key="o")
+cmd.o(outname=None, outdir=None, nameformat=None, columnformat=None,
+      allcols=False, fits=False, noclobber=False, copyheader=False,
+      namecommand=None, namefromlist=None, changesuffix=None,
+      delimiter=None, logcommandline=False, gzip=False, bzip2=False,
+      capture=False, key="o")
 ```
 
 **Description**
 
 Write the current light curve to a file, capture it back into a `Result` object, or both. Useful for saving intermediate state mid-pipeline (e.g. after sigma-clipping or filtering) and for the final output of a processed batch.
 
+The CLI `-o` keyword takes a single positional argument that is interpreted as a *filename* in single-LC mode (`vartools -i ...`) and as a *directory* in list mode (`vartools -l ...`). pyvartools splits this dual semantics into two explicit kwargs:
+
+- `outname=` is used when the pipeline runs through `Pipeline.run` or `Pipeline.run_file` (single-LC mode);
+- `outdir=` is used when it runs through `Pipeline.run_filelist`, `Pipeline.run_batch`, or `Pipeline.run_combinelcs` (list mode).
+
+A pipeline that supplies both can be reused in either mode; if the wrong one is supplied for the run method invoked, a clear `RuntimeError` is raised at run time.
+
 `cmd.o` can be used in three modes:
 
-- **Write to disk only** (`filename="path"`, `capture=False`): the LC is saved to disk.
-- **Capture only** (`capture=True`, `filename=None`): the LC is written to a temporary file, captured into `result.files[key]`, and the temp file is cleaned up automatically.
-- **Write and capture** (`capture=True`, `filename="path"`): the LC is both saved to disk and captured into `result.files[key]`.
+- **Write to disk only** (`outname=` or `outdir=` set, `capture=False`): the LC is saved to disk.
+- **Capture only** (`capture=True`, no `outname`/`outdir`): the LC is written to a mode-appropriate temporary path, captured into `result.files[key]`, and cleaned up automatically.
+- **Write and capture** (`capture=True` plus `outname=` or `outdir=`): both saved to disk and captured.
 
 When `capture=True` and no explicit `columnformat` is given, pyvartools passes the `allcols` flag to `-o` so the captured DataFrame contains every LC-vector variable registered up to that point in the pipeline (matching the library-mode fast path). If `columnformat` is given, the captured DataFrame uses the variable names listed in it.
 
@@ -84,19 +92,35 @@ CLI equivalent: [`-o`](../../cli/control-flow.md#-o).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `filename` | `str` or `None` | Output file path (or directory in batch mode). Required unless `capture=True`. |
-| `nameformat` | `str` or `None` | Format string for output filenames in batch mode, e.g. `"file_%s_%05d.txt"` (`%s` = LC basename, `%d` = sequence number). |
+| `outname` | `str` or `None` | Output filename for single-LC runs (`Pipeline.run` / `run_file`). Use `"-"` for stdout. |
+| `outdir` | `str` or `None` | Output directory for list/batch runs (`Pipeline.run_filelist` / `run_batch` / `run_combinelcs`). Per-LC filenames are constructed inside it. |
+| `nameformat` | `str` or `None` | Format string for output filenames in list mode, e.g. `"file_%s_%05d.txt"` (`%s` = LC basename, `%d` = sequence number). Ignored in single-LC mode. |
 | `columnformat` | `str` or `None` | Output column spec, e.g. `"t:%17.9f,mag:%9.5f,err:%9.5f"`. |
 | `allcols` | `bool` | Write every light-curve-vector variable defined by commands *before* this `cmd.o` in the pipeline, with a type-appropriate default `printf` format and a `# name1 name2 …` header line for ASCII output. Mutually exclusive with `columnformat`. Handy when a prior command has created new vectors (e.g. `cmd.Phase(..., phasevar="ph")`, `cmd.linfit(..., modelvar="m")`) that you want to capture without listing each one. Default `False`. |
 | `fits` | `bool` | Write output in FITS binary table format. |
 | `noclobber` | `bool` | Do not overwrite an existing output file. |
 | `copyheader` | `bool` | Copy the FITS header from the input file to the output file. |
-| `namecommand` | `str` or `None` | Shell command used to generate the output filename dynamically. |
-| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list. `True` uses the default column; a string specifies a column name/number (emits `namefromlist column <col>`). |
+| `namecommand` | `str` or `None` | Shell command used to generate the output filename dynamically (list mode only). |
+| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list (list mode only). `True` uses the default column; a string specifies a column name/number (emits `namefromlist column <col>`). |
+| `changesuffix` | `tuple[str, str]` or `None` | After the default basename has been built, strip a trailing `old_suffix` (if present) and append `new_suffix`. Either may be empty. Applied **before** any `fits` / `gzip` / `bzip2` suffix. Mutually exclusive with `nameformat` / `namecommand` / `namefromlist`. E.g. `changesuffix=(".fits", ".txt")` rewrites `foo.fits` → `foo.txt`. List-mode only. |
 | `delimiter` | `str` or `None` | Column delimiter character for the output file (default: whitespace). |
 | `logcommandline` | `bool` | Write the full vartools command line into the output file header. |
-| `capture` | `bool` | If `True`, capture the written light curve into `result.files[key]`. For single-LC runs this is a `LightCurve`; for batch runs it is a list of `LightCurve` objects. When `filename=None`, the output goes to a temporary file that is cleaned up automatically. Default `False`. |
+| `gzip` / `bzip2` | `bool` | Compress the output. The corresponding `.gz` / `.bz2` extension is appended if not already present, and the data are piped through the `gzip` or `bzip2` external program (must be on `PATH`). Combined with `fits=True`, `gzip=True` produces a gzip-compressed FITS file via cfitsio's native `.fits.gz` driver; `bzip2=True` cannot be combined with `fits=True`. Compression cannot be combined with stdout (`outname="-"`) when `fits=True`. Compressed inputs (`.gz`, `.Z`, `.bz2` for ASCII; `.fits.gz`, `.fits.fz`, `.fits.Z`, `.fits.bz2` for FITS) are auto-detected and decompressed on read. Mutually exclusive. |
+| `capture` | `bool` | If `True`, capture the written light curve into `result.files[key]`. For single-LC runs this is a `LightCurve`; for batch runs it is a list of `LightCurve` objects. When neither `outname` nor `outdir` is supplied, the output goes to a mode-appropriate temporary path that is cleaned up automatically. Default `False`. |
 | `key` | `str` | Key under which the captured LC(s) appear in `result.files`. Default `"o"`. Use a unique key when the pipeline contains more than one `cmd.o(capture=True)`. |
+
+**Caveat — FITS input, ASCII output.** In batch mode, when the input list contains FITS light curves and the output is **ASCII** (`fits=False`), the default output filename follows the input basename — so `kplr.fits` is written as ASCII to a file *also* named `kplr.fits`. The `.fits` suffix is then misleading: the file holds plain text. Use `changesuffix` to rewrite it:
+
+```python
+.o(outdir="./outdir", changesuffix=(".fits", ".txt"))
+```
+
+For arbitrary renaming (multi-part suffixes, inserting tags, etc.) use `namecommand` with `sed`:
+
+```python
+.o(outdir="./outdir",
+   namecommand=r"sed -n 's|^.*/\([^/]*\)\.fits  *\([^ ]*\) .*$|\2/\1.txt|p'")
+```
 
 **Output**
 
@@ -128,7 +152,7 @@ print(result.vars["LS_Period_1_2"])     # clip=0, o=1, LS=2
 # Write to disk AND capture
 result2 = (vt.Pipeline()
         .clip(5.0)
-        .o(filename="EXAMPLES/OUTDIR1/2.clipped", capture=True, key="clipped")).run(lc)
+        .o(outname="EXAMPLES/OUTDIR1/2.clipped", capture=True, key="clipped")).run(lc)
 # File written to disk and also available as result2.files["clipped"]
 
 # Multiple intermediate snapshots
@@ -157,7 +181,7 @@ phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
 (vt.Pipeline()
         .LS(0.1, 100.0, 0.1, npeaks=1)
         .Phase(period="ls")
-        .o("EXAMPLES/OUTDIR1",
+        .o(outdir="EXAMPLES/OUTDIR1",
           nameformat="file_%s_%05d_simout.txt",
           columnformat="t:%11.5f,mag:%7.4f,err:%7.4f")).run_filelist([f"EXAMPLES/{i}" for i in range(1, 11)])
 ```
@@ -258,7 +282,7 @@ Convert ASCII `EXAMPLES/1` to a FITS LC at `EXAMPLES/1.tmpout.fits`, attaching a
 batch = (vt.Pipeline()
          .addfitskeyword("TMPKEY", "TSTRING", value="var x",
                          comment="a comment")
-         .o("EXAMPLES/", nameformat="%s.tmpout.fits", fits=True)
+         .o(outdir="EXAMPLES/", nameformat="%s.tmpout.fits", fits=True)
          ).run_filelist("EXAMPLES/lc_list_addfitskey",
                         inlistvars={"x": vt.ListVar(col=2, type="string")})
 ```

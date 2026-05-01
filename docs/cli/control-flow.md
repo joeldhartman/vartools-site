@@ -167,10 +167,12 @@ vartools -l EXAMPLES/lc_list -rms \
 -o
     <outdir | outname>
     ["nameformat" formatstring | "namecommand" command |
-     "namefromlist" ["column" col]]
+     "namefromlist" ["column" col] |
+     "changesuffix" oldsuffix newsuffix]
     ["columnformat" formatstring | "allcols"]
     ["delimiter" delimchar]
     ["fits"] ["copyheader"] ["logcommandline"] ["noclobber"]
+    ["gzip" | "bzip2"]
 ```
 
 **Description**
@@ -187,6 +189,7 @@ Python equivalent: [`o`](../python/commands/control-flow.md#o-output-light-curve
 | `"nameformat" formatstring` | Override the naming convention. Tokens: `%s` = input basename; `%b` = basename stripped of its last extension; `%d` = light-curve number (from 1); `%0nd` = zero-padded; `%%` = literal `%`. |
 | `"namecommand" command` | Execute a shell command to determine the output name. The string `echo $fulllcname $outdir $lcnum` is piped into `command`; its stdout is the output filename. |
 | `"namefromlist" ["column" col]` | Read the output filename from the input list file. `outdir` is prepended. By default the next unused column is used. |
+| `"changesuffix" oldsuffix newsuffix` | After the default basename has been built, strip a trailing `oldsuffix` (if present) and append `newsuffix`. Either string may be empty (use `""` to skip the strip or skip the append). Applied **before** any `"fits"` / `"gzip"` / `"bzip2"` suffix is added. Mutually exclusive with `"nameformat"`, `"namecommand"`, and `"namefromlist"`. Useful for quickly mapping `.fits` → `.txt` when writing ASCII output for FITS-named inputs. |
 | `"columnformat" formatstring` | Comma-separated list of `varname[:printf_format]` entries (e.g. `t:%.17g,mag:%.5f,err:%.5f,xpos:%.3f`). For FITS output the text after the first `:` is the column unit, a second `:` introduces a description, and a third `:` an alternative units string. |
 | `"allcols"` | Write every light-curve-vector variable defined by commands *before* this `-o`, with a type-appropriate default `printf` format and a `# name1 name2 …` header line for ASCII. Mutually exclusive with `"columnformat"`. |
 | `"delimiter" delimchar` | Column separator character (default: single space). |
@@ -194,6 +197,19 @@ Python equivalent: [`o`](../python/commands/control-flow.md#o-output-light-curve
 | `"copyheader"` | Copy the primary FITS header from the input light curve to the output (FITS input only). |
 | `"logcommandline"` | Log the full VARTOOLS command line to the output file header. |
 | `"noclobber"` | Do not overwrite existing files; VARTOOLS terminates if a file already exists. |
+| `"gzip"` / `"bzip2"` | Compress the output. The corresponding `.gz` / `.bz2` extension is appended if not already present, and the output is piped through the `gzip` or `bzip2` external program (which must be on `PATH`). When combined with `"fits"`, `"gzip"` produces a compressed FITS file via cfitsio's native `.fits.gz` driver; `"bzip2"` cannot be combined with `"fits"`. Compression cannot be combined with stdout (`"-"`) when `"fits"` is also given. Compressed inputs (`.gz`, `.Z`, `.bz2` for ASCII; `.fits.gz`, `.fits.fz`, `.fits.Z`, `.fits.bz2` for FITS) are also auto-detected and decompressed on read. |
+
+**Caveat — FITS input, ASCII output.** If the input list contains FITS light curves and the output is **ASCII** (no `"fits"` keyword), the default output filename follows the input basename — so a file like `kplr.fits` is written as ASCII to a file *also* named `kplr.fits`. The `.fits` suffix is then misleading: the file holds plain text, and any downstream tool that opens it expecting a FITS table will fail. The simplest fix is `changesuffix`:
+
+```bash
+-o ./outdir changesuffix .fits .txt
+```
+
+For arbitrary renaming (e.g. inserting a tag, splitting on multiple delimiters), use `namecommand` with `sed`, which receives `$fulllcname $outdir $lcnum` on stdin:
+
+```bash
+-o ./outdir namecommand 'sed -n '\''s|^.*/\([^/]*\)\.fits  *\([^ ]*\) .*$|\2/\1.txt|p'\'''
+```
 
 **Examples**
 

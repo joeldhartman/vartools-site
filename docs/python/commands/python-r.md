@@ -82,7 +82,7 @@ batch = (vt.Pipeline()
          .resample(method="linear",
                    file_times="list", list_column=1, t_column=1)
          .restorelc(1, vars="mag")
-         .o("EXAMPLES/OUTDIR1",
+         .o(outdir="EXAMPLES/OUTDIR1",
             nameformat="%s.arimamodel",
             columnformat="t,mag,mag_arima")
          ).run_filelist("EXAMPLES/lc_list",
@@ -109,7 +109,7 @@ batch = (vt.Pipeline()
          .resample(method="linear",
                    file_times="list", list_column=1, t_column=1)
          .restorelc(1, vars="mag")
-         .o("EXAMPLES/OUTDIR1",
+         .o(outdir="EXAMPLES/OUTDIR1",
             nameformat="%s.arimamodel",
             columnformat="t,mag,mag_arima")
          ).run_filelist("EXAMPLES/lc_list",
