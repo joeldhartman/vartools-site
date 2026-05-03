@@ -57,7 +57,9 @@ extra_css:
   - stylesheets/extra.css
 
 extra_javascript:
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  # polyfill.io was sold to a CDN that injected malware in mid-2024 and is now
+  # widely blocked.  Modern browsers all support ES6 natively so the polyfill
+  # was redundant; removing avoids the slow-fail on every page load.
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 extra:

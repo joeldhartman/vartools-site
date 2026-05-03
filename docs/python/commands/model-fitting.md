@@ -225,7 +225,7 @@ CLI equivalent: [`-decorr`](../../cli/model-fitting.md#-decorr).
 | `subtractfirstterm` | `int` | `1` to decorrelate against `(signal − signal[0])` rather than `signal` directly (useful for detrending against JD). |
 | `global_files` | list of `(str, int)` or `None` | List of `(filename, polynomial_order)` tuples for external trend files. |
 | `lc_columns` | list of `(int, int)` or `None` | List of `(column_number, polynomial_order)` tuples for light-curve-internal trends. |
-| `save_model` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["decorr_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `save_model` | `bool`, `str`, or `Output` | Directory for auxiliary file output. A string is the **directory name** (not a filename); per-LC `*.decorr.model` files are written inside it. `True` captures as `result.files["decorr_model_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `maskpoints` | `str` or `None` | Mask variable; only points with `maskvar > 0` contribute to the fit. |
 
 **Output**
