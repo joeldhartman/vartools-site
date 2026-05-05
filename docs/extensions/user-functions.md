@@ -223,7 +223,7 @@ registered function and its help text (when `provide_help == 1`).
   names (`sin`, `cos`, `log`, etc.), which are already built in.
 - **No state.** User functions receive only their arguments and must be
   stateless (pure functions).  They are evaluated repeatedly and may be
-  called from parallel threads — never use static or global variables.
+  called from parallel threads — do not use static or global variables.
 - **Integer arguments.** The evaluator passes all arguments as `double`.  If
   you need an integer-typed argument (e.g., a number of harmonics), just
   use `(int)param[0]` inside the function.

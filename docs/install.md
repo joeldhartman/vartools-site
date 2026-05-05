@@ -331,8 +331,8 @@ feature is silently disabled if the detection fails. Pass the listed
 | R | Embedded `-R` command | `--with-RHOME=/path` |
 
 !!! note "Python and R are compile-time dependencies"
-    Unlike command-line tools that simply shell out, the `-python` and
-    `-R` commands **embed** the Python and R interpreters directly into
+    The `-python` and
+    `-R` commands embed the Python and R interpreters directly into
     the VARTOOLS binary. Detection happens at `./configure` time —
     `configure` probes for `Python.h` + NumPy headers and for `libR.so`
     + the R headers, and the resulting features are compiled in or not.
@@ -467,10 +467,8 @@ conda activate pyvartools
 ### Library mode (`libvartoolspipeline.so`)
 
 After `make install`, the shared library `libvartoolspipeline.so` is
-installed alongside the binary. When pyvartools can find this library it
-runs vartools **in-process** (no subprocess spawned per call), giving a
-roughly 20× speedup for single-LC and batch runs. If the library is not
-found, pyvartools falls back transparently to the subprocess path.
+installed alongside the binary. This library is used by pyvartools for
+more efficient processing.
 
 See the [Pipeline — Performance: library mode](python/pipeline.md#performance-library-mode)
 section for details on controlling this behaviour.

@@ -78,7 +78,7 @@ the LC is not corrected. The final `1 EXAMPLES/OUTDIR1` writes the model to
 disk.
 
 The CLI pipeline writes only the model, so a second step (`gawk` in the
-original example, or `-Injecttransit` if you want a single-call workflow) is
+original example, or `-Injecttransit` if you want a single-call run) is
 needed to add that model onto the observed LC and save the result to
 `EXAMPLES/3.transit`, which the next example uses as its input.
 

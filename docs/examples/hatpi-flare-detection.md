@@ -262,4 +262,4 @@ candidates' fit windows shaded red.  The 2×3 grid below is per-flare
 zooms on the top-6 candidates by Δχ² with the fitted exponential-decay
 model overlaid in red.
 
-Note that this algorithm is not optimized, and is not presented as a "best" practice method for finding flares. It is meant to illustrate an example of how VARTOOLS can be used to incorporate some of the advanced statistical processes of R into a python-driven light-curve analysis pipeline that can easily be extended to processing a large number of light curves.
+Note that this algorithm is not optimized, and is not presented as a "best" practice method for finding flares. It is meant to illustrate an example of how VARTOOLS can be used to incorporate some of the advanced statistical processes of R into a python-driven light-curve analysis pipeline that can be extended to processing a large number of light curves.

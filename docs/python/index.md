@@ -77,8 +77,8 @@ keyword arguments alongside the command parameters.
 
 ### 2. Chaining commands by calling on `LightCurve` or `Result` objects.
 
-Call commands directly as methods on a `LightCurve` object. Every command
-executes **immediately** and returns a `Result`. Further commands can be 
+Call commands directly as methods on a `LightCurve` object. Each command
+executes immediately and returns a `Result`. Further commands can be 
 executed on the `Result` which accumulates any statistics and output produced 
 by the new command:
 

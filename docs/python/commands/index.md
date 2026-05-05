@@ -2,8 +2,7 @@
 
 pyvartools exposes every vartools command as a typed Python class under
 `pyvartools.commands`.  Each command is categorised the same way as in
-the [CLI reference](../../cli/index.md), so a command found on one side
-is easily found on the other.
+the [CLI reference](../../cli/index.md).
 
 Browse the per-category pages in the sidebar, or use the
 [alphabetical Command Index](../../commands.md) to jump straight to a
@@ -31,7 +30,7 @@ result = pipe.run_file("EXAMPLES/2")
 
 ## Auxiliary output files
 
-Many commands can write auxiliary files (periodograms, model curves, coefficient tables, etc.) to disk. Every such parameter is named `save_*` and accepts four modes, controlled by passing a `bool`, a path string, or an `Output` object.
+Many commands can write auxiliary files (periodograms, model curves, coefficient tables, etc.) to disk. Such parameters are generally named `save_*` and accept multiple modes, controlled by passing a `bool`, a path string, or an `Output` object.
 
 ### The four modes
 

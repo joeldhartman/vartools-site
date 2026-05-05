@@ -650,7 +650,7 @@ Cite Tamuz, Mazeh & Zucker 2005, MNRAS, 356, 1466.
 
 **Examples**
 
-**Example 1.** Apply SYSREM to the light curves in `EXAMPLES/trendlist_tfa`. Two initial "color"-like terms (the second and third columns of the list) and one initial "airmass"-like term (taken from `EXAMPLES/3`) are used. 5σ clipping is applied for both the mean-magnitude calculation and the iterative fit; the saturation threshold is 8.0 mag. The model light curves are written to `EXAMPLES/OUTDIR1`, the converged trend vectors to `EXAMPLES/OUTDIR1/sysrem.trends`. The two `-rms` calls show the effect of SYSREM. In production, SYSREM is typically applied to a much larger ensemble, with airmass/seeing/temperature initialising the airmass-like terms and ra/dec/colour initialising the colour-like terms.
+**Example 1.** Apply SYSREM to the light curves in `EXAMPLES/trendlist_tfa`. Two initial "color"-like terms (the second and third columns of the list) and one initial "airmass"-like term (taken from `EXAMPLES/3`) are used. 5σ clipping is applied for both the mean-magnitude calculation and the iterative fit; the saturation threshold is 8.0 mag. The model light curves are written to `EXAMPLES/OUTDIR1`, the converged trend vectors to `EXAMPLES/OUTDIR1/sysrem.trends`. The two `-rms` calls show the effect of SYSREM.
 
 ```bash
 vartools -l EXAMPLES/trendlist_tfa -header \

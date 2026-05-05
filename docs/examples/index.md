@@ -1,6 +1,6 @@
 # Examples
 
-Worked end-to-end examples of common VARTOOLS workflows. Each page shows a
+Worked end-to-end examples of common VARTOOLS tasks. Each page shows a
 command-line invocation, the real output it produces, the equivalent
 pyvartools script, and short notes on what's going on.
 

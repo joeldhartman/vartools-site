@@ -274,7 +274,7 @@ points are the observations folded on the fitted ephemeris via
 
 ### Variation: GPU transit search with CETRA
 
-[CETRA](https://github.com/leigh2/cetra) ([Smith et al. 2025, MNRAS, 539, 297](https://ui.adsabs.harvard.edu/abs/2025MNRAS.539..297S)) is a CUDA-accelerated transit-detection algorithm that often outperforms BLS in both sensitivity and runtime.  Because it's a Python package rather than a vartools command, it slots into the pipeline through `cmd.python(inprocess=True)` — the in-process callback runs the user code in pyvartools' own interpreter, so `import cetra` (and the live PyCUDA context it spins up) sees the same GPU resources as the calling script.
+[CETRA](https://github.com/leigh2/cetra) ([Smith et al. 2025, MNRAS, 539, 297](https://ui.adsabs.harvard.edu/abs/2025MNRAS.539..297S)) is a CUDA-accelerated transit-detection algorithm that can operate faster than the CPU-based BLS algorithm.  Because it's a Python package rather than a vartools command, it enters into the pipeline through `cmd.python(inprocess=True)` — the in-process callback runs the user code in pyvartools' own interpreter, so `import cetra` (and the PyCUDA context it initializes) sees the same GPU resources as the calling script.
 
 Once CETRA finds the period / `T0` / duration, the rest of the pipeline is the same chain as the BLS variant above: `BLSFixPerDurTc` re-derives depth and other transit statistics at the CETRA ephemeris, then `MandelAgolTransit` fits a Mandel-Agol model.
 

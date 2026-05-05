@@ -2,7 +2,7 @@
 
 pyvartools exposes every VARTOOLS command as a method directly on
 `LightCurve`, `Result`, `LightCurveBatch`, and `BatchResult`, eliminating the
-need to construct an explicit `Pipeline` for most workflows.
+need to construct an explicit `Pipeline` for most tasks.
 
 Every command method executes **immediately** and returns a result object —
 there is no separate "deferred chain" step or `.run()` call needed on
@@ -184,14 +184,16 @@ print(result.vars["LS_Period_1_long"])
 running one vartools invocation per LC and collecting results into a
 `BatchResult`.
 
-!!! note "Performance for large surveys"
-    `LightCurveBatch` runs one vartools invocation per light curve, which is
-    convenient but carries per-call overhead. For large collections (hundreds of
-    light curves or more), `Pipeline.run_batch()` or `Pipeline.run_filelist()`
-    submit all light curves in a single vartools call and are typically a few
-    times to ~20× faster, depending on light curve size and command mix. Use
-    `LightCurveBatch` for interactive work and moderate-sized batches;
-    switch to `Pipeline` for survey-scale processing.
+!!! note "Performance for large surveys" 
+    `LightCurveBatch` runs one
+    vartools invocation per light curve, which is convenient but
+    carries per-call overhead. For large collections (hundreds of
+    light curves or more), `Pipeline.run_batch()` or
+    `Pipeline.run_filelist()` submit all light curves in a single
+    vartools call and are typically several times faster, depending on
+    light curve size and command mix. Use `LightCurveBatch` for
+    interactive work and moderate-sized batches; switch to `Pipeline`
+    for survey-scale processing.
 
 ### Creating a batch and running a chain
 
@@ -311,7 +313,7 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
     `MandelAgolTransit.P0` / `T00`, and common scalar parameters such as
     `clip.sigclip` and `restricttimes.minJD` / `maxJD`.  For those
     parameters the two backends produce identical results; `Pipeline`
-    wins on throughput because it runs one vartools invocation for the
+    can be faster though because it runs one vartools invocation for the
     whole batch instead of one per LC.
 
     `LightCurveBatch` resolves arrays to scalars in Python before each

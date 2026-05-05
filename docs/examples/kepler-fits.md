@@ -97,15 +97,13 @@ under a constant mag shift. `-o /tmp/tmp.lc` writes the processed LC back
 out as an ASCII file (time, magnitude, uncertainty).
 
 The Python version uses `LightCurve.from_file(..., t_col=..., mag_col=...,
-err_col=...)` with the real FITS column names, which is the natural way to
-do it. The flux-to-magnitude conversion and LS search are identical to
+err_col=...)` with the real FITS column names. The flux-to-magnitude conversion and LS search are identical to
 the CLI.
 
 The LS search finds a very strong signal near 28 d, which for this Q1 LC
 is dominated by long-timescale instrumental systematics (Kepler Q1 was the
 first science quarter and has not been corrected for long-term trends in
-the raw flux). Real Kepler workflows typically run PDCSAP flux through
-additional detrending (TFA or SYSREM) before interpreting the periodogram.
+the raw flux).
 
 ### Variation: shifting Kepler BKJD to full BJD
 

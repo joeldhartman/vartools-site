@@ -278,11 +278,11 @@ header is merged with the data-extension HDU's header (extension wins
 on conflict), structural keywords are filtered out, and the result is
 stored here. When `.to_file()` writes the light curve back to FITS,
 these preserved keywords are re-emitted onto the output's primary
-HDU. The data extension always gets freshly-derived structural
-keywords from the current DataFrame — so the column layout always
+HDU. The data extension gets freshly-derived structural
+keywords from the current DataFrame — so the column layout
 matches what the LightCurve actually contains.
 
-**Keywords that are always stripped** on read and write (they must be
+**Keywords that are stripped** on read and write (they must be
 redetermined from the current data):
 
 - Global structure: `SIMPLE`, `BITPIX`, `EXTEND`, `XTENSION`,

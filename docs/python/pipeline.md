@@ -4,43 +4,46 @@
 reaching for in several situations:
 
 - **Efficient batch processing of large surveys** — `run_batch()` and
-  `run_filelist()` submit all light curves to a single vartools invocation,
-  exploiting vartools' internal `-parallel` processing and avoiding per-LC
-  Python overhead. For large numbers of light curves this is typically a few
-  times to ~20× faster than running them one at a time via the Chaining API,
-  depending on light curve size and command mix.
-- **Internal vartools parallelisation** — `run_batch()` and `run_filelist()`
-  accept `nthreads=N`, which forwards `-parallel N` to vartools so it
-  distributes the work across multiple CPU cores within a single process.
-- **Per-star variable injection** — the `inlistvars` mechanism lets you
-  supply a different parameter value (e.g. a search period bound) for each
-  light curve via list-file columns, without writing custom wrapper code.
-- **Per-observation variable initialisation** — `init_lc_vars` lets you
-  create and initialise custom per-point variables before the command chain
-  begins, which is useful for masking or error-scaling workflows.
-- **Reusing the same command sequence across many calls** — a `Pipeline`
-  instance can be run against any number of light curves; the command sequence
-  is defined once and reused.
-- **Reading light curves directly from disk** — `run_file()` and
-  `run_filelist()` hand file paths straight to vartools with no Python I/O,
-  which is the most efficient option when light curves are already on disk.
+  `run_filelist()` submit all light curves to a single vartools
+  invocation, exploiting vartools' internal `-parallel` processing and
+  avoiding per-LC Python overhead. For large numbers of light curves
+  this is typically faster than running them one at a time via the
+  Chaining API, depending on light curve size and command mix.  
+- **Internal vartools parallelisation** — `run_batch()` and
+  `run_filelist()` accept `nthreads=N`, which forwards `-parallel N`
+  to vartools so it distributes the work across multiple CPU cores
+  within a single process.  
+- **Per-star variable injection** — the
+  `inlistvars` mechanism lets you supply a different parameter value
+  (e.g. a search period bound) for each light curve via list-file
+  columns, without writing custom wrapper code.  
+- **Per-observation variable initialisation** — `init_lc_vars` lets you create 
+  and initialise custom per-point variables before the command chain
+  begins, which is useful for masking or error-scaling tasks.  
+- **Reusing the same command sequence across many calls** — a
+  `Pipeline` instance can be run against any number of light curves;
+  the command sequence is defined once and reused.  
+- **Reading light curves directly from disk** — `run_file()` and 
+  `run_filelist()` hand
+  file paths straight to vartools with no Python I/O, which is the
+  most efficient option when light curves are already on disk.  
 - **Streaming output and resume for long surveys** — `run_batch()` and
   `run_filelist()` accept a `stats_file=PATH` kwarg to flush the stats
   table to disk as each light curve completes, plus `resume=True` to
-  pick up where a killed run left off.  See
-  [Streaming output and resume](#streaming-output-and-resume).
-- **Static command-line validation** — `Pipeline.validate()` parses the
-  assembled command line through vartools (`-headeronly`) without
-  processing any data, returning the list of output columns the run
-  would produce or raising `PipelineValidationError` with the parser's
-  message.  Useful for fast turnaround during pipeline construction.
+  pick up where a killed run left off.  See [Streaming output and
+  resume](#streaming-output-and-resume).  
+- **Static command-line validation** — `Pipeline.validate()` parses the 
+  assembled command
+  line through vartools (`-headeronly`) without processing any data,
+  returning the list of output columns the run would produce or
+  raising `PipelineValidationError` with the parser's message.  Useful
+  for fast turnaround during pipeline construction.
 
 A `Pipeline` holds an ordered sequence of command objects and translates them
 into a vartools command-line string when a run method is called. If
 `libvartoolspipeline.so` is installed, `run()` and `run_batch()` operate
-**in-process** — light curve arrays are injected directly into the C library,
-eliminating subprocess startup and serialisation overhead (roughly 20× faster
-per call). This includes `capture_lc=True` mode: the modified light curve data
+in-process — light curve arrays are injected directly into the C library,
+eliminating subprocess startup and serialisation overhead. This includes `capture_lc=True` mode: the modified light curve data
 is read back directly from C memory without writing to disk. When the library
 is not available, or for operations that require output files on disk,
 pyvartools launches the `vartools` binary as a subprocess and parses its
@@ -222,7 +225,7 @@ print(batch.vars)   # one row per line in the list file
 
 ---
 
-### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, segment_vars=None, lc_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
 
 Single-group convenience wrapper around `run_combinelcs()`. Combines *files* into one in-memory light curve, runs the pipeline, and returns a single [`Result`](results.md) (not a `BatchResult`).
 
@@ -237,15 +240,17 @@ result = (vt.Pipeline()
 print(result.vars["LS_Period_1_1"])
 ```
 
-All keyword arguments forward to `run_combinelcs()`; see that method for details.
+`segment_vars` accepts a flat list of length `len(files)` per variable (one value per segment) and `lc_vars` accepts a single value per variable; both auto-wrap to the nested shape that `run_combinelcs()` expects. See [`run_combinelcs()`](#run_combinelcs) for the full description.
+
+All other keyword arguments forward to `run_combinelcs()`.
 
 ---
 
-### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, segment_vars=None, lc_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
 
 Run the pipeline using vartools `-l … combinelcs` mode. Each entry in *groups* is a list of file paths that vartools combines into a single in-memory light curve before passing it to the command chain. The result contains one row in `batch.vars` per group.
 
-This is the natural entry point for multi-telescope stitching workflows — for example, merging per-telescope files with a `-stitch` user command before running a period search.
+This mode of processing can be used to merge light curve files from multiple telescopes with the `-stitch` user command before running other processes.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -257,15 +262,35 @@ This is the natural entry point for multi-telescope stitching workflows — for 
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. |
 | `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. |
-| `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables. See [Per-star variables](#per-star-variables-inlistvars). |
+| `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables read from columns of an existing list file or initialised from an expression. See [Per-star variables](#per-star-variables-inlistvars). For attaching Python values to each segment / group, use `segment_vars` / `lc_vars` below — they auto-build the list-file column. |
+| `segment_vars` | `dict` or `None` | Per-segment variables to broadcast across the points of each input file. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])` — one value per segment. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `-stitch` that take a per-observation string field label. |
+| `lc_vars` | `dict` or `None` | Per-LC scalar variables, one value per group (length `len(groups)`). Tuple form `(values, type)` overrides the auto-detected type. Used to attach metadata such as star names that the pipeline references via vartools variable names (e.g. the `starnamevar` of `-stitch shifts_file`). |
 | `lcnumvar` | `str` or `None` | Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out of emitting the `lcnumvar` qualifier. |
-| `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). |
+| `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). The same delimiter is used for `segment_vars` sub-columns. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
 | `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
 
 PerLC array parameters are supported: each PerLC must have one value per group (`len(groups)`). The values are appended as additional columns to the temporary list file and wired up via `-inlistvars`, exactly as in `run_batch()`/`run_filelist()`. A length mismatch raises `ValueError`.
+
+#### Type inference for `segment_vars` / `lc_vars`
+
+The vartools type for each variable is inferred from the Python values:
+
+| Python value | Inferred type |
+|---|---|
+| `int` (or `bool`) | `"int"` |
+| `float` | `"double"` |
+| `str` | `"string"` |
+
+Pass a `(values, type)` tuple to override — e.g. when you want a string-valued ID column whose values happen to look numeric:
+
+```python
+lc_vars={"id": (["001", "002", "003"], "string")}
+```
+
+String values may not contain whitespace; vartools list-file columns are whitespace-separated, so an embedded space would corrupt the row.
 
 Returns a [`BatchResult`](results.md) object.
 
@@ -307,6 +332,38 @@ batch = (vt.Pipeline()
 print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)
 ```
 
+#### Example — attach per-segment and per-LC metadata
+
+`-stitch shifts_file` requires a per-observation string field label (so each segment can be tagged with the telescope or chip it came from) and a per-LC star name (so shifts can be matched against an external shifts table). Use `segment_vars` for the per-segment label and `lc_vars` for the per-LC name:
+
+```python
+import pyvartools as vt
+
+result = (vt.Pipeline()
+          .expr("mask=1")
+          .stitch("mag", "err", "mask", "lcnum",
+                  method="poly 5", groupbytime=0.5, fitonly=True,
+                  shifts_file=("fieldname", "starname"),
+                  out_shifts_file="/tmp/shifts.txt")
+          ).run_combinelc(
+              ["EXAMPLES/2", "EXAMPLES/2.shifted"],
+              segment_vars={"fieldname": ["2_A", "2_B"]},
+              lc_vars={"starname": "2"},
+          )
+print(open("/tmp/shifts.txt").read())
+# 2 2_A,0,3313;2_B,0.30000000000003313,3313
+```
+
+The same pattern works for the plural form when each group needs its own labels:
+
+```python
+batch = pipe.run_combinelcs(
+    groups=[["s1a.txt", "s1b.txt"], ["s2a.txt", "s2b.txt"]],
+    segment_vars={"fieldname": [["A1", "B1"], ["A2", "B2"]]},
+    lc_vars={"starname": ["TIC1", "TIC2"]},
+)
+```
+
 ---
 
 ## `validate()`
@@ -319,8 +376,8 @@ validate(nthreads=1, randseed=None, skipmissing=False, jdtol=None,
 Pass the assembled command line through vartools' own parser without
 processing any light curves and return the list of expected output column
 names.  Internally this runs the binary with `-headeronly`, which validates
-the syntax and exits.  Useful for catching argument errors quickly during
-pipeline construction (turnaround is sub-second), and for inspecting the
+the syntax and exits.  Useful for catching argument errors during
+pipeline construction, and for inspecting the
 exact column layout the run will produce.
 
 ```python
@@ -398,7 +455,7 @@ nthreads`:
   `stats_file_buffer_lines`** — wall-clock matches a run with
   `nthreads=stats_file_buffer_lines`.
 
-The most common case where this matters: you set
+One common case where this matters: you set
 `stats_file_buffer_lines=1` for a true real-time log of a long-running
 batch.  That works correctly but serialises the run — you trade
 throughput for live visibility.
@@ -1073,7 +1130,7 @@ pipe = vt.Pipeline().rms()
 # First call: initialises the in-process pipeline (~same cost as subprocess)
 result = pipe.run(lc)
 
-# Subsequent calls: inject arrays, skip subprocess overhead (~20× faster)
+# Subsequent calls: inject arrays, skip subprocess overhead
 for lc in [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(3, 8)]:
     result = pipe.run(lc)
 

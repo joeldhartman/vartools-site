@@ -213,7 +213,7 @@ for i, r in enumerate(batch_result):
 
 List of processed light curves in the same order as the input.  Returns an
 empty list when `capture_lc=False` was used (the default for
-`Pipeline.run_batch()`), so ``for lc in batch.lcs:`` is always safe.
+`Pipeline.run_batch()`), so ``for lc in batch.lcs:`` is safe.
 `LightCurveBatch.run()` defaults to `capture_lc=True`.
 
 ```python

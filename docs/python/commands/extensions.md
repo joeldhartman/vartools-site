@@ -27,7 +27,6 @@ Every bundled extension has a dedicated class in `pyvartools.commands` with type
 import pyvartools as vt
 from pyvartools.commands import fastchi2, stitch
 
-# Auto-loaded extension: just use the command directly
 r = vt.fastchi2("EXAMPLES/2", Nharm=2, freqmax=24.0, freqmin=0.1)
 ```
 
@@ -406,7 +405,7 @@ cmd.stitch(stitch_variables, uncertainty_variables, mask_variables,
            lcnum_var, method,
            refnum_var=None, groupbytime=None, groupbytime_start=None,
            fitonly=False,
-           save_fitted_parameters=False, params_nameformat=None,
+           save_fitted_parameters=False, fitted_parameters_nameformat=None,
            add_stitchparams_fitsheader=False, add_stitchparams_mode=None,
            add_shifts_fitsheader=None, add_shifts_hdu=None,
            add_shifts_mode=None,
@@ -435,11 +434,11 @@ CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
 | `lcnum_var` | `str` | Variable identifying which input segment each observation belongs to (typically set by the `lcnumvar` keyword of `combinelcs`). |
 | `method` | `str`, required | `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. |
 | `refnum_var` | `str`, optional | Further subdivide segments by a second grouping variable. |
-| `groupbytime` | `float` or `str`, optional | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
+| `groupbytime` | `float`, optional | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
 | `groupbytime_start` | `float`, optional | Start time of the first time bin (only meaningful when `groupbytime` is set). |
 | `fitonly` | `bool` | Compute the shifts but do not subtract them. |
 | `save_fitted_parameters` | `bool`, `str`, or `Output` | Write per-source shift files. |
-| `params_nameformat` | `str`, optional | Format string applied to the fitted-parameter filenames (`format` keyword). |
+| `fitted_parameters_nameformat` | `str`, optional | Format string applied to the fitted-parameter filenames (`format` keyword). |
 | `add_stitchparams_fitsheader` | `bool` or `str` | Add stitch parameters to the FITS header. Pass `True`, or `"primary"`/`"extension"` to select the HDU. |
 | `add_stitchparams_mode` | `str`, optional | `"append"` or `"update"`. |
 | `add_shifts_fitsheader` | `str`, optional | Keyword base (e.g. `"SHFT"`) used to log shifts into FITS headers. |
@@ -447,10 +446,10 @@ CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
 | `add_shifts_mode` | `str`, optional | `"append"` or `"update"`. |
 | `shifts_file` | tuple of 2 `str`, optional | `(fieldlabelsvar, starnamevar)` — enables `shifts_file` mode for reading/writing previously determined shifts. |
 | `append_refnum_to_fieldlabel` | `bool` | Append the `refnum_var` value to the field label in shifts files. |
-| `in_shifts_file` | `str` or `list` of `str`, optional | Pre-existing shifts file(s) to read. |
+| `in_shifts_file` | `str` or `list` of `str`, optional | Pre-existing shifts file(s) to read. **One file per stitched variable** — pass a single string when `stitch_variables` is a string, or a list of the same length as `stitch_variables` when it is a list. |
 | `nobs_refit` | `int`, optional | Minimum new observations before re-fitting an existing shift. |
 | `header_basename_only` | `bool` | Match shifts-file rows by basename only. |
-| `out_shifts_file` | `str` or `list` of `str`, optional | Output shifts file(s) to write. |
+| `out_shifts_file` | `str` or `list` of `str`, optional | Output shifts file(s) to write. **One file per stitched variable** — pass a single string when `stitch_variables` is a string, or a list of the same length as `stitch_variables` when it is a list. |
 | `include_missing` | `bool` | Include un-fit (missing) sources in the output shifts file. |
 | `lib_path` | `str`, optional | Path to `stitch.so` / `stitch.la`. |
 
@@ -501,6 +500,34 @@ result = (vt.Pipeline()
           ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"])
 print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 ```
+
+#### Per-segment field labels and per-LC star names with `shifts_file`
+
+`shifts_file=(fieldlabelsvar, starnamevar)` enables shifts-file mode, which writes (and optionally reads) measured offsets keyed by a per-observation field label and per-LC star name. The two variables are different vector types in vartools — `fieldlabelsvar` is a per-point string (one value broadcast across all rows of a segment) and `starnamevar` is a per-LC scalar — so they need to be supplied differently. The `segment_vars` and `lc_vars` keywords on `run_combinelc()` / `run_combinelcs()` build the right list-file columns automatically:
+
+```python
+import pyvartools as vt
+
+# EXAMPLES/2.shifted is EXAMPLES/2 with +0.3 mag added.  Tag the two
+# segments "2_A" / "2_B" so the recovered shifts file can attribute the
+# 0.3 mag offset to segment B; tag the combined LC with starname "2".
+result = (vt.Pipeline()
+          .expr("mask=1")
+          .stitch("mag", "err", "mask", "lcnum",
+                  method="poly 5", groupbytime=0.5,
+                  groupbytime_start=54550.123, fitonly=True,
+                  shifts_file=("fieldname", "starname"),
+                  out_shifts_file="/tmp/shifts.txt")
+          ).run_combinelc(
+              ["EXAMPLES/2", "EXAMPLES/2.shifted"],
+              segment_vars={"fieldname": ["2_A", "2_B"]},
+              lc_vars={"starname": "2"},
+          )
+print(open("/tmp/shifts.txt").read())
+# 2 2_A,0,3313;2_B,0.30000000000003313,3313
+```
+
+The first column of the output shifts file is the star name; the second is a `;`-separated list of `<field>,<shift>,<nobs>` triplets.  See [`run_combinelcs()`](../pipeline.md#run_combinelcs) for the full specification of `segment_vars` / `lc_vars`, including how to pass a `(values, type)` tuple to override the auto-detected type.
 
 ---
 
@@ -982,7 +1009,7 @@ class Stitch(vt.load_userlib("/path/to/stitch.so", name="stitch")):
 
 ## Output statistics
 
-Output statistics produced by user commands appear in `result.vars` automatically — vartools writes them to its standard output just like built-in commands, and pyvartools parses them in the same way. No special configuration is needed.
+Output statistics produced by user commands appear in `result.vars` automatically — vartools writes them to its standard output just like built-in commands, and pyvartools parses them in the same way.
 
 ## Pipeline execution mode
 
