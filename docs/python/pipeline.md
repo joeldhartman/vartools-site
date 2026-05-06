@@ -357,12 +357,23 @@ print(open("/tmp/shifts.txt").read())
 The same pattern works for the plural form when each group needs its own labels:
 
 ```python
-batch = pipe.run_combinelcs(
-    groups=[["s1a.txt", "s1b.txt"], ["s2a.txt", "s2b.txt"]],
-    segment_vars={"fieldname": [["A1", "B1"], ["A2", "B2"]]},
+plural_pipe = (vt.Pipeline()
+               .expr("mask=1")
+               .stitch("mag", "err", "mask", "lcnum",
+                       method="poly 3", fitonly=True))
+batch = plural_pipe.run_combinelcs(
+    groups=[["EXAMPLES/2", "EXAMPLES/2.shifted"],
+            ["EXAMPLES/2", "EXAMPLES/2.shifted"]],
+    segment_vars={"fieldname": [["G1_A", "G1_B"], ["G2_A", "G2_B"]]},
     lc_vars={"starname": ["TIC1", "TIC2"]},
 )
+print(len(batch.vars))   # 2 — one row per group
 ```
+
+The `starname` values supplied via `lc_vars` are *vartools variables*, not the
+``Name`` column of the stats DataFrame.  Pipeline commands that consume them
+(such as `-stitch shifts_file`) see the per-LC string; everything else still
+keys off the input filename.
 
 ---
 
