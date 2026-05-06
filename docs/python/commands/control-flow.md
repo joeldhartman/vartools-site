@@ -202,9 +202,17 @@ phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
       Per-call cost is typically ~2 ms vs ~50 ms for subprocess.
 
     `capture=True` combined with `outname=`/`outdir=` (write and capture
-    both) and pipelines mixing `cmd.o(...)` with auxiliary `save_*=True`
-    outputs still fall back to subprocess — those modes are tracked as
-    follow-ups.
+    both) also runs in library mode via the C-side `capture_id` keyword:
+    the file is written and the post-write LC arrays are pulled into
+    `result.files[key]` in one library call.
+
+    Pipelines mixing `cmd.o(...)` with auxiliary `save_*=True` outputs
+    (e.g. `save_periodogram`) also run in library mode — the C-side
+    writers fopen/fwrite into a per-Pipeline tmpdir during the in-
+    process call, and pyvartools reads the files back with the
+    existing parsers.  Performance is between full library mode and
+    subprocess (still does the disk I/O for the side-output files);
+    point `TMPDIR` at `/dev/shm` to make those writes RAM-only.
 
 ---
 
