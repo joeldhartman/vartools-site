@@ -175,9 +175,10 @@ batch = (vt.Pipeline()
         .o(capture=True, key="phased")).run_batch(lcs)
 phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
 
-# Write to a named directory with a custom nameformat.  Disk-backed outputs
-# (-o directory ... nameformat) require on-disk input filenames, so use
-# run_filelist rather than run_batch here.
+# Write to a named directory with a custom nameformat.  Both run_filelist
+# (paths) and run_batch (in-memory LightCurves) work — the per-LC output
+# basenames come from the input filename for run_filelist, or from each
+# LC's .name attribute for run_batch.
 (vt.Pipeline()
         .LS(0.1, 100.0, 0.1, npeaks=1)
         .Phase(period="ls")
@@ -185,6 +186,15 @@ phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
           nameformat="file_%s_%05d_simout.txt",
           columnformat="t:%11.5f,mag:%7.4f,err:%7.4f")).run_filelist([f"EXAMPLES/{i}" for i in range(1, 11)])
 ```
+
+!!! note "Performance: library mode"
+    `cmd.o(outname=...)` and `cmd.o(outdir=...)` (without `capture=True`)
+    run through pyvartools' in-process library mode when `libvartoolspipeline`
+    is installed, skipping the per-call subprocess fork.  Single-LC runs
+    are typically several times faster than the subprocess path; the
+    output file is byte-identical between modes.  `capture=True` and
+    pipelines mixing `cmd.o(...)` with auxiliary `save_*=True` outputs
+    fall back to subprocess.
 
 ---
 
