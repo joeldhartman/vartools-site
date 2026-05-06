@@ -81,7 +81,7 @@ A pipeline that supplies both can be reused in either mode; if the wrong one is 
 `cmd.o` can be used in three modes:
 
 - **Write to disk only** (`outname=` or `outdir=` set, `capture=False`): the LC is saved to disk.
-- **Capture only** (`capture=True`, no `outname`/`outdir`): the LC is written to a mode-appropriate temporary path, captured into `result.files[key]`, and cleaned up automatically.
+- **Capture only** (`capture=True`, no `outname`/`outdir`): the LC is captured into `result.files[key]`. In library mode this is purely in-memory (vartools snapshots the LC variables into a buffer keyed by ``key``; no temporary file is ever written). In subprocess fallback mode the LC is written to a mode-appropriate temporary path and read back; pyvartools cleans the temp file up.
 - **Write and capture** (`capture=True` plus `outname=` or `outdir=`): both saved to disk and captured.
 
 When `capture=True` and no explicit `columnformat` is given, pyvartools passes the `allcols` flag to `-o` so the captured DataFrame contains every LC-vector variable registered up to that point in the pipeline (matching the library-mode fast path). If `columnformat` is given, the captured DataFrame uses the variable names listed in it.
@@ -188,13 +188,23 @@ phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
 ```
 
 !!! note "Performance: library mode"
-    `cmd.o(outname=...)` and `cmd.o(outdir=...)` (without `capture=True`)
-    run through pyvartools' in-process library mode when `libvartoolspipeline`
-    is installed, skipping the per-call subprocess fork.  Single-LC runs
-    are typically several times faster than the subprocess path; the
-    output file is byte-identical between modes.  `capture=True` and
-    pipelines mixing `cmd.o(...)` with auxiliary `save_*=True` outputs
-    fall back to subprocess.
+    Most `cmd.o` configurations run in pyvartools' in-process library
+    mode when `libvartoolspipeline` is installed, skipping the per-call
+    subprocess fork:
+
+    - **`outname=PATH`** (single-LC) and **`outdir=DIR`** (batch): library
+      mode writes the file directly from inside the C call; the output
+      file is byte-identical to subprocess mode.
+    - **`capture=True` with no path**: library mode handles this entirely
+      in memory.  No temporary file is written, no temp directory is
+      allocated.  Multiple `cmd.o(capture=True)` snapshots at distinct
+      points in one pipeline are produced in a single library call.
+      Per-call cost is typically ~2 ms vs ~50 ms for subprocess.
+
+    `capture=True` combined with `outname=`/`outdir=` (write and capture
+    both) and pipelines mixing `cmd.o(...)` with auxiliary `save_*=True`
+    outputs still fall back to subprocess — those modes are tracked as
+    follow-ups.
 
 ---
 
