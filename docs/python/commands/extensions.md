@@ -1013,7 +1013,9 @@ Output statistics produced by user commands appear in `result.vars` automaticall
 
 ## Pipeline execution mode
 
-Pipelines that contain `UserCommand` instances always run in **subprocess mode**, even when `libvartoolspipeline.so` is available. The in-process library does not support dynamically loaded extension libraries. This is handled transparently; no change to how you call the pipeline is required.
+Pipelines that contain `UserCommand` (or any `cmd.fastchi2`, `cmd.stitch`, ... typed wrapper) instances run in pyvartools' in-process **library mode** when `libvartoolspipeline.so` is available — the same as built-in commands. Vartools' `lt_dlopen` resolves the extension's library dependencies (libgsl, libcfitsio, libcspice, ...) via symbols already loaded by `libvartoolspipeline.so`, so per-call overhead is the usual ~10 ms vs ~50 ms for the subprocess fallback.
+
+The in-process Python callback path (`cmd.python(inprocess=True)`) is the one exception: it explicitly refuses combinations with `UserCommand` / `save_*=True` / `cmd.o(...)` because the cross-callback state has not been validated against those configurations.
 
 ---
 
