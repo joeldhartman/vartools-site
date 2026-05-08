@@ -233,25 +233,39 @@ batch = vt.LightCurveBatch(lcs)
 first_lc = batch[0]
 
 # String key — looked up by `.name`
-lc = batch["EXAMPLES/2"]
+lc = batch["2"]
+print(lc.name, lc.cols)
 
 # Membership test — accepts either a name string or a LightCurve
-"EXAMPLES/2" in batch          # True
-batch[0] in batch              # True
-
-# Iteration
-for lc in batch:
-    print(lc.name, lc.cols)
+print("2" in batch)            # True
+print("missing" in batch)      # False
+print(batch[0] in batch)       # True
 
 # Length
-len(batch)                     # 3
+print(len(batch))              # 5
 ```
 
-Combined with `LightCurve` column access, this turns a "find LC #1
-and pull its `tmp` column" task into a one-liner:
+Combined with `LightCurve` column access, "find LC '1' and pull its
+`tmp` column" becomes a one-liner.  The LCs below carry an extra
+`tmp` aux column so the example is self-contained:
 
 ```python
-tmp = batch["1"]["tmp"]
+import numpy as np
+
+aux_lcs = [
+    vt.LightCurve.from_arrays(
+        t=np.arange(5, dtype=float),
+        mag=np.full(5, 10.0 + i),
+        err=np.full(5, 0.01),
+        aux={"tmp": np.full(5, 100.0 * i)},
+        name=str(i),
+    )
+    for i in range(1, 4)
+]
+aux_batch = vt.LightCurveBatch(aux_lcs)
+
+tmp = aux_batch["1"]["tmp"]
+print(tmp)                     # [100. 100. 100. 100. 100.]
 ```
 
 A missing name raises `KeyError`.
