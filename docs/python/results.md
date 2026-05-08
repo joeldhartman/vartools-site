@@ -222,17 +222,65 @@ for source_lc in batch.lcs:
     print(source_lc.name, len(source_lc))
 ```
 
-### `.files` — `dict[str, list[pd.DataFrame]]`
+### `.files` — `dict[str, list[pd.DataFrame] | LightCurveList]`
 
-Maps each logical output file name to a list of DataFrames, one per input
-light curve (same order as the input). Files that were not produced for a
+Maps each logical output file name to a per-LC list of outputs, in the
+same order as the input batch.  Files that were not produced for a
 particular light curve appear as `None` at that position.
+
+* For periodograms, MCMC chains, and other tabular auxiliaries the
+  values are `pd.DataFrame`s.
+* For `cmd.o(capture=True)` the values are
+  [`LightCurveList`](#lightcurvelist)s — list subclasses that also
+  support **by-name** lookup.
 
 ```python
 for name, df in zip([lc.name for lc in lcs], batch.files["LS_periodogram_0"]):
     if df is not None:
         df.to_csv(f"{name}_pgram.csv", index=False)
 ```
+
+#### `LightCurveList`
+
+A `list` subclass returned by `BatchResult.files[key]` whenever the
+captured outputs are `LightCurve` objects (`cmd.o(capture=True)` in
+batch mode).  Adds string-key indexing on top of the usual `list`
+behaviour so a captured LC can be looked up by its `.name`:
+
+```python
+import os
+import pyvartools as vt
+
+os.makedirs("/tmp/clipped_out", exist_ok=True)
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 6)]
+br = (
+    vt.Pipeline()
+      .clip(5.0)
+      .expr("tmp=t+2*mag")
+      .o(outdir="/tmp/clipped_out", columnformat="t,tmp", capture=True,
+         key="clipped")
+).run_batch(lcs)
+
+clipped = br.files["clipped"]   # LightCurveList
+print(type(clipped).__name__)   # LightCurveList
+print(len(clipped))             # 5
+
+# Integer indexing — same as a plain list
+first = clipped[0]
+print(first.name, first.cols)   # 1 ['t', 'tmp']
+
+# String key — looked up by `LightCurve.name`
+lc = clipped["3"]
+print(lc["tmp"][:3])
+
+# Membership test
+print("3" in clipped)           # True
+print("missing" in clipped)     # False
+```
+
+`None` placeholders for missing files are preserved in positional
+slots and skipped during by-name lookup.  Iteration, slicing, and
+`len()` work as for any other `list`.
 
 ### `.lcscalars` — `pd.DataFrame`
 
