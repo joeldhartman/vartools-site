@@ -224,6 +224,38 @@ lc3 = vt.LightCurve.from_file("EXAMPLES/3")
 batch = vt.LightCurveBatch(lc1, lc2, lc3)
 ```
 
+### Indexing — by position or by name
+
+```python
+batch = vt.LightCurveBatch(lcs)
+
+# Integer index — same as a list
+first_lc = batch[0]
+
+# String key — looked up by `.name`
+lc = batch["EXAMPLES/2"]
+
+# Membership test — accepts either a name string or a LightCurve
+"EXAMPLES/2" in batch          # True
+batch[0] in batch              # True
+
+# Iteration
+for lc in batch:
+    print(lc.name, lc.cols)
+
+# Length
+len(batch)                     # 3
+```
+
+Combined with `LightCurve` column access, this turns a "find LC #1
+and pull its `tmp` column" task into a one-liner:
+
+```python
+tmp = batch["1"]["tmp"]
+```
+
+A missing name raises `KeyError`.
+
 ### Immediate batch methods — `batch.run_CMD(...)`
 
 ```python

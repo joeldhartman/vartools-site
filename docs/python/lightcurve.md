@@ -169,6 +169,7 @@ lc = vt.LightCurve.from_timeseries(ts, mag_col="sap_flux", err_col="sap_flux_err
 | `.err` | `np.ndarray` or `None` | Per-point magnitude uncertainties, or `None` if absent. |
 | `.name` | `str` | String label for this light curve. |
 | `.scalars` | `dict[str, float]` | Per-star scalar variables (see below). |
+| `.cols` | `list[str]` | All column names, including auxiliary columns (see below). |
 | `.shape` | `tuple[int, int]` | `(n_observations, n_columns)` — mirrors `DataFrame.shape`. |
 | `.fitsheader` | `astropy.io.fits.Header` or `None` | Preserved FITS metadata (see below). |
 
@@ -180,10 +181,8 @@ from the modified arrays.
 
 Extra columns beyond the standard `t` / `mag` / `err` (e.g. airmass,
 pixel coordinates, quality flags, per-point reference mags) are stored
-alongside the standard three in the same backing DataFrame.  They are
-*not* exposed as per-column properties — the set varies from LC to LC,
-so listing them individually on the class would be brittle.  Instead,
-pull them out by name from the DataFrame:
+alongside the standard three in the same backing DataFrame.  Access
+them by name with `lc[col]`:
 
 ```python
 import numpy as np
@@ -196,14 +195,25 @@ airmass = 1.5 + 0.001 * t
 lc = vt.LightCurve.from_arrays(
     t, mag, err,
     aux={"airmass": airmass},
+    name="star1",
 )
 
 # List all columns
-print(lc.to_dataframe().columns.tolist())   # ['t', 'mag', 'err', 'airmass']
+print(lc.cols)                  # ['t', 'mag', 'err', 'airmass']
 
-# Read an aux column
-print(lc.to_dataframe()["airmass"][:3].to_numpy())
+# Test for membership
+print("airmass" in lc)          # True
+print("missing" in lc)          # False
+
+# Read a column — returns a numpy array (no copy when the dtype is
+# numpy-compatible).  `lc['t']` is equivalent to `lc.t` for the
+# three standard columns.
+print(lc["airmass"][:3])        # [1.5   1.501 1.502]
 ```
+
+Indexing with a missing name raises `KeyError`; indexing with a
+non-string raises `TypeError`.  For row-level access, use
+`lc.to_dataframe()` (which returns a copy).
 
 When the LightCurve is passed to a Pipeline, pyvartools automatically
 builds a `-inputlcformat` flag listing every column name, so any
@@ -442,12 +452,12 @@ lc.plot(ax=ax, color="C0", markersize=2)
 
 ## Special methods
 
-`len(lc)` returns the number of data points. `repr(lc)` / `str(lc)` produces a
-summary string:
-
-```
-LightCurve(name='my_star', n=300, cols=['t', 'mag', 'err'])
-```
+| Operation | Result |
+|---|---|
+| `len(lc)` | Number of data points. |
+| `lc[col]` | Column as a numpy array (`KeyError` if missing, `TypeError` for non-string keys). |
+| `col in lc` | `True` if *col* is a column name. |
+| `repr(lc)` | Summary string — e.g. `LightCurve(name='my_star', n=300, cols=['t', 'mag', 'err'])`. |
 
 ---
 
