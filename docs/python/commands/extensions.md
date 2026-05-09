@@ -143,16 +143,16 @@ pipe = (vt.Pipeline()
 ```python
 # Read a 7-column LC (t/mag/err + four HATPI flag columns) and combine the
 # four flag vectors into a single quality_flag.  The string-typed fiphot
-# flag column is declared with vt.LCColumn(col=4, type="string") in the
-# `columns=` mapping.
+# flag column is declared with vt.PerPointColumn(col=4, type="string") in the
+# `perpoint_columns=` mapping.
 batch = (vt.Pipeline()
          .hatpiflag("fiphot_flag", "rejbadframe", "tfa_mask",
                     "pointing_outlier", "quality_flag")
          .stats("quality_flag", "mean,sum,max")
          ).run_filelist(["EXAMPLES/2.hatpiflag"],
-                        columns={
+                        perpoint_columns={
                             "t": 1, "mag": 2, "err": 3,
-                            "fiphot_flag": vt.LCColumn(col=4, type="string"),
+                            "fiphot_flag": vt.PerPointColumn(col=4, type="string"),
                             "rejbadframe": 5,
                             "tfa_mask": 6,
                             "pointing_outlier": 7,
@@ -503,7 +503,7 @@ print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 
 #### Per-segment field labels and per-LC star names with `shifts_file`
 
-`shifts_file=(fieldlabelsvar, starnamevar)` enables shifts-file mode, which writes (and optionally reads) measured offsets keyed by a per-observation field label and per-LC star name. The two variables are different vector types in vartools — `fieldlabelsvar` is a per-point string (one value broadcast across all rows of a segment) and `starnamevar` is a per-LC scalar — so they need to be supplied differently. The `segment_vars` and `lc_vars` keywords on `run_combinelc()` / `run_combinelcs()` build the right list-file columns automatically:
+`shifts_file=(fieldlabelsvar, starnamevar)` enables shifts-file mode, which writes (and optionally reads) measured offsets keyed by a per-observation field label and per-LC star name. The two variables are different vector types in vartools — `fieldlabelsvar` is a per-point string (one value broadcast across all rows of a segment) and `starnamevar` is a per-LC scalar — so they need to be supplied differently. The `perlcsegment_vars` and `perlc_vars` keywords on `run_combinelc()` / `run_combinelcs()` build the right list-file columns automatically:
 
 ```python
 import pyvartools as vt
@@ -520,14 +520,14 @@ result = (vt.Pipeline()
                   out_shifts_file="/tmp/shifts.txt")
           ).run_combinelc(
               ["EXAMPLES/2", "EXAMPLES/2.shifted"],
-              segment_vars={"fieldname": ["2_A", "2_B"]},
-              lc_vars={"starname": "2"},
+              perlcsegment_vars={"fieldname": ["2_A", "2_B"]},
+              perlc_vars={"starname": "2"},
           )
 print(open("/tmp/shifts.txt").read())
 # 2 2_A,0,3313;2_B,0.30000000000003313,3313
 ```
 
-The first column of the output shifts file is the star name; the second is a `;`-separated list of `<field>,<shift>,<nobs>` triplets.  See [`run_combinelcs()`](../pipeline.md#run_combinelcs) for the full specification of `segment_vars` / `lc_vars`, including how to pass a `(values, type)` tuple to override the auto-detected type.
+The first column of the output shifts file is the star name; the second is a `;`-separated list of `<field>,<shift>,<nobs>` triplets.  See [`run_combinelcs()`](../pipeline.md#run_combinelcs) for the full specification of `perlcsegment_vars` / `perlc_vars`, including how to pass a `(values, type)` tuple to override the auto-detected type.
 
 ---
 

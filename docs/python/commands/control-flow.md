@@ -258,10 +258,10 @@ batch = (vt.Pipeline()
          .print_cols("name,x,y,RMS_0,mag",
                      fmt="%20s,%.2f,%.2f,%.3f,%.3f")
          ).run_filelist("EXAMPLES/lc_list_tfa_sr_bin",
-                        inlistvars={
-                            "name": vt.ListVar(col=1, type="string"),
-                            "x": vt.ListVar(col=2),
-                            "y": vt.ListVar(col=3),
+                        perlc_vars={
+                            "name": vt.PerLCColumn(col=1, type="string"),
+                            "x": vt.PerLCColumn(col=2),
+                            "y": vt.PerLCColumn(col=3),
                         })
 ```
 
@@ -306,13 +306,13 @@ Convert ASCII `EXAMPLES/1` to a FITS LC at `EXAMPLES/1.tmpout.fits`, attaching a
 
 ```python
 # A two-column list file ("EXAMPLES/lc_list_addfitskey" contains
-# "EXAMPLES/1 HELLO") supplies the per-LC value of x via inlistvars.
+# "EXAMPLES/1 HELLO") supplies the per-LC value of x via perlc_vars.
 batch = (vt.Pipeline()
          .addfitskeyword("TMPKEY", "TSTRING", value="var x",
                          comment="a comment")
          .o(outdir="EXAMPLES/", nameformat="%s.tmpout.fits", fits=True)
          ).run_filelist("EXAMPLES/lc_list_addfitskey",
-                        inlistvars={"x": vt.ListVar(col=2, type="string")})
+                        perlc_vars={"x": vt.PerLCColumn(col=2, type="string")})
 ```
 
 ---

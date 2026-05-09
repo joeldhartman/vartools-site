@@ -14,10 +14,10 @@ reaching for in several situations:
   to vartools so it distributes the work across multiple CPU cores
   within a single process.  
 - **Per-star variable injection** — the
-  `inlistvars` mechanism lets you supply a different parameter value
+  `perlc_vars` mechanism lets you supply a different parameter value
   (e.g. a search period bound) for each light curve via list-file
   columns, without writing custom wrapper code.  
-- **Per-observation variable initialisation** — `init_lc_vars` lets you create 
+- **Per-observation variable initialisation** — `perpoint_vars` lets you create 
   and initialise custom per-point variables before the command chain
   begins, which is useful for masking or error-scaling tasks.  
 - **Reusing the same command sequence across many calls** — a
@@ -105,7 +105,7 @@ pipe = (vt.Pipeline()
 
 ## Run methods
 
-### `run(lc, capture_lc=False, outdir=None, timeout=None, init_lc_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run(lc, capture_lc=False, outdir=None, timeout=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
 
 Run the pipeline on a single light curve held in memory.
 
@@ -115,7 +115,7 @@ Run the pipeline on a single light curve held in memory.
 | `capture_lc` | `bool` | If `True`, return the (possibly modified) output light curve as `result.lc`. In library mode, the data is read directly from C memory; in subprocess mode, a temporary file is used. Default `False`. |
 | `outdir` | `str` or `None` | Directory for command output files (e.g. periodogram files from `save_periodogram=True`). If `None` (default), a temporary directory is created and its contents are captured into `result.files` before it is deleted. |
 | `timeout` | `int` or `None` | Maximum number of seconds to wait for the vartools process. Raises `RunError` if the process exceeds the limit. `None` means no limit. |
-| `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise via `-inputlcformat` col=0. See [Initialised LC variables](#initialised-lc-variables-init_lc_vars). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise via `-inputlcformat` col=0. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools for reproducible random-number sequences. |
 | `skipmissing` | `bool` | Pass `-skipmissing`; silently skip missing input files. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N` to set the Julian-date matching tolerance. |
@@ -127,7 +127,7 @@ Returns a [`Result`](results.md) object.
 
 ---
 
-### `run_file(path, capture_lc=False, outdir=None, timeout=None, columns=None, init_lc_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run_file(path, capture_lc=False, outdir=None, timeout=None, perpoint_columns=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
 
 Run the pipeline on a light curve file already on disk. vartools reads the file directly — no Python I/O is performed.
 
@@ -138,7 +138,7 @@ Run the pipeline on a light curve file already on disk. vartools reads the file 
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
-| `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-init_lc_vars). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
@@ -150,7 +150,7 @@ Returns a [`Result`](results.md) object.
 
 ---
 
-### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, init_lc_vars=None, inlistvars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
+### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_vars=None, perlc_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a list of light curves in memory. All light curves are written to temporary files and processed in a single vartools invocation using `-l`.
 
@@ -162,8 +162,8 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds for the whole batch. |
 | `raise_on_error` | `bool` | If `True` (default), a vartools failure raises `RunError`. If `False`, the exception is stored in `result.error` and `result.vars` will be empty. |
-| `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-init_lc_vars). |
-| `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables. For `run_batch()` the list file contains only LC paths (no extra columns), so only `col=0` (expression-initialised) `ListVar` entries are meaningful. For per-star values from file columns use `run_filelist()`. See [Per-star variables](#per-star-variables-inlistvars). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
+| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables. For `run_batch()` the list file contains only LC paths (no extra columns), so only `col=0` (expression-initialised) `PerLCColumn` entries are meaningful. For per-star values from file columns use `run_filelist()`. See [Per-star variables](#per-star-variables-inlistvars). |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
@@ -179,7 +179,7 @@ Returns a [`BatchResult`](results.md) object.
 
 ---
 
-### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
+### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a collection of light curve files on disk. No Python I/O is performed — vartools reads the files directly. This is the most efficient method for large surveys.
 
@@ -192,8 +192,8 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
-| `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-init_lc_vars). |
-| `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables read from list file columns. See [Per-star variables](#per-star-variables-inlistvars). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
+| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from list file columns. See [Per-star variables](#per-star-variables-inlistvars). |
 | `combinelcs` | `bool` | If `True`, append `combinelcs` to the `-l` flag — vartools then treats each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
 | `lcnumvar` | `str` or `None` | Only used when `combinelcs=True`. Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
@@ -225,7 +225,7 @@ print(batch.vars)   # one row per line in the list file
 
 ---
 
-### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, segment_vars=None, lc_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
 
 Single-group convenience wrapper around `run_combinelcs()`. Combines *files* into one in-memory light curve, runs the pipeline, and returns a single [`Result`](results.md) (not a `BatchResult`).
 
@@ -240,13 +240,13 @@ result = (vt.Pipeline()
 print(result.vars["LS_Period_1_1"])
 ```
 
-`segment_vars` accepts a flat list of length `len(files)` per variable (one value per segment) and `lc_vars` accepts a single value per variable; both auto-wrap to the nested shape that `run_combinelcs()` expects. See [`run_combinelcs()`](#run_combinelcs) for the full description.
+`perlcsegment_vars` accepts a flat list of length `len(files)` per variable (one value per segment) and `perlc_vars` accepts a single value per variable; both auto-wrap to the nested shape that `run_combinelcs()` expects. See [`run_combinelcs()`](#run_combinelcs) for the full description.
 
 All other keyword arguments forward to `run_combinelcs()`.
 
 ---
 
-### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, columns=None, init_lc_vars=None, inlistvars=None, segment_vars=None, lc_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
 
 Run the pipeline using vartools `-l … combinelcs` mode. Each entry in *groups* is a list of file paths that vartools combines into a single in-memory light curve before passing it to the command chain. The result contains one row in `batch.vars` per group.
 
@@ -261,12 +261,12 @@ This mode of processing can be used to merge light curve files from multiple tel
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. |
-| `init_lc_vars` | `dict[str, LCVar]` or `None` | Per-observation variables to create and initialise. |
-| `inlistvars` | `dict[str, int \| ListVar]` or `None` | Per-star variables read from columns of an existing list file or initialised from an expression. See [Per-star variables](#per-star-variables-inlistvars). For attaching Python values to each segment / group, use `segment_vars` / `lc_vars` below — they auto-build the list-file column. |
-| `segment_vars` | `dict` or `None` | Per-segment variables to broadcast across the points of each input file. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])` — one value per segment. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `-stitch` that take a per-observation string field label. |
-| `lc_vars` | `dict` or `None` | Per-LC scalar variables, one value per group (length `len(groups)`). Tuple form `(values, type)` overrides the auto-detected type. Used to attach metadata such as star names that the pipeline references via vartools variable names (e.g. the `starnamevar` of `-stitch shifts_file`). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. |
+| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from columns of an existing list file or initialised from an expression. See [Per-star variables](#per-star-variables-inlistvars). For attaching Python values to each segment / group, use `perlcsegment_vars` / `perlc_vars` below — they auto-build the list-file column. |
+| `perlcsegment_vars` | `dict` or `None` | Per-segment variables to broadcast across the points of each input file. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])` — one value per segment. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `-stitch` that take a per-observation string field label. |
+| `perlc_vars` | `dict` or `None` | Per-LC scalar variables, one value per group (length `len(groups)`). Tuple form `(values, type)` overrides the auto-detected type. Used to attach metadata such as star names that the pipeline references via vartools variable names (e.g. the `starnamevar` of `-stitch shifts_file`). |
 | `lcnumvar` | `str` or `None` | Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out of emitting the `lcnumvar` qualifier. |
-| `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). The same delimiter is used for `segment_vars` sub-columns. |
+| `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). The same delimiter is used for `perlcsegment_vars` sub-columns. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
@@ -274,7 +274,7 @@ This mode of processing can be used to merge light curve files from multiple tel
 
 PerLC array parameters are supported: each PerLC must have one value per group (`len(groups)`). The values are appended as additional columns to the temporary list file and wired up via `-inlistvars`, exactly as in `run_batch()`/`run_filelist()`. A length mismatch raises `ValueError`.
 
-#### Type inference for `segment_vars` / `lc_vars`
+#### Type inference for `perlcsegment_vars` / `perlc_vars`
 
 The vartools type for each variable is inferred from the Python values:
 
@@ -287,7 +287,7 @@ The vartools type for each variable is inferred from the Python values:
 Pass a `(values, type)` tuple to override — e.g. when you want a string-valued ID column whose values happen to look numeric:
 
 ```python
-lc_vars={"id": (["001", "002", "003"], "string")}
+perlc_vars={"id": (["001", "002", "003"], "string")}
 ```
 
 String values may not contain whitespace; vartools list-file columns are whitespace-separated, so an embedded space would corrupt the row.
@@ -334,7 +334,7 @@ print(batch.vars[["Name", "LS_Period_1_2"]])   # LS is the 3rd command (index 2)
 
 #### Example — attach per-segment and per-LC metadata
 
-`-stitch shifts_file` requires a per-observation string field label (so each segment can be tagged with the telescope or chip it came from) and a per-LC star name (so shifts can be matched against an external shifts table). Use `segment_vars` for the per-segment label and `lc_vars` for the per-LC name:
+`-stitch shifts_file` requires a per-observation string field label (so each segment can be tagged with the telescope or chip it came from) and a per-LC star name (so shifts can be matched against an external shifts table). Use `perlcsegment_vars` for the per-segment label and `perlc_vars` for the per-LC name:
 
 ```python
 import pyvartools as vt
@@ -347,8 +347,8 @@ result = (vt.Pipeline()
                   out_shifts_file="/tmp/shifts.txt")
           ).run_combinelc(
               ["EXAMPLES/2", "EXAMPLES/2.shifted"],
-              segment_vars={"fieldname": ["2_A", "2_B"]},
-              lc_vars={"starname": "2"},
+              perlcsegment_vars={"fieldname": ["2_A", "2_B"]},
+              perlc_vars={"starname": "2"},
           )
 print(open("/tmp/shifts.txt").read())
 # 2 2_A,0,3313;2_B,0.30000000000003313,3313
@@ -364,13 +364,13 @@ plural_pipe = (vt.Pipeline()
 batch = plural_pipe.run_combinelcs(
     groups=[["EXAMPLES/2", "EXAMPLES/2.shifted"],
             ["EXAMPLES/2", "EXAMPLES/2.shifted"]],
-    segment_vars={"fieldname": [["G1_A", "G1_B"], ["G2_A", "G2_B"]]},
-    lc_vars={"starname": ["TIC1", "TIC2"]},
+    perlcsegment_vars={"fieldname": [["G1_A", "G1_B"], ["G2_A", "G2_B"]]},
+    perlc_vars={"starname": ["TIC1", "TIC2"]},
 )
 print(len(batch.vars))   # 2 — one row per group
 ```
 
-The `starname` values supplied via `lc_vars` are *vartools variables*, not the
+The `starname` values supplied via `perlc_vars` are *vartools variables*, not the
 ``Name`` column of the stats DataFrame.  Pipeline commands that consume them
 (such as `-stitch shifts_file`) see the per-LC string; everything else still
 keys off the input filename.
@@ -620,7 +620,7 @@ pyvartools handles this automatically:
 # Columns: t=1, mag=2, err=3
 result = pipe.run_file(
     "EXAMPLES/2",
-    columns=["t", "mag", "err"],
+    perpoint_columns=["t", "mag", "err"],
 )
 ```
 
@@ -629,7 +629,7 @@ result = pipe.run_file(
 ```python
 result = pipe.run_file(
     "EXAMPLES/2",
-    columns={"t": 1, "mag": 2, "err": 3},
+    perpoint_columns={"t": 1, "mag": 2, "err": 3},
 )
 ```
 
@@ -638,7 +638,7 @@ result = pipe.run_file(
 ```python
 result = pipe.run_file(
     "EXAMPLES/example.fits",
-    columns={"t": "BJD", "mag": "Mag", "err": "Err"},
+    perpoint_columns={"t": "BJD", "mag": "Mag", "err": "Err"},
 )
 ```
 
@@ -681,18 +681,18 @@ first light curve and applied to the whole batch.
 
 ---
 
-## Initialised LC variables (`init_lc_vars`)
+## Initialised LC variables (`perpoint_vars`)
 
 vartools supports a special column number `0` in `-inputlcformat`. Instead of reading a value from a file column, vartools **creates a per-observation variable** and initialises it from an analytic expression. This is useful for creating mask flags, synthetic indices, or any per-point derived quantity before the pipeline begins.
 
 The expression is evaluated once per observation. The special variable `NR` holds the 0-based observation index.
 
-### `LCVar`
+### `PerPointVar`
 
 ```python
-from pyvartools import LCVar
+from pyvartools import PerPointVar
 
-LCVar(type="double", init="0")
+PerPointVar(type="double", init="0")
 ```
 
 | Attribute | Type | Default | Description |
@@ -700,10 +700,10 @@ LCVar(type="double", init="0")
 | `type` | `str` | `"double"` | Variable type: `"double"`, `"float"`, `"int"`, `"long"`, `"short"`, `"string"`, `"char"`, or `"utc"`. |
 | `init` | `str` | `"0"` | Initialisation expression. May reference `NR` (0-based obs index) or other variables already defined by earlier `-inputlcformat` entries. |
 
-Pass a `dict[str, LCVar]` as `init_lc_vars` to any run method. The dictionary key is the variable name used inside vartools commands.
+Pass a `dict[str, PerPointVar]` as `perpoint_vars` to any run method. The dictionary key is the variable name used inside vartools commands.
 
 !!! note
-    Supplying `init_lc_vars` **replaces** vartools' implicit default column mapping. pyvartools prepends `t:1,mag:2,err:3` automatically so the standard columns remain mapped. If your light curve has a non-standard column layout, also supply the `columns` parameter (`run_file`/`run_filelist`) or use a `LightCurve` with the correct column names (`run`/`run_batch`).
+    Supplying `perpoint_vars` **replaces** vartools' implicit default column mapping. pyvartools prepends `t:1,mag:2,err:3` automatically so the standard columns remain mapped. If your light curve has a non-standard column layout, also supply the `columns` parameter (`run_file`/`run_filelist`) or use a `LightCurve` with the correct column names (`run`/`run_batch`).
 
 ### Examples
 
@@ -711,13 +711,13 @@ Pass a `dict[str, LCVar]` as `init_lc_vars` to any run method. The dictionary ke
 
 ```python
 import pyvartools as vt
-from pyvartools import LCVar, commands as cmd
+from pyvartools import PerPointVar, commands as cmd
 
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
 result = vt.Pipeline().rms().run(
     lc,
-    init_lc_vars={"mymask": LCVar(type="int", init="0")},
+    perpoint_vars={"mymask": PerPointVar(type="int", init="0")},
 )
 print(result.vars["RMS_0"])
 ```
@@ -727,7 +727,7 @@ print(result.vars["RMS_0"])
 ```python
 result = vt.Pipeline().rms().run(
     lc,
-    init_lc_vars={"obs_idx": LCVar(type="double", init="NR")},
+    perpoint_vars={"obs_idx": PerPointVar(type="double", init="NR")},
 )
 ```
 
@@ -736,23 +736,23 @@ result = vt.Pipeline().rms().run(
 ```python
 result = vt.Pipeline().expr("err = err * (1 + 9*early_mask)").rms().run(
     lc,
-    init_lc_vars={"early_mask": LCVar(type="int", init="t<10")},
+    perpoint_vars={"early_mask": PerPointVar(type="int", init="t<10")},
 )
 print(result.vars["RMS_1"])
 ```
 
 ---
 
-## Per-star variables (`inlistvars`)
+## Per-star variables (`perlc_vars`)
 
 vartools `-inlistvars` defines **per-star (scalar) variables** read from extra columns in the input list file, one value per light curve. These variables are accessible to commands like `LS`, `aov`, and `BLS` via the `var` keyword (e.g. `minp="myperiod"` in `cmd.LS`).
 
-### `ListVar`
+### `PerLCColumn`
 
 ```python
-from pyvartools import ListVar
+from pyvartools import PerLCColumn
 
-ListVar(col=2, type="double", init=None, combinelc=False)
+PerLCColumn(col=2, type="double", init=None, combinelc=False)
 ```
 
 | Attribute | Type | Default | Description |
@@ -762,15 +762,15 @@ ListVar(col=2, type="double", init=None, combinelc=False)
 | `init` | `str` or `None` | `None` | Initialisation expression used when `col=0`. The special variable `NF` holds the 0-based line number. |
 | `combinelc` | `bool` | `False` | If `True`, the same value is applied to all light curves that share the same LC name (used when combining multiple observations into a single LC). |
 
-As a shorthand, `int` values are accepted in place of `ListVar` objects when only a column number is needed:
+As a shorthand, `int` values are accepted in place of `PerLCColumn` objects when only a column number is needed:
 
 ```python
-inlistvars={"myperiod": 2}   # equivalent to ListVar(col=2)
+perlc_vars={"myperiod": 2}   # equivalent to PerLCColumn(col=2)
 ```
 
 ### With `run_filelist()`
 
-`run_filelist()` is the primary method for using `inlistvars`. The list file may contain extra columns beyond the LC file path. vartools reads those columns and maps them to the specified variable names.
+`run_filelist()` is the primary method for using `perlc_vars`. The list file may contain extra columns beyond the LC file path. vartools reads those columns and maps them to the specified variable names.
 
 **Example list file (`EXAMPLES/lc_list_periods`):**
 
@@ -784,12 +784,12 @@ EXAMPLES/3 1.891
 
 ```python
 import pyvartools as vt
-from pyvartools import ListVar, commands as cmd
+from pyvartools import PerLCColumn, commands as cmd
 
 pipe = vt.Pipeline().LS("myperiod", 100.0, 0.1)
 batch = pipe.run_filelist(
     "EXAMPLES/lc_list_periods",
-    inlistvars={"myperiod": ListVar(col=2)},
+    perlc_vars={"myperiod": PerLCColumn(col=2)},
 )
 print(batch.vars[["Name", "LS_Period_1_0"]])
 ```
@@ -801,20 +801,20 @@ Here `minp="myperiod"` is a bare identifier string, so pyvartools emits `var myp
 ```python
 batch = pipe.run_filelist(
     "EXAMPLES/lc_list_periods",
-    inlistvars={
-        "myperiod": ListVar(col=2),
-        "lc_idx": ListVar(col=0, type="double", init="NF"),
+    perlc_vars={
+        "myperiod": PerLCColumn(col=2),
+        "lc_idx": PerLCColumn(col=0, type="double", init="NF"),
     },
 )
 ```
 
 ### With `run_batch()`
 
-`run_batch()` builds a temporary list file containing only LC file paths — there are no extra columns available. Therefore `inlistvars` with `run_batch()` is only useful for `col=0` expression-initialised variables. For per-star values from a file, write the list file yourself and use `run_filelist()`.
+`run_batch()` builds a temporary list file containing only LC file paths — there are no extra columns available. Therefore `perlc_vars` with `run_batch()` is only useful for `col=0` expression-initialised variables. For per-star values from a file, write the list file yourself and use `run_filelist()`.
 
 ### Reserved variable names
 
-The names `t`, `mag`, `err`, and `id` are reserved by vartools and cannot be used as `inlistvars` variable names.
+The names `t`, `mag`, `err`, and `id` are reserved by vartools and cannot be used as `perlc_vars` variable names.
 
 ---
 
@@ -1201,7 +1201,7 @@ cases:
 | `capture_lc=True` | Modified LC requires vartools to write a file |
 | Any command has `save_*=True` | Output files require a working directory |
 | `cmd.o(capture=True)` | Output LC capture requires filesystem |
-| `init_lc_vars` is set | Library pipeline argv does not include `-inputlcformat` col=0 entries |
+| `perpoint_vars` is set | Library pipeline argv does not include `-inputlcformat` col=0 entries |
 | Any global option is non-default (`randseed`, `jdtol`, `skipmissing`, `matchstringid`) | Global CLI flags are not threaded through the in-process library |
 
 ---

@@ -51,7 +51,7 @@ batch = (vt.Pipeline()
          .R("b <- sd(mag)",
             invars="mag", outvars="b", outputcolumns="b")
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 print(batch.vars[["Name", "R_b_0"]])
 ```
 
@@ -64,7 +64,7 @@ batch = (vt.Pipeline()
             invars="mag", outvars="b", outputcolumns="b",
             process_all_lcs=True)
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 **Example 3.** ARIMA modelling using R's `forecast` package. After saving the original `mag`, we bin and resample the LC onto a uniform grid (ARIMA needs evenly-sampled data), call `auto.arima`, and subtract the residuals to obtain the smoothed model `mag_arima`. The model is then resampled back to the original time grid (using the [list-form `resample`](manipulation.md#resample-resample-onto-a-new-time-grid)) and the original `mag` is restored. Requires `tseries` and `forecast` to be installed in R.
@@ -86,7 +86,7 @@ batch = (vt.Pipeline()
             nameformat="%s.arimamodel",
             columnformat="t,mag,mag_arima")
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 The resulting `*.arimamodel` files contain `t`, the original `mag`, and the smoothed `mag_arima`:
@@ -113,7 +113,7 @@ batch = (vt.Pipeline()
             nameformat="%s.arimamodel",
             columnformat="t,mag,mag_arima")
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 ![ARIMA forecast plot for EXAMPLES/2](../../assets/examples/R_arimaforecast_2.png)
@@ -141,7 +141,7 @@ CLI equivalent: [`-python`](../../cli/python-r.md#-python).
 !!! note "subprocess vs in-process"
     The default path runs the user code in a vartools-spawned Python sub-process — fully isolated from the calling pyvartools interpreter, so neither sub-process libpython nor user globals leak across the boundary.
 
-    Setting `inprocess=True` instead routes the user code through a C-level callback into your live pyvartools Python interpreter, so the code sees your imports, globals, and an explicit `namespace=` dict. This requires library mode (no `randseed`/`skipmissing`/`jdtol`/`matchstringid`, no `init_lc_vars`, no `timeout=` — and only the single-LC `Pipeline.run(lc)` path, since the batch entry points go through the subprocess). `save_*=True` outputs and `cmd.o(...)` configurations are library-compatible. If any of the remaining conditions force the subprocess path, `inprocess=True` raises `RuntimeError` with a list of the obstacles rather than silently falling back.
+    Setting `inprocess=True` instead routes the user code through a C-level callback into your live pyvartools Python interpreter, so the code sees your imports, globals, and an explicit `namespace=` dict. This requires library mode (no `randseed`/`skipmissing`/`jdtol`/`matchstringid`, no `perpoint_vars`, no `timeout=` — and only the single-LC `Pipeline.run(lc)` path, since the batch entry points go through the subprocess). `save_*=True` outputs and `cmd.o(...)` configurations are library-compatible. If any of the remaining conditions force the subprocess path, `inprocess=True` raises `RuntimeError` with a list of the obstacles rather than silently falling back.
 
     `inprocess=True` additionally requires at least one of `invars=`, `outvars=`, or `vars=` to be set so vartools knows which variables to marshal across the C→Python callback. The bare form `python("x = 1", inprocess=True)` raises `ValueError` at construction time — vartools' parser would otherwise treat it as "process all variables", which the in-process callback does not support and which would fall through to a subprocess fork that is unsafe inside a Python host process.
 
@@ -188,7 +188,7 @@ batch = (vt.Pipeline()
          .python("b = numpy.var(mag)",
                  invars="mag", outvars="b", outputcolumns="b")
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 print(batch.vars[["Name", "PYTHON_b_0"]])
 ```
 
@@ -204,7 +204,7 @@ batch = (vt.Pipeline()
                  invars="mag", outvars="b", outputcolumns="b",
                  process_all_lcs=True)
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 **Example 3.** Use `matplotlib.pyplot` to make a `.png` plot for each light curve with a sufficiently strong LS detection.  The plotting function lives in a separate file (`EXAMPLES/plotlc.py`) loaded via `init_fromfile=True`; the wrapper command then calls it inside an `if` block conditioned on the LS false-alarm probability.  Modelled on the CLI `-python` Example 2.
@@ -220,7 +220,7 @@ batch = (vt.Pipeline()
                      init="EXAMPLES/plotlc.py", init_fromfile=True)
          .ficmd()
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 The plot below is the actual `EXAMPLES/2.png` produced by `plotlc()` — LC vs time on the top panel, phase-folded at the LS period on the bottom:
@@ -241,7 +241,7 @@ batch = (vt.Pipeline()
                  init="EXAMPLES/plotlc.py", init_fromfile=True,
                  process_all_lcs=True)
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 ```
 
 **Example 5.** Reuse Python state across two `-python` calls in the same pipeline using `continueprocess`. The first call defines a module-global cached value; the second reads it. To survive across calls (which run inside per-call wrapper functions), mutable state must be declared `global`.
@@ -255,7 +255,7 @@ batch = (vt.Pipeline()
                  continueprocess=1,
                  invars="mag", outvars="b", outputcolumns="b")
          ).run_filelist("EXAMPLES/lc_list",
-                        columns={"t": 1, "mag": 2, "err": 3})
+                        perpoint_columns={"t": 1, "mag": 2, "err": 3})
 print(batch.vars[["Name", "PYTHON_b_1"]])
 ```
 
