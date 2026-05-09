@@ -163,7 +163,7 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 | `timeout` | `int` or `None` | Timeout in seconds for the whole batch. |
 | `raise_on_error` | `bool` | If `True` (default), a vartools failure raises `RunError`. If `False`, the exception is stored in `result.error` and `result.vars` will be empty. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables. For `run_batch()` the list file contains only LC paths (no extra columns), so only `col=0` (expression-initialised) `PerLCColumn` entries are meaningful. For per-star values from file columns use `run_filelist()`. See [Per-star variables](#per-star-variables-inlistvars). |
+| `perlc_vars` | `dict` or `None` | Per-LC variables.  Schema entries (`int` or `PerLCColumn`) define a list-file column to read from, and values entries (a list / tuple / `numpy.ndarray` / `pandas.Series` of length `len(lcs)`, or a `(values, type)` tuple) attach Python data per LC: pyvartools allocates a list-file column for them and writes one value per LC.  Mixing schema and values entries in the same dict is fine.  See [Per-LC variables](#per-lc-variables-perlc_vars) and [Per-LC values from Python](#per-lc-values-from-python). |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
 | `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
 | `jdtol` | `float` or `None` | Pass `-jdtol N`. |
@@ -191,9 +191,9 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
-| `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
+| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from list file columns. See [Per-star variables](#per-star-variables-inlistvars). |
+| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from list-file columns (schema form: `int` or `PerLCColumn`).  Values-form entries are rejected — pyvartools is not the writer of the list file in this mode, so it cannot append columns for them; use `run_batch()` instead. |
 | `combinelcs` | `bool` | If `True`, append `combinelcs` to the `-l` flag — vartools then treats each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
 | `lcnumvar` | `str` or `None` | Only used when `combinelcs=True`. Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
@@ -810,7 +810,54 @@ batch = pipe.run_filelist(
 
 ### With `run_batch()`
 
-`run_batch()` builds a temporary list file containing only LC file paths — there are no extra columns available. Therefore `perlc_vars` with `run_batch()` is only useful for `col=0` expression-initialised variables. For per-star values from a file, write the list file yourself and use `run_filelist()`.
+`run_batch()` builds a temporary list file from the in-memory light curves, and pyvartools owns its layout, so it can append columns for values supplied from Python.  `perlc_vars` accepts both schema and values entries here:
+
+```python
+import pyvartools as vt
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+periods = [0.573, 0.412, 1.891]   # one minp per LC
+
+pipe = vt.Pipeline().LS("myperiod", 100.0, 0.1)
+batch = pipe.run_batch(lcs, perlc_vars={"myperiod": periods})
+```
+
+For schema entries with `col=0` (expression-initialised) the column reference is unchanged from `run_filelist()`.  See [Per-LC values from Python](#per-lc-values-from-python) below for the full dispatch rules and a per-LC output-name example.
+
+### Per-LC values from Python
+
+In `run_batch()` (and `LightCurveBatch.run()`), each non-schema entry of `perlc_vars` is rendered into a fresh list-file column.  Recognised value shapes:
+
+| Spec form | Interpretation |
+|-----------|----------------|
+| `int` *or* `PerLCColumn(...)` | Schema — column reference, identical to `run_filelist()` semantics. |
+| `list` / `tuple` / `np.ndarray` / `pd.Series` of length `len(lcs)` | Values — one per LC.  Type is auto-detected from the first non-`None` value (`bool` → `int`). |
+| `(values, type)` tuple | Values with explicit type override.  `type` is one of `"double"`, `"float"`, `"int"`, `"long"`, `"short"`, `"string"`, `"char"`, `"utc"`. |
+
+The original gap this closed: per-LC output names through `cmd.o(namefromlist=...)`:
+
+```python
+import os, tempfile
+import pyvartools as vt
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+outnames = [f"OutputName_is_this_{i}" for i in range(1, 4)]
+outdir = tempfile.mkdtemp(prefix="namefromlist_")
+
+batch = (vt.Pipeline()
+         .clip(5.0).expr("tmp=t+2*mag")
+         .o(outdir=outdir, allcols=True,
+            namefromlist="outname",
+            capture=True, key="clipped")
+         ).run_batch(lcs, perlc_vars={"outname": outnames})
+
+print(sorted(os.listdir(outdir)))
+# ['OutputName_is_this_1', 'OutputName_is_this_2', 'OutputName_is_this_3']
+```
+
+Each LC's processed output is written to `<outdir>/<outname>` instead of being keyed by the input LC's name.
+
+`run_filelist()` rejects values-form entries with a clear error pointing here — in list-file mode pyvartools is not the writer of the on-disk list, so it cannot append columns.  Schema entries (`int` / `PerLCColumn`) still work in `run_filelist()`.
 
 ### Reserved variable names
 

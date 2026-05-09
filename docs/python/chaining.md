@@ -371,6 +371,36 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
 
 ---
 
+### Per-LC values via `perlc_vars`
+
+`LightCurveBatch.run()` accepts a `perlc_vars=` kwarg for per-LC values
+that don't fit on a command attribute — typically per-LC strings (output
+names, labels) or numeric values referenced by name elsewhere in the
+chain.  Supplying it routes the run through `Pipeline.run_batch()` (a
+single vartools invocation), so each LC sees its own value through the
+`-inlistvars` mechanism.
+
+```python
+import os, tempfile
+import pyvartools as vt
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+outnames = [f"clipped_{i}" for i in range(1, 4)]
+outdir = tempfile.mkdtemp(prefix="lcb_perlc_vars_")
+
+batch = (vt.LightCurveBatch(lcs)
+         .clip(5.0)
+         .o(outdir=outdir, allcols=True,
+            namefromlist="outname")
+         .run(perlc_vars={"outname": outnames}))
+```
+
+Each LC's processed output lands at `<outdir>/<outname>`.  See
+[Per-LC values from Python](pipeline.md#per-lc-values-from-python) on
+the Pipeline page for the full dispatch rules and accepted shapes.
+
+---
+
 ### Per-LC error handling
 
 If a single LC fails, the error is captured in `batch_result[i].error` and

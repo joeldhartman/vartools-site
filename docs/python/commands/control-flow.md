@@ -101,7 +101,7 @@ CLI equivalent: [`-o`](../../cli/control-flow.md#-o).
 | `noclobber` | `bool` | Do not overwrite an existing output file. |
 | `copyheader` | `bool` | Copy the FITS header from the input file to the output file. |
 | `namecommand` | `str` or `None` | Shell command used to generate the output filename dynamically (list mode only). |
-| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list (list mode only). `True` uses the default column; a string specifies a column name/number (emits `namefromlist column <col>`). |
+| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list (list mode only). `True` uses the default column; a string specifies a column name/number (emits `namefromlist column <col>`). To supply per-LC output names from Python rather than from a column already on the list file, pass the names via `perlc_vars` on `run_batch()` or `LightCurveBatch.run()` — see [Per-LC values from Python](../pipeline.md#per-lc-values-from-python). |
 | `changesuffix` | `tuple[str, str]` or `None` | After the default basename has been built, strip a trailing `old_suffix` (if present) and append `new_suffix`. Either may be empty. Applied **before** any `fits` / `gzip` / `bzip2` suffix. Mutually exclusive with `nameformat` / `namecommand` / `namefromlist`. E.g. `changesuffix=(".fits", ".txt")` rewrites `foo.fits` → `foo.txt`. List-mode only. |
 | `delimiter` | `str` or `None` | Column delimiter character for the output file (default: whitespace). |
 | `logcommandline` | `bool` | Write the full vartools command line into the output file header. |
