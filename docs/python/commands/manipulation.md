@@ -252,6 +252,9 @@ Evaluate an analytic expression and assign the result to a named variable. The e
 
 The expression engine supports aggregate functions like `mean(mag)`, `stddev(mag)`, `pct(mag, 95.0)`, and filtering like `mean(mag, t>53730)`. See the [Analytic Expressions](../../cli/expressions.md) reference for the complete list of operators, functions, and constants.
 
+!!! tip "Operator names"
+    The expression grammar follows C, not NumPy: modulo is `t%P` (not `mod(t, P)`), power is `mag^2` (not `mag**2`), and there is no `np.` prefix on functions (`sqrt`, `log`, `sin`, etc. are bare names).
+
 CLI equivalent: [`-expr`](../../cli/manipulation.md#-expr).
 
 **Parameters**

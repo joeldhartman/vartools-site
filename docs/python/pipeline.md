@@ -111,7 +111,7 @@ Run the pipeline on a single light curve held in memory.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `lc` | `LightCurve`, `pd.DataFrame`, or astropy `TimeSeries` | The light curve to process. DataFrames and TimeSeries objects are coerced to `LightCurve` automatically. |
+| `lc` | `LightCurve`, `str` / `os.PathLike`, `pd.DataFrame`, or astropy `TimeSeries` | The light curve to process. A path is loaded via [`LightCurve.from_file()`](lightcurve.md#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name); DataFrames and TimeSeries objects are coerced to `LightCurve` automatically. |
 | `capture_lc` | `bool` | If `True`, return the (possibly modified) output light curve as `result.lc`. In library mode, the data is read directly from C memory; in subprocess mode, a temporary file is used. Default `False`. |
 | `outdir` | `str` or `None` | Directory for command output files (e.g. periodogram files from `save_periodogram=True`). If `None` (default), a temporary directory is created and its contents are captured into `result.files` before it is deleted. |
 | `timeout` | `int` or `None` | Maximum number of seconds to wait for the vartools process. Raises `RunError` if the process exceeds the limit. `None` means no limit. |
@@ -156,7 +156,7 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `lcs` | list of `LightCurve`, `DataFrame`, or `TimeSeries` | The light curves to process. |
+| `lcs` | list of `LightCurve`, `str` / `os.PathLike`, `DataFrame`, or `TimeSeries` | The light curves to process. Path entries are loaded via [`LightCurve.from_file()`](lightcurve.md#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name); mixed types are allowed. For path-only inputs, [`run_filelist()`](#run_filelistpaths-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-perpoint_columnsnone-perpoint_varsnone-perlc_varsnone-combinelcsfalse-lcnumvarlcnum-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse-stats_filenone-stats_file_modeoverwrite-stats_file_buffer_linesnone-resumefalse--batchresult) is more efficient — vartools reads the files directly with no Python I/O. |
 | `nthreads` | `int` | Number of parallel threads (vartools `-parallel` flag). Default `1`. |
 | `capture_lc` | `bool` | If `True`, capture the modified output LC for each light curve and return them as `result.lcs`. |
 | `outdir` | `str` or `None` | Directory for command output files. |

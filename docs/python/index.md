@@ -131,12 +131,15 @@ from pyvartools import commands as cmd
 
 pipe = vt.Pipeline().clip(sigclip=5.0).LS(0.5, 10.0, 0.1)
 
-# Run on a single light curve
+# Run on a file path — pyvartools loads the LC for you
+result = pipe.run("EXAMPLES/2")
+
+# Run on an in-memory LightCurve (or a DataFrame, or an astropy TimeSeries)
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = pipe.run(lc)
 
-# Run on a list of light curves — one vartools call for all of them
-batch = pipe.run_batch([vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)])
+# Run on a list of paths (or LightCurves) — one vartools call for all of them
+batch = pipe.run_batch([f"EXAMPLES/{i}" for i in range(1, 11)])
 print(batch.vars[["Name", "LS_Period_1_1"]])
 
 # Read files directly from disk, and use 2 parallel processes
