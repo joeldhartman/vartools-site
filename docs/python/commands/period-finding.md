@@ -26,7 +26,7 @@ CLI equivalent: [`-LS`](../../cli/period-finding.md#-ls-generalized-lomb-scargle
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `minp`, `maxp` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period search range (same units as the time column, typically days). See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| `minp`, `maxp` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period search range (same units as the time column, typically days). Numeric forms are validated at construction time: `minp > 0`, `maxp > 0`, and `minp < maxp`; a clear `ValueError` is raised otherwise.  Non-numeric forms (variable references, expressions, per-LC arrays) are accepted as-is since their numeric value isn't known until run time.  See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
 | `subsample` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Frequency step as a fraction of 1/T (time span). Smaller values = finer resolution. Typical: `1e-3`. Accepts variable names, expressions, and per-LC arrays. |
 | `npeaks` | `int` | Number of highest peaks to find and report. Default `5`. |
 | `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["LS_periodogram_N"]`; a path string writes to that directory without capturing; `Output(path, capture=True)` does both. See [Auxiliary output files](index.md#auxiliary-output-files). |

@@ -381,7 +381,7 @@ keys off the input filename.
 
 ```text
 validate(nthreads=1, randseed=None, skipmissing=False, jdtol=None,
-         matchstringid=False, timeout=30) → list[str]
+         matchstringid=False, timeout=30, perlc_vars=None) → list[str]
 ```
 
 Pass the assembled command line through vartools' own parser without
@@ -401,13 +401,26 @@ A bad command line raises `PipelineValidationError` with the parser's
 stderr attached so you can see exactly what vartools rejected:
 
 ```python
-bad_pipe = vt.Pipeline().add(...)         # construct one with a parser bug
+bad_pipe = vt.Pipeline().add(vt.commands.Raw("--no-such-flag"))
 try:
     bad_pipe.validate()
 except vt.PipelineValidationError as e:
     print(e.stderr)   # vartools usage block
     print(e.argv)     # full argv that was run, for reproduction
 ```
+
+For pipelines that reference per-LC variables by name (e.g.
+`cmd.LS("minp", "maxp", 0.1)`), pass the same `perlc_vars=` dict you'd use
+at run time so the parser can resolve those names:
+
+```python
+pipe = vt.Pipeline().LS("minp", "maxp", 0.1, npeaks=1)
+cols = pipe.validate(perlc_vars={"minp": [0.3, 0.5], "maxp": [3.0, 5.0]})
+```
+
+Both values-form (`{name: [vals, ...]}`) and schema-form (`{name: int}`,
+`{name: PerLCColumn(...)}`) are accepted — `validate()` only needs the
+names to resolve, not the values themselves.
 
 `validate()` runs vartools once per call, so it's intended for
 construction-time / debug use rather than tight inner loops.  The
