@@ -1126,65 +1126,24 @@ See the [Results](results.md) reference page for full attribute documentation. A
 
 ---
 
-## Performance: library mode
+## Performance and reusing a Pipeline
 
-When `libvartoolspipeline.so` is on the library search path, pyvartools runs
-vartools **in-process** rather than spawning a new subprocess for every call.
-The pipeline is initialised once (command-line parsing, memory allocation) and
-light curve arrays are injected directly into C memory on each subsequent call.
+A `Pipeline` is **reusable** — once constructed, you can run it against any number of light curves.  The first run pays a fixed setup cost; subsequent runs reuse the parsed pipeline state and just feed in new light-curve data, so a loop of many runs is much faster than constructing a new pipeline each time:
 
 ```python
 import pyvartools as vt
-from pyvartools import commands as cmd
-import numpy as np
 
-lc = vt.LightCurve.from_file("EXAMPLES/2")
 pipe = vt.Pipeline().rms()
-
-# First call: initialises the in-process pipeline (~same cost as subprocess)
-result = pipe.run(lc)
-
-# Subsequent calls: inject arrays, skip subprocess overhead
-for lc in [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(3, 8)]:
+for i in range(2, 8):
+    lc = vt.LightCurve.from_file(f"EXAMPLES/{i}")
     result = pipe.run(lc)
-
-# capture_lc=True also uses library mode (no subprocess needed)
-pipe2 = vt.Pipeline().clip(3.0)
-result2 = pipe2.run(lc, capture_lc=True)
-print(len(result2.lc.t))  # modified LC returned directly from C memory
 ```
 
-### What library mode supports
+For multiple light curves, prefer `run_batch()` or `run_filelist()` — these amortise setup across the whole batch in a single call.
 
-Library mode now covers most batch features end-to-end:
+### Per-LC output filenames — `cmd.o(outname=PerLC([...]))`
 
-| Feature | Library mode |
-|---------|--------------|
-| `capture_lc=True` (modified LC returned in `result.lc` / `result.lcs`) | ✓ via the C-side capture buffer |
-| `cmd.o(outname=PATH)` / `cmd.o(outdir=DIR)` / `cmd.o(capture=True)` | ✓ writes directly from the C call |
-| `cmd.o(outname=PerLC([...]))` per-LC output filenames | ✓ via the per-call inlist API |
-| `perpoint_vars={...}` (init expressions for per-row variables) | ✓ `-inputlcformat name:0:type:expr` clauses are emitted |
-| Additional LC columns beyond `t/mag/err` | ✓ injected via the extended `vartools_set_lc_data` |
-| `perlc_vars={"name": [values, ...]}` (values form) | ✓ injected via the per-call inlist API |
-| Per-LC command parameters: `cmd.LS(minp=PerLC([...]))`, numpy arrays, pandas Series | ✓ same per-call inlist API |
-| Chain continuations (`br1.expr(...).run()`) that carry forward per-LC scalars | ✓ batch_scalars route through the per-call inlist API |
-| `stats_file=PATH` (no `resume=True`) | ✓ library-mode writer emits the same `Print__vtpy_seq__0_<N>` column as subprocess so files inter-resume |
-| Global flags: `randseed`, `jdtol` | ✓ threaded into the LibPipeline init argv |
-| `skipmissing`, `matchstringid` (list-file-only flags) | ✓ accepted as a no-op (no list file in library mode) |
-| `save_*=True` auxiliary outputs (`save_periodogram`, etc.) | ✓ written to a per-Pipeline tmpdir and parsed back |
-
-Additional light curve columns (beyond t, mag, err) are handled automatically.
-When a `LightCurve` or `DataFrame` has extra named columns, pyvartools:
-
-1. Passes `-inputlcformat` to create the variable slots in the C library
-2. Injects the extra column data alongside t/mag/err
-3. Returns all LC variables (original and newly created) in the output
-
-#### Per-LC output filenames — `cmd.o(outname=PerLC([...]))`
-
-For batch runs that need each LC's output to land at its own filename
-(rather than `<outdir>/<lc.name>`), wrap a list of names in `PerLC` and
-pass it as `outname`:
+For batch runs that need each LC's output to land at its own filename (rather than `<outdir>/<lc.name>`), wrap a list of names in `PerLC` and pass it as `outname`:
 
 ```python
 import os, tempfile
@@ -1203,37 +1162,29 @@ batch = vt.Pipeline([
 assert sorted(os.listdir(outdir)) == sorted(names)
 ```
 
-`outname=PerLC([...])` requires `outdir=` to also be set; the per-LC
-names land at `<outdir>/<name_i>`.  The same pipeline runs identically
-in subprocess mode (when `VARTOOLS_USE_LIBRARY=0`) and produces
-byte-identical output files.
+`outname=PerLC([...])` requires `outdir=` to also be set; the per-LC names land at `<outdir>/<name_i>`.
 
-### Enabling and disabling library mode
+### Configuring the library backend
 
-Library mode is **on by default** when `libvartoolspipeline.so` can be found.
-It falls back silently to subprocess mode when:
+pyvartools ships with an optional shared library (`libvartoolspipeline.so`) that lets a `Pipeline` run entirely in-process, skipping per-call subprocess startup. It's installed by `make install` and is used automatically when available.
 
-- the library is not installed
-- `VARTOOLS_USE_LIBRARY=0` is set in the environment
-- `timeout` is specified (library mode has no built-in timeout mechanism)
+You don't normally need to think about whether a given run goes through the in-process path or a subprocess — pyvartools picks the right one and the results are the same either way. A few configurations always go through the subprocess path:
 
-To force subprocess mode globally:
+| Situation | Reason |
+|-----------|--------|
+| The shared library isn't installed or can't be found | No in-process backend available |
+| `nthreads > 1` on `run_batch()` / `run_filelist()` | Parallel runs use the subprocess path |
+| `timeout=` is set | The in-process path doesn't enforce timeouts |
+| `resume=True` from a partial `stats_file` | Subprocess path only |
 
-```bash
-export VARTOOLS_USE_LIBRARY=0
-```
-
-### Non-standard library path
-
-If `libvartoolspipeline.so` is not on the default search path, point pyvartools
-to it explicitly:
+If the shared library is installed in a non-standard location, point pyvartools at it:
 
 === "Python"
 
     ```python
     import pyvartools as vt
     try:
-        vt.set_library("/path/to/libvartoolspipeline.so")   # placeholder
+        vt.set_library("/path/to/libvartoolspipeline.so")
     except FileNotFoundError:
         pass
     ```
@@ -1244,21 +1195,11 @@ to it explicitly:
     export VARTOOLS_LIBRARY=/path/to/libvartoolspipeline.so
     ```
 
-### When library mode is not used
+To force the subprocess path globally (e.g. for benchmarking or debugging):
 
-The pipeline falls back to the subprocess path transparently in these
-remaining cases:
-
-| Situation | Reason |
-|-----------|--------|
-| `libvartoolspipeline.so` not found | Library not installed |
-| `VARTOOLS_USE_LIBRARY=0` | Explicitly disabled |
-| `timeout` is set | Library mode has no timeout support |
-| `nthreads > 1` in `run_batch` | Library mode is single-threaded by design |
-| `resume=True` on `stats_file` | Resume uses the file's seq column to identify completed rows; library batch writes the seq column but the resume preprocessing path is subprocess-only |
-| `perlc_vars` contains a column-reference entry (`int` or `PerLCColumn`) | Real list-file column refs require the list file |
-| `cmd.o(namefromlist=COLNAME)` where the column comes from a real list file (e.g. via `run_filelist`) | Same — needs the list file |
-| `cmd.python(inprocess=False)` with `randseed`/`skipmissing`/`jdtol`/`matchstringid` | Single-LC `run()` keeps its global-opts gate; lift in a future change |
+```bash
+export VARTOOLS_USE_LIBRARY=0
+```
 
 ---
 
