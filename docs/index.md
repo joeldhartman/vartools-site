@@ -1,7 +1,5 @@
 # VARTOOLS
 
-**Light curve analysis tools — command-line C program and Python API.**
-
 VARTOOLS is a collection of tools for analyzing astronomical photometric time series (light curves). It is written in C and runs from the command line, or via the Python package, **pyvartools**, processing one or many light curves through a user-defined pipeline of statistical, filtering, period-finding, and model-fitting operations. The tool is designed to enable efficient batch processing of a large collection of light curves.
 
 ---
@@ -22,7 +20,7 @@ VARTOOLS is a collection of tools for analyzing astronomical photometric time se
     ```python
     import pyvartools as vt
 
-    # Simplest form — pass a filename directly to the command
+    # Pass a filename directly to the command
     result = vt.LS("EXAMPLES/2", 1.0, 2.0, 0.01)
     print(f"Best period: {result.varobjs.LS.Period_1:.5f} d")
     ```
