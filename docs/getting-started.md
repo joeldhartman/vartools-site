@@ -1,15 +1,15 @@
 # Getting Started
 
-This page walks through a few simple VARTOOLS examples, showing both the CLI and Python (`pyvartools`) approaches side by side. All examples assume you are working in the VARTOOLS source directory and that the `EXAMPLES/` directory is present.
+This page walks through a few simple VARTOOLS examples, showing both the CLI and Python (`pyvartools`) approaches side by side. All examples assume that the VARTOOLS source directory is the working directory, and that the `EXAMPLES/` directory is present.
 
 !!! tip "Installation"
     If you have not yet installed VARTOOLS, see the [Installation](install.md) page before continuing.
 
 ---
 
-## 1. Your First VARTOOLS Run
+## 1. A first VARTOOLS run
 
-Let's start with the basic task of computing the root-mean-square (RMS) scatter of a light curve.
+The simplest example is the calculation of the root-mean-square (RMS) scatter of a light curve.
 
 === "CLI"
 
@@ -60,13 +60,13 @@ Let's start with the basic task of computing the root-mean-square (RMS) scatter 
     By default, VARTOOLS expects plain-text files with columns: `BJD  magnitude  magnitude_error`. Comment lines beginning with `#` are ignored. See the CLI reference for other supported formats and FITS input.
 
 !!! tip "Output column index"
-    The trailing `_0` in `RMS_0` is the **command index** — this RMS calculation is the first command (0-based index 1) in the pipeline. See [Understanding the Output](#4-understanding-the-output) below for full details.
+    The trailing `_0` in `RMS_0` is the **command index** — this RMS calculation is the first command (0-based index 1) in the pipeline. See [Output structure](#4-output-structure) below for full details.
 
 ---
 
 ## 2. Chaining Commands
 
-Commands are processed in sequence, so you can combine filtering with analysis in a single call. Here, sigma clipping is applied before the Lomb-Scargle period search.
+Commands are processed in sequence, so filtering can be combined with analysis in a single call. Here, sigma clipping is applied before the Lomb-Scargle period search.
 
 === "CLI"
 
@@ -131,7 +131,7 @@ VARTOOLS is designed to process large sets of light curves efficiently. Pass a l
 
 ---
 
-## 4. Understanding the Output
+## 4. Output structure
 
 ### Column naming convention
 
@@ -175,7 +175,7 @@ This produces output that can be more human-readable when there are many statist
 
 - **Statistics vs. transformations.** Some commands compute statistics about the light curve without changing it (`-rms`, `-LS`, `-BLS`, `-stats`, …). Others modify the in-memory light curve so subsequent commands see a different input (`-clip`, `-fluxtomag`, `-harmonicfilter`, …). A typical pipeline is a few transformations followed by one or more statistics commands.
 
-- **Two output channels.** The statistics table goes to stdout (or to the file given by `-redirectstats`). The (possibly modified) light curves are **not** written unless you explicitly request them with `-o` (CLI) or `capture_lc=True` (pyvartools; `capture_lc=True` is the default option in this case).
+- **Two output channels.** The statistics table goes to stdout (or to the file given by `-redirectstats`). The (possibly modified) light curves are not written unless explicitly requested through `-o` (CLI) or `capture_lc=True` (pyvartools; `capture_lc=True` is the default option in this case).
 
 - **Batch vs. single light curve processing.** For the CLI use the `-i` input flag to process a single light curve, or the `-l` input flag to process a list of light curves. For pyvartools processing a single light curve produces a `Result` object, whereas processing a collection of light curves produces a `BatchResult` object.
 
@@ -189,4 +189,4 @@ This produces output that can be more human-readable when there are many statist
 
 - **The `Name` column.** The first column of every VARTOOLS output row identifies the light curve it came from. It serves as the primary key when joining VARTOOLS output with other catalogs.
 
-- **Discovering commands.** `vartools -listcommands` lists every command; `vartools -help <cmd>` prints full syntax for one command; `vartools -example <cmd>` shows a runnable example. See also [Understanding the Output](#4-understanding-the-output) for how statistics columns are named.
+- **Discovering commands.** `vartools -listcommands` lists every command; `vartools -help <cmd>` prints full syntax for one command; `vartools -example <cmd>` shows a runnable example. See also [Output structure](#4-output-structure) for how statistics columns are named.
