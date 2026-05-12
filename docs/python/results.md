@@ -85,8 +85,7 @@ period  = result.LS_Period_1_0        # equivalent to result.vars["LS_Period_1_0
 log_fap = result.Log10_LS_Prob_1_0
 ```
 
-This is convenient for interactive use. A clean `AttributeError` is raised
-for keys that do not exist.
+This is intended for interactive access. A clean `AttributeError` is raised for keys that do not exist.
 
 ### `.lc` — `LightCurve` or `None`
 
@@ -159,7 +158,7 @@ Returned by `pipe.run_batch(lcs)`, `pipe.run_filelist(paths)`, and
 
 A pandas DataFrame with one row per light curve. The `Name` column contains
 the light curve identifier; remaining columns are the VARTOOLS statistics.
-Column names are identical to those produced by the CLI with `-header`.
+Column names are identical to those that VARTOOLS itself reports in its output table header.
 
 ```python
 batch = pipe.run_batch(lcs)
@@ -232,7 +231,7 @@ particular light curve appear as `None` at that position.
   values are `pd.DataFrame`s.
 * For `cmd.o(capture=True)` the values are
   [`LightCurveList`](#lightcurvelist)s — list subclasses that also
-  support **by-name** lookup.
+  support by-name lookup.
 
 ```python
 for name, df in zip([lc.name for lc in lcs], batch.files["LS_periodogram_0"]):
