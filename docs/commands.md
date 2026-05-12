@@ -11,9 +11,7 @@ the per-category pages under [`python/commands/`](python/commands/index.md).  Co
 corresponding library (see [Extension Commands](cli/extensions.md)).
 
 !!! tip "Searching"
-    The search box (top right) matches command names, descriptions,
-    and doc content simultaneously — try it if you don't remember the
-    exact spelling of a command.
+    The search box (top right) matches command names, descriptions, and doc content simultaneously, and may help in finding a command whose exact name is uncertain.
 
 | Command | Description | CLI | Python API |
 |---|---|---|---|
