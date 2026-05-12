@@ -1,53 +1,37 @@
 # Pipeline
 
-`Pipeline` is an alternative to the [Chaining API](chaining.md) that is worth
-reaching for in several situations:
+`Pipeline` is an alternative to the [Chaining API](chaining.md). Use it when:
 
-- **Efficient batch processing of large surveys** — `run_batch()` and
-  `run_filelist()` submit all light curves to a single vartools
-  invocation, exploiting vartools' internal `-parallel` processing and
-  avoiding per-LC Python overhead. For large numbers of light curves
-  this is typically faster than running them one at a time via the
-  Chaining API, depending on light curve size and command mix.  
-- **Internal vartools parallelisation** — `run_batch()` and
-  `run_filelist()` accept `nthreads=N`, which forwards `-parallel N`
-  to vartools so it distributes the work across multiple CPU cores
-  within a single process.  
-- **Per-star variable injection** — the
-  `perlc_vars` mechanism lets you supply a different parameter value
-  (e.g. a search period bound) for each light curve via list-file
-  columns, without writing custom wrapper code.  
-- **Per-observation variable initialisation** — `perpoint_vars` lets you create 
-  and initialise custom per-point variables before the command chain
-  begins, which is useful for masking or error-scaling tasks.  
-- **Reusing the same command sequence across many calls** — a
-  `Pipeline` instance can be run against any number of light curves;
-  the command sequence is defined once and reused.  
-- **Reading light curves directly from disk** — `run_file()` and 
-  `run_filelist()` hand
-  file paths straight to vartools with no Python I/O, which is the
-  most efficient option when light curves are already on disk.  
-- **Streaming output and resume for long surveys** — `run_batch()` and
-  `run_filelist()` accept a `stats_file=PATH` kwarg to flush the stats
-  table to disk as each light curve completes, plus `resume=True` to
-  pick up where a killed run left off.  See [Streaming output and
-  resume](#streaming-output-and-resume).  
-- **Static command-line validation** — `Pipeline.validate()` parses the 
-  assembled command
-  line through vartools (`-headeronly`) without processing any data,
-  returning the list of output columns the run would produce or
-  raising `PipelineValidationError` with the parser's message.  Useful
-  for fast turnaround during pipeline construction.
+- **You're running a survey-scale batch.** `run_batch()` and
+  `run_filelist()` process all the light curves in one call, amortising
+  setup cost across the whole batch and supporting multi-threaded
+  parallel processing via `nthreads=N`.
+- **You want to attach per-LC values that aren't simple command
+  parameters.** `perlc_vars` lets you supply a different value per
+  light curve for things like search period bounds, output filenames,
+  or metadata referenced by name in analytic expressions.
+- **You want to initialise per-observation variables before the chain
+  runs.** `perpoint_vars` lets you create custom per-point variables
+  (masks, weights, indices) without modifying your light curves.
+- **You want to reuse the same command sequence many times.** A
+  `Pipeline` instance can be run repeatedly against different inputs.
+- **Your light curves are already on disk and you don't want to round-trip
+  through Python.** `run_file()` and `run_filelist()` read the files
+  directly.
+- **You need to checkpoint a long-running job.** Set `stats_file=PATH`
+  to flush statistics to disk as each light curve completes, and
+  `resume=True` to pick up where a killed run left off.  See
+  [Streaming output and resume](#streaming-output-and-resume).
+- **You want to validate the pipeline shape before running it.**
+  `Pipeline.validate()` returns the list of output column names the
+  pipeline would produce, or raises `PipelineValidationError` if the
+  pipeline is malformed — useful for fast turnaround during pipeline
+  construction.
 
-A `Pipeline` holds an ordered sequence of command objects and translates them
-into a vartools command-line string when a run method is called. If
-`libvartoolspipeline.so` is installed, `run()` and `run_batch()` operate
-in-process — light curve arrays are injected directly into the C library,
-eliminating subprocess startup and serialisation overhead. This includes `capture_lc=True` mode: the modified light curve data
-is read back directly from C memory without writing to disk. When the library
-is not available, or for operations that require output files on disk,
-pyvartools launches the `vartools` binary as a subprocess and parses its
-output. Both paths produce identical results.
+A `Pipeline` is built by chaining command builders and run on one or more
+light curves. The same `Pipeline` produces identical results regardless
+of which execution path pyvartools chooses internally; you don't need to
+think about it.
 
 ---
 
