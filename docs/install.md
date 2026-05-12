@@ -225,7 +225,7 @@ Python package.
     way through CSPICE, VARTOOLS, and pyvartools. Every feature works,
     including `-python`, `-R`, and `-parallel`.
 
-    For best performance, keep your source and light-curve files on
+    For best performance, keep the source and light-curve files on
     the WSL filesystem (`~/` etc.), not on Windows-side paths
     (`/mnt/c/...`).
 
@@ -470,7 +470,7 @@ After `make install`, the shared library `libvartoolspipeline.so` is
 installed alongside the binary. This library is used by pyvartools for
 more efficient processing.
 
-See the [Pipeline — Performance: library mode](python/pipeline.md#performance-library-mode)
+See the [Pipeline — Performance and reusing a Pipeline](python/pipeline.md#performance-and-reusing-a-pipeline)
 section for details on controlling this behaviour.
 
 ### Configuring the vartools binary path

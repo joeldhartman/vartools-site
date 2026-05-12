@@ -338,9 +338,8 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
     command parameters, `perlc_vars` values-form, carried-forward
     scalars from chain continuations, `cmd.o(outname=PerLC(...))`,
     `cmd.o(capture=True)`, and `stats_file=PATH` (without `resume`).
-    See [Performance: library mode](pipeline.md#performance-library-mode)
-    for the full coverage matrix and the remaining subprocess-only
-    cases.
+    See [Performance and reusing a Pipeline](pipeline.md#performance-and-reusing-a-pipeline)
+    for the cases that still go through subprocess.
 
 ---
 
