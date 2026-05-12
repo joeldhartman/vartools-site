@@ -93,7 +93,7 @@ CLI equivalent: [`-o`](../../cli/control-flow.md#-o).
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `outname` | `str` or `None` | Output filename for single-LC runs (`Pipeline.run` / `run_file`). Use `"-"` for stdout. |
-| `outdir` | `str` or `None` | Output directory for list/batch runs (`Pipeline.run_filelist` / `run_batch` / `run_combinelcs`). Per-LC filenames are constructed inside it. |
+| `outdir` | `str` or `None` | Output directory for list/batch runs (`Pipeline.run_filelist` / `run_batch` / `run_combinelcs`). Per-LC filenames are constructed inside it. Combine with `outname=PerLC([...])` to override the per-LC basename from Python — see [Per-LC output filenames](#per-lc-output-filenames). |
 | `nameformat` | `str` or `None` | Format string for output filenames in list mode, e.g. `"file_%s_%05d.txt"` (`%s` = LC basename, `%d` = sequence number). Ignored in single-LC mode. |
 | `columnformat` | `str` or `None` | Output column spec, e.g. `"t:%17.9f,mag:%9.5f,err:%9.5f"`. |
 | `allcols` | `bool` | Write every light-curve-vector variable defined by commands *before* this `cmd.o` in the pipeline, with a type-appropriate default `printf` format and a `# name1 name2 …` header line for ASCII output. Mutually exclusive with `columnformat`. Handy when a prior command has created new vectors (e.g. `cmd.Phase(..., phasevar="ph")`, `cmd.linfit(..., modelvar="m")`) that you want to capture without listing each one. Default `False`. |
@@ -213,6 +213,48 @@ phased_lcs = batch.files["phased"]   # list of 10 LightCurve objects
     existing parsers.  Performance is between full library mode and
     subprocess (still does the disk I/O for the side-output files);
     point `TMPDIR` at `/dev/shm` to make those writes RAM-only.
+
+#### Per-LC output filenames
+
+Batch runs (`run_batch`, `LightCurveBatch.run()`, `run_filelist` with
+in-memory LCs) default to `<outdir>/<lc.name>` for each LC's output
+file.  To pick the per-LC basenames from Python instead — without
+needing a list file or `perlc_vars` plumbing — wrap a list of strings
+in `PerLC` and pass it as `outname`:
+
+```python
+import os, tempfile
+import pyvartools as vt
+from pyvartools import commands as cmd
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+outdir = tempfile.mkdtemp(prefix="cmd_o_perlc_outname_")
+names = [f"star_{i:03d}.lc" for i in range(1, 4)]
+
+batch = vt.Pipeline([
+    cmd.clip(5.0),
+    cmd.o(outdir=outdir, outname=vt.PerLC(names), allcols=True),
+]).run_batch(lcs)
+
+assert sorted(os.listdir(outdir)) == sorted(names)
+```
+
+The PerLC list must have one entry per light curve in the batch.
+Both `outdir=` and the PerLC `outname=` are required together;
+`outname=PerLC([...])` without `outdir=` raises a clear `ValueError`
+at run-batch entry.  The same pipeline works in subprocess mode
+(`VARTOOLS_USE_LIBRARY=0`) and produces byte-identical output files.
+
+Multiple `cmd.o(outname=PerLC(...))` instances in a single pipeline
+each map to their own outdir with their own per-LC names — pyvartools
+allocates a distinct synthetic inlist variable per `cmd.o`.  Combining
+with `capture=True` also works: the file is written under
+`<outdir>/<name_i>` *and* the LC is captured into `result.files[key]`.
+
+The auto-rewrite (which translates `outname=PerLC([...])` into a
+synthetic `namefromlist` + per-call inlist update) leaves the user's
+`cmd.o` instance unchanged after the run via `try/finally`, so a
+Pipeline reused across multiple calls behaves identically each time.
 
 ---
 

@@ -1164,19 +1164,6 @@ vartools **in-process** rather than spawning a new subprocess for every call.
 The pipeline is initialised once (command-line parsing, memory allocation) and
 light curve arrays are injected directly into C memory on each subsequent call.
 
-Library mode supports `capture_lc=True`: after the pipeline runs, the modified
-light curve data (including any new variables created by commands like `-expr`)
-is read back from C memory into numpy arrays and returned as a `LightCurve`
-object. This makes **command chaining via the Chaining API** fully in-process —
-no subprocess or disk I/O is needed.
-
-Additional light curve columns (beyond t, mag, err) are handled automatically.
-When a `LightCurve` or `DataFrame` has extra named columns, pyvartools:
-
-1. Passes `-inputlcformat` to create the variable slots in the C library
-2. Injects the extra column data alongside t/mag/err
-3. Returns all LC variables (original and newly created) in the output
-
 ```python
 import pyvartools as vt
 from pyvartools import commands as cmd
@@ -1198,6 +1185,60 @@ result2 = pipe2.run(lc, capture_lc=True)
 print(len(result2.lc.t))  # modified LC returned directly from C memory
 ```
 
+### What library mode supports
+
+Library mode now covers most batch features end-to-end:
+
+| Feature | Library mode |
+|---------|--------------|
+| `capture_lc=True` (modified LC returned in `result.lc` / `result.lcs`) | ✓ via the C-side capture buffer |
+| `cmd.o(outname=PATH)` / `cmd.o(outdir=DIR)` / `cmd.o(capture=True)` | ✓ writes directly from the C call |
+| `cmd.o(outname=PerLC([...]))` per-LC output filenames | ✓ via the per-call inlist API |
+| `perpoint_vars={...}` (init expressions for per-row variables) | ✓ `-inputlcformat name:0:type:expr` clauses are emitted |
+| Additional LC columns beyond `t/mag/err` | ✓ injected via the extended `vartools_set_lc_data` |
+| `perlc_vars={"name": [values, ...]}` (values form) | ✓ injected via the per-call inlist API |
+| Per-LC command parameters: `cmd.LS(minp=PerLC([...]))`, numpy arrays, pandas Series | ✓ same per-call inlist API |
+| Chain continuations (`br1.expr(...).run()`) that carry forward per-LC scalars | ✓ batch_scalars route through the per-call inlist API |
+| `stats_file=PATH` (no `resume=True`) | ✓ library-mode writer emits the same `Print__vtpy_seq__0_<N>` column as subprocess so files inter-resume |
+| Global flags: `randseed`, `jdtol` | ✓ threaded into the LibPipeline init argv |
+| `skipmissing`, `matchstringid` (list-file-only flags) | ✓ accepted as a no-op (no list file in library mode) |
+| `save_*=True` auxiliary outputs (`save_periodogram`, etc.) | ✓ written to a per-Pipeline tmpdir and parsed back |
+
+Additional light curve columns (beyond t, mag, err) are handled automatically.
+When a `LightCurve` or `DataFrame` has extra named columns, pyvartools:
+
+1. Passes `-inputlcformat` to create the variable slots in the C library
+2. Injects the extra column data alongside t/mag/err
+3. Returns all LC variables (original and newly created) in the output
+
+#### Per-LC output filenames — `cmd.o(outname=PerLC([...]))`
+
+For batch runs that need each LC's output to land at its own filename
+(rather than `<outdir>/<lc.name>`), wrap a list of names in `PerLC` and
+pass it as `outname`:
+
+```python
+import os, tempfile
+import pyvartools as vt
+from pyvartools import commands as cmd
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+outdir = tempfile.mkdtemp(prefix="perlc_outname_doc_")
+names = [f"clipped_{i:03d}.txt" for i in range(1, 4)]
+
+batch = vt.Pipeline([
+    cmd.clip(5.0),
+    cmd.o(outdir=outdir, outname=vt.PerLC(names), allcols=True),
+]).run_batch(lcs)
+
+assert sorted(os.listdir(outdir)) == sorted(names)
+```
+
+`outname=PerLC([...])` requires `outdir=` to also be set; the per-LC
+names land at `<outdir>/<name_i>`.  The same pipeline runs identically
+in subprocess mode (when `VARTOOLS_USE_LIBRARY=0`) and produces
+byte-identical output files.
+
 ### Enabling and disabling library mode
 
 Library mode is **on by default** when `libvartoolspipeline.so` can be found.
@@ -1206,7 +1247,6 @@ It falls back silently to subprocess mode when:
 - the library is not installed
 - `VARTOOLS_USE_LIBRARY=0` is set in the environment
 - `timeout` is specified (library mode has no built-in timeout mechanism)
-- output files are requested (e.g. `save_model=True` on a command)
 
 To force subprocess mode globally:
 
@@ -1237,19 +1277,19 @@ to it explicitly:
 
 ### When library mode is not used
 
-The pipeline falls back to the subprocess path transparently in any of these
-cases:
+The pipeline falls back to the subprocess path transparently in these
+remaining cases:
 
 | Situation | Reason |
 |-----------|--------|
 | `libvartoolspipeline.so` not found | Library not installed |
 | `VARTOOLS_USE_LIBRARY=0` | Explicitly disabled |
 | `timeout` is set | Library mode has no timeout support |
-| `capture_lc=True` | Modified LC requires vartools to write a file |
-| Any command has `save_*=True` | Output files require a working directory |
-| `cmd.o(capture=True)` | Output LC capture requires filesystem |
-| `perpoint_vars` is set | Library pipeline argv does not include `-inputlcformat` col=0 entries |
-| Any global option is non-default (`randseed`, `jdtol`, `skipmissing`, `matchstringid`) | Global CLI flags are not threaded through the in-process library |
+| `nthreads > 1` in `run_batch` | Library mode is single-threaded by design |
+| `resume=True` on `stats_file` | Resume uses the file's seq column to identify completed rows; library batch writes the seq column but the resume preprocessing path is subprocess-only |
+| `perlc_vars` contains a column-reference entry (`int` or `PerLCColumn`) | Real list-file column refs require the list file |
+| `cmd.o(namefromlist=COLNAME)` where the column comes from a real list file (e.g. via `run_filelist`) | Same — needs the list file |
+| `cmd.python(inprocess=False)` with `randseed`/`skipmissing`/`jdtol`/`matchstringid` | Single-LC `run()` keeps its global-opts gate; lift in a future change |
 
 ---
 

@@ -349,25 +349,23 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
                                      maxp=10.0, subsample=0.1).run()
 ```
 
-!!! note "Comparison with `Pipeline.run_batch()`"
-    `Pipeline.run_batch()` also accepts per-LC arrays, via vartools'
-    internal `-inlistvars` mechanism.  Every per-star parameter whose CLI
-    value-spec accepts one of the `var` / `expr` / `list column`
-    keywords is supported — in practice this covers period-search
-    parameters on `LS`, `BLS`, `aov`, `aov_harm`, `BLSFixPer`, as well as
-    `Phase.period`, `harmonicfilter.period`, `Injectharm.period`,
-    `MandelAgolTransit.P0` / `T00`, and common scalar parameters such as
-    `clip.sigclip` and `restricttimes.minJD` / `maxJD`.  For those
-    parameters the two backends produce identical results; `Pipeline`
-    can be faster though because it runs one vartools invocation for the
-    whole batch instead of one per LC.
+!!! note "Library-mode dispatch with PerLC"
+    `LightCurveBatch.run()` now auto-routes through
+    `Pipeline.run_batch()` whenever any command in the chain has a
+    `PerLC` attribute (including `cmd.o(outname=PerLC([...]))`).  A
+    single vartools invocation handles the whole batch and per-LC
+    values are injected via the in-process inlist API in library mode.
+    In practical terms: the only time `LightCurveBatch.run()` still
+    falls back to its per-LC loop is when every command is plain
+    scalar — in which case there's nothing per-LC to coordinate.
 
-    `LightCurveBatch` resolves arrays to scalars in Python before each
-    individual run, which additionally covers any rare parameter whose
-    CLI grammar has no `var` / `expr` / `list column` escape hatch.  The
-    trade-off is one vartools invocation per light curve (see the
-    performance note above) — use it for interactive work and smaller
-    batches, switch to `Pipeline` for survey-scale runs.
+    Library-mode coverage for batch features now includes per-LC
+    command parameters, `perlc_vars` values-form, carried-forward
+    scalars from chain continuations, `cmd.o(outname=PerLC(...))`,
+    `cmd.o(capture=True)`, and `stats_file=PATH` (without `resume`).
+    See [Performance: library mode](pipeline.md#performance-library-mode)
+    for the full coverage matrix and the remaining subprocess-only
+    cases.
 
 ---
 
@@ -398,6 +396,32 @@ batch = (vt.LightCurveBatch(lcs)
 Each LC's processed output lands at `<outdir>/<outname>`.  See
 [Per-LC values from Python](pipeline.md#per-lc-values-from-python) on
 the Pipeline page for the full dispatch rules and accepted shapes.
+
+#### Shortcut: `cmd.o(outname=PerLC([...]))`
+
+For the common case of per-LC output filenames, you can pass a `PerLC`
+of strings directly to `cmd.o(outname=)` and skip the `namefromlist` +
+`perlc_vars` plumbing:
+
+```python
+import os, tempfile
+import pyvartools as vt
+
+lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 4)]
+outdir = tempfile.mkdtemp(prefix="lcb_perlc_outname_")
+names = [f"clipped_{i}.lc" for i in range(1, 4)]
+
+batch = (vt.LightCurveBatch(lcs)
+         .clip(5.0)
+         .o(outdir=outdir, outname=vt.PerLC(names), allcols=True)
+         .run())
+
+assert sorted(os.listdir(outdir)) == sorted(names)
+```
+
+pyvartools auto-translates this to the equivalent `namefromlist` +
+synthetic inlist variable internally.  Works in both library and
+subprocess modes and produces byte-identical output files.
 
 ---
 

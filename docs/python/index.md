@@ -28,9 +28,12 @@ VARTOOLS engine in one of two ways:
 - **Subprocess mode** — if the shared library is not available, pyvartools
   launches the `vartools` binary as a subprocess, passing the light curve
   via stdin and parsing its stdout. The results are identical; only
-  performance differs. This mode is also used automatically for operations
-  that require output files on disk (e.g. writing periodogram files), or when
-  using the `nthreads` parameter to perform multi-threaded batch processing.
+  performance differs. This mode is also used automatically when
+  multi-threaded batch processing is requested (`nthreads > 1`),
+  when resuming a streamed `stats_file`, or for the few command
+  configurations the in-process C entry point doesn't yet expose
+  (see [Performance: library mode](pipeline.md#performance-library-mode)
+  for the full coverage matrix).
 
 From the user's perspective both modes behave identically; the choice is made
 automatically.
