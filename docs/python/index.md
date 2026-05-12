@@ -1,39 +1,27 @@
 # pyvartools — Python API Overview
 
-**pyvartools** is the Python interface to VARTOOLS. It lets you
-load light curves into Python, run any combination of VARTOOLS analysis
-commands on them, and work with the results as standard Python and pandas
-objects.
+**pyvartools** is the Python interface to VARTOOLS. It provides Python classes for the VARTOOLS analysis commands and reads, processes, and returns light curves through standard Python and pandas data structures.
 
 ---
 
 ## How it works
 
-Every VARTOOLS analysis command (period search, detrending, sigma
-clipping, transit fitting, …) has a corresponding Python class in
-`pyvartools.commands`. These commands act on light curves, which can
-be stored in LightCurve objects. The commands produce Result objects
-that contain computed statistics, possibly modified light curves, and
-any other auxiliary datasets (e.g., periodograms computed by a
-period-finding command).
+Every VARTOOLS analysis command (period search, detrending, sigma clipping, transit fitting, ...) has a corresponding Python class in `pyvartools.commands`. The classes act on light curves represented by `LightCurve` objects, and produce `Result` objects containing the computed statistics, the modified light curve (when capture is requested), and any auxiliary datasets associated with the command (e.g., a periodogram produced by a period-finding command).
 
-Internally, pyvartools has two execution paths and picks between them automatically:
+Internally, pyvartools has two execution paths and selects between them automatically:
 
-- **Library mode** — the default fast path. The VARTOOLS engine runs in-process via a shared library (`libvartoolspipeline.so`, installed by `make install`).
-- **Subprocess mode** — used when library mode isn't available, or for combinations of options the fast path doesn't cover (e.g. `nthreads > 1`, `timeout=...`, resuming from a partial `stats_file`). The `vartools` binary runs as a separate process; results are identical.
+- Library mode — the default fast path. The VARTOOLS engine runs in-process via a shared library (`libvartoolspipeline.so`, installed by `make install`).
+- Subprocess mode — used when library mode is not available, or for combinations of options the in-process path does not yet cover (e.g. `nthreads > 1`, `timeout=...`, resuming from a partial `stats_file`). The `vartools` binary runs as a separate process.
 
-Both modes produce the same outputs; you don't need to think about which one is used. See [Performance and reusing a Pipeline](pipeline.md#performance-and-reusing-a-pipeline) for the details.
+Both paths produce identical outputs. See [Performance and reusing a Pipeline](pipeline.md#performance-and-reusing-a-pipeline) for the details.
 
 ---
 
 ## Three calling styles
 
-### 1. Top-level functions (simplest)
+### 1. Top-level functions
 
-The quickest way to run a single command is to call it directly on the `vt`
-module. The first argument is the light curve — pass a filename, a
-`LightCurve` object, a DataFrame, a 2-D numpy array, or a tuple of
-`(t, mag, err)` arrays:
+The most direct form for running a single command is to call it as a function on the `vt` module. The first argument is the light curve — a filename, a `LightCurve` object, a DataFrame, a 2-D numpy array, or a tuple of `(t, mag, err)` arrays:
 
 ```python
 import numpy as np
@@ -99,16 +87,13 @@ r2 = r1.harmonicfilter(period=r1.varobjs.LS.Period_1, nharm=2)
 !!! note "Pipeline-stateful commands"
     A handful of commands (`savelc`, `restorelc`, `columnsuffix`, `ifcmd`, `o`)
     only make sense inside a single `Pipeline` invocation.  Calling them as
-    methods on `LightCurve` or `Result` raises `NotImplementedError` with a
-    message directing you to use `Pipeline` instead.
+    methods on `LightCurve` or `Result` raises `NotImplementedError`.
 
 See the [Method Chaining API](chaining.md) page for the full reference.
 
-### 3. Pipeline objects (for reuse and efficient batch processing)
+### 3. Pipeline objects
 
-A `Pipeline` holds an ordered sequence of commands and can be applied to
-many different light curves. This is the natural choice when you want to
-define an analysis procedure once and run it over a large collection of files:
+A `Pipeline` is an ordered sequence of commands that can be applied to one or more light curves. It is the appropriate form for defining an analysis procedure once and running it over many input files, and for the other situations covered in the [Pipeline](pipeline.md) page:
 
 ```python
 import pyvartools as vt
@@ -127,8 +112,8 @@ result = pipe.run(lc)
 batch = pipe.run_batch([f"EXAMPLES/{i}" for i in range(1, 11)])
 print(batch.vars[["Name", "LS_Period_1_1"]])
 
-# Read files directly from disk, and use 2 parallel processes
-# no Python I/O, fastest for large surveys
+# Read files directly from disk with 2 parallel processes —
+# no Python I/O, appropriate for large surveys
 batch = pipe.run_filelist("EXAMPLES/lc_list", nthreads=2)
 print(batch.vars[["Name", "LS_Period_1_1"]])
 ```
