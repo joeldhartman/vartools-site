@@ -1,5 +1,11 @@
 # Version History
 
+### Version 1.6 — May 12, 2026
+
+Renamed `-Killharm` to `-harmonicfilter`, retaining `-Killharm` as a backward-compatible synonym; added `-fourierfilter`, a full-band Fourier-domain filter; added `-setlcname` option to override the `stdin` placeholder used as the LC name when input comes from `-i -`; added `allcols`, `changesuffix`, `gzip`, and `bzip2` keywords to `-o`, and auto-detection of compressed light-curve inputs (`.gz`, `.bz2`, `.fits.gz`, `.fits.fz`, `.fits.Z`, `.fits.bz2`) on `-i` and `-l`; added `outputcolumn` keyword to `-expr` (used with `listvar`/`scalar`/`const`) that exposes the computed value in the result table; reject duplicate statistic names in `-stats` at parse time; added parse-time constant folding and per-LC aggregate-call memoisation to the analytic-expression engine, which can speed common O(N²) patterns by orders of magnitude; fixed `parseonedelim*()` STRING corruption (regression from the r5380 combinelcs change in 1.51); fixed `-nonlinfit` `fitmask` heap overflow and missing variable resolution that caused SIGSEGV in MCMC fitting, and a `-nonlinfit omodel` token-order bug that caused `-oneline` (and any subsequent global option) to be silently swallowed; fixed `-linfit format` keyword silently swallowing the following argv token; fixed `-linfit save_model` to honour `model_nameformat`; fixed `-BLSFixPerDurTc save_phcurve` buffer overflow that triggered a glibc abort; fixed `-addnoise wavelet` last-point out-of-bounds read; fixed `-python` and `-R` undersize allocations under `-readall`; fixed `-Starspot fitstarspot_amoeba` uninitialised index; fixed multiple format-string vulnerabilities in output and Python/R callback code; fixed `vartools -help` and `vartools -example` output rendering literal `%%` instead of `%` in many help strings; added the `libvartoolspipeline.so` shared library providing an in-process embedding API for external programs; added `make install-python` and `make check-asan` build targets; updated `configure.ac` to handle NumPy 2.x include layout. Initial release of `pyvartools`, a Python interface to VARTOOLS — see the [Python API documentation](python/index.md) for details.
+
+---
+
 ### Version 1.52 — March 19, 2026
 
 Added examples for the `-difffluxtomag`, `-restoretimes`, and `-sortlc` commands; fixed typo in
