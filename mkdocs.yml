@@ -1,7 +1,7 @@
 site_name: VARTOOLS
 site_description: Light curve analysis for astronomers — command-line C program and Python API
 site_author: Joel D. Hartman
-site_url: http://www.astro.princeton.edu/~jhartman/vartools_new/
+site_url: http://www.astro.princeton.edu/~jhartman/vartools.html/
 
 theme:
   name: material
