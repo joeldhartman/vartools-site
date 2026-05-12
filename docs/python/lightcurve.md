@@ -41,8 +41,8 @@ extension:
   extension and read transparently. `t_col`, `mag_col`, `err_col` are
   FITS-specific and have no effect for ASCII inputs.
 
-All columns present in the resulting DataFrame are passed to vartools
-automatically via `-inputlcformat` when a `Pipeline` run method is called.
+All columns present in the resulting DataFrame are accessible by name
+to any command when a `Pipeline` run method is called.
 
 `name` defaults to the stem of `path` (filename without directory or
 extension) if not supplied.

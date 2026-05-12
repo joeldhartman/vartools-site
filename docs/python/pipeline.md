@@ -99,13 +99,13 @@ Run the pipeline on a single light curve held in memory.
 | `capture_lc` | `bool` | If `True`, return the (possibly modified) output light curve as `result.lc`. In library mode, the data is read directly from C memory; in subprocess mode, a temporary file is used. Default `False`. |
 | `outdir` | `str` or `None` | Directory for command output files (e.g. periodogram files from `save_periodogram=True`). If `None` (default), a temporary directory is created and its contents are captured into `result.files` before it is deleted. |
 | `timeout` | `int` or `None` | Maximum number of seconds to wait for the vartools process. Raises `RunError` if the process exceeds the limit. `None` means no limit. |
-| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise via `-inputlcformat` col=0. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `randseed` | `int` or `None` | Pass `-randseed N` to vartools for reproducible random-number sequences. |
-| `skipmissing` | `bool` | Pass `-skipmissing`; silently skip missing input files. Default `False`. |
-| `jdtol` | `float` or `None` | Pass `-jdtol N` to set the Julian-date matching tolerance. |
-| `matchstringid` | `bool` | Pass `-matchstringid` to force string-based LC name matching. Default `False`. |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise from an analytic expression before the pipeline runs (useful for masks, weights, indices). See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
+| `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
+| `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
+| `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
+| `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
 
-If the `LightCurve` contains columns beyond the default three (`t`, `mag`, `err`), a `-inputlcformat` flag is constructed automatically and passed to vartools so the extra columns are accessible by name. See [Additional columns](#additional-columns-inputlcformat).
+If the `LightCurve` contains columns beyond the default three (`t`, `mag`, `err`), pyvartools automatically makes the extra columns available to commands by name. See [Additional columns](#additional-columns).
 
 Returns a [`Result`](results.md) object.
 
@@ -121,12 +121,12 @@ Run the pipeline on a light curve file already on disk. vartools reads the file 
 | `capture_lc` | `bool` | Capture the output light curve as `result.lc`. |
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
-| `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
+| `columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve file (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns) below. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
-| `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
-| `jdtol` | `float` or `None` | Pass `-jdtol N`. |
-| `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
+| `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
+| `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
+| `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
 
 The light curve name reported in `result.vars["Name"]` is taken from the file stem (i.e. the filename without directory or extension).
 
@@ -141,23 +141,23 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `lcs` | list of `LightCurve`, `str` / `os.PathLike`, `DataFrame`, or `TimeSeries` | The light curves to process. Path entries are loaded via [`LightCurve.from_file()`](lightcurve.md#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name); mixed types are allowed. For path-only inputs, [`run_filelist()`](#run_filelistpaths-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-perpoint_columnsnone-perpoint_varsnone-perlc_varsnone-combinelcsfalse-lcnumvarlcnum-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse-stats_filenone-stats_file_modeoverwrite-stats_file_buffer_linesnone-resumefalse--batchresult) is more efficient — vartools reads the files directly with no Python I/O. |
-| `nthreads` | `int` | Number of parallel threads (vartools `-parallel` flag). Default `1`. |
+| `nthreads` | `int` | Number of parallel threads to use. Default `1`. |
 | `capture_lc` | `bool` | If `True`, capture the modified output LC for each light curve and return them as `result.lcs`. |
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds for the whole batch. |
 | `raise_on_error` | `bool` | If `True` (default), a vartools failure raises `RunError`. If `False`, the exception is stored in `result.error` and `result.vars` will be empty. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `perlc_vars` | `dict` or `None` | Per-LC variables.  Schema entries (`int` or `PerLCColumn`) define a list-file column to read from, and values entries (a list / tuple / `numpy.ndarray` / `pandas.Series` of length `len(lcs)`, or a `(values, type)` tuple) attach Python data per LC: pyvartools allocates a list-file column for them and writes one value per LC.  Mixing schema and values entries in the same dict is fine.  See [Per-LC variables](#per-lc-variables-perlc_vars) and [Per-LC values from Python](#per-lc-values-from-python). |
-| `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
-| `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
-| `jdtol` | `float` or `None` | Pass `-jdtol N`. |
-| `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `perlc_vars` | `dict` or `None` | Per-LC variables — one value per light curve. Values can be supplied directly (a list / tuple / `numpy.ndarray` / `pandas.Series` of length `len(lcs)`, or a `(values, type)` tuple) or as a reference to an existing list-file column (`int` or `PerLCColumn`). Mixing the two forms in the same dict is fine. See [Per-LC variables](#per-lc-variables-perlc_vars) and [Per-LC values from Python](#per-lc-values-from-python). |
+| `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
+| `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
+| `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
+| `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
 | `stats_file` | `str` or `None` | If set, also stream the stats table to this file as each light curve completes. The file content matches `result.vars` and can be reloaded by a subsequent `resume=True` call. See [Streaming output and resume](#streaming-output-and-resume). |
 | `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. With `"append"` the existing file is preserved and only new rows are added; `resume=True` sets this automatically when an existing file is detected. |
-| `stats_file_buffer_lines` | `int` or `None` | Forwarded to vartools as `-bufferlines N`.  Sets the maximum number of light curves whose results vartools queues before flushing in `-parallel` mode.  Default `None` → vartools auto-scales to a value that's safe for the given thread count.  Setting it below `nthreads` caps effective parallelism at this value (threads beyond it stall waiting for a free slot).  Has no effect when `nthreads=1`.  See [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
+| `stats_file_buffer_lines` | `int` or `None` | Maximum number of light curves whose results are queued in memory before flushing to `stats_file` in parallel runs. Default `None` → auto-scales to a safe value for the given thread count.  Setting it below `nthreads` caps effective parallelism (threads beyond it stall waiting for a free slot).  Has no effect when `nthreads=1`.  See [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
 | `resume` | `bool` | If `True` and `stats_file` exists, parse it, skip any light curves whose row is already present, and append rows for the remaining ones. The pipeline's column layout is validated against the file via [`validate()`](#validate); a mismatch raises `PipelineValidationError`. Pipelines containing `-copylc` cannot be resumed. Default `False`. |
 
-Extra columns in the first `LightCurve` are used to construct a `-inputlcformat` flag automatically; all light curves in the batch are assumed to share the same column structure. See [Additional columns](#additional-columns-inputlcformat).
+Extra columns in the first `LightCurve` are propagated automatically; all light curves in the batch are assumed to share the same column structure. See [Additional columns](#additional-columns).
 
 Returns a [`BatchResult`](results.md) object.
 
@@ -175,18 +175,18 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
-| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. See [Additional columns](#additional-columns-inputlcformat) below. |
+| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns) below. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
-| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from list-file columns (schema form: `int` or `PerLCColumn`).  Values-form entries are rejected — pyvartools is not the writer of the list file in this mode, so it cannot append columns for them; use `run_batch()` instead. |
+| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-LC variables, read from columns of the on-disk list file (`int` or `PerLCColumn` — schema form only).  To supply values directly from Python, use `run_batch()` instead. |
 | `combinelcs` | `bool` | If `True`, append `combinelcs` to the `-l` flag — vartools then treats each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
 | `lcnumvar` | `str` or `None` | Only used when `combinelcs=True`. Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
-| `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
-| `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
-| `jdtol` | `float` or `None` | Pass `-jdtol N`. |
-| `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
+| `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
+| `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
+| `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
 | `stats_file` | `str` or `None` | Stream the stats table to this file as each row is produced. See [Streaming output and resume](#streaming-output-and-resume). |
 | `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. |
-| `stats_file_buffer_lines` | `int` or `None` | Forwarded to vartools as `-bufferlines N`.  Should be `>= nthreads`; see the run_batch entry and [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
+| `stats_file_buffer_lines` | `int` or `None` | Maximum number of light curves queued before flushing to `stats_file` in parallel runs. Should be `>= nthreads`; see the `run_batch` entry and [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
 | `resume` | `bool` | Resume from a partial `stats_file`, skipping already-completed light curves. See [Streaming output and resume](#streaming-output-and-resume). Pipelines containing `-copylc` cannot be resumed. Default `False`. |
 
 Returns a [`BatchResult`](results.md) object.
@@ -244,16 +244,16 @@ This mode of processing can be used to merge light curve files from multiple tel
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
-| `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. |
+| `columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns). |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. |
 | `perlc_vars` | `dict` or `None` | Per-LC variables, one value per group (length `len(groups)`). Accepts a sequence of values, a `(values, type)` tuple to override the auto-detected type, or schema entries (`int` or `PerLCColumn`) that reference a column in an existing list file. See [Per-LC variables](#per-lc-variables-perlc_vars). |
 | `perlcsegment_vars` | `dict` or `None` | Per-segment variables, with a value for each segment within each group. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])`. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `stitch` that need a per-segment label. |
 | `lcnumvar` | `str` or `None` | Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out of emitting the `lcnumvar` qualifier. |
 | `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). The same delimiter is used for `perlcsegment_vars` sub-columns. |
-| `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
-| `skipmissing` | `bool` | Pass `-skipmissing`. Default `False`. |
-| `jdtol` | `float` or `None` | Pass `-jdtol N`. |
-| `matchstringid` | `bool` | Pass `-matchstringid`. Default `False`. |
+| `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
+| `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
+| `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
+| `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
 
 PerLC array parameters are supported: each PerLC must have one value per group (`len(groups)`). The values are appended as additional columns to the temporary list file and wired up via `-inlistvars`, exactly as in `run_batch()`/`run_filelist()`. A length mismatch raises `ValueError`.
 
@@ -367,12 +367,7 @@ validate(nthreads=1, randseed=None, skipmissing=False, jdtol=None,
          matchstringid=False, timeout=30, perlc_vars=None) → list[str]
 ```
 
-Pass the assembled command line through vartools' own parser without
-processing any light curves and return the list of expected output column
-names.  Internally this runs the binary with `-headeronly`, which validates
-the syntax and exits.  Useful for catching argument errors during
-pipeline construction, and for inspecting the
-exact column layout the run will produce.
+Check that the pipeline is well-formed without processing any data, and return the list of expected output column names. Useful for catching errors during pipeline construction, and for inspecting the exact column layout the run will produce.
 
 ```python
 pipe = vt.Pipeline().LS(0.1, 10.0, 0.1, npeaks=3).rms()
@@ -380,16 +375,14 @@ cols = pipe.validate()
 # ['Name', 'LS_Period_1_0', 'Log10_LS_Prob_1_0', ..., 'RMS_1', ...]
 ```
 
-A bad command line raises `PipelineValidationError` with the parser's
-stderr attached so you can see exactly what vartools rejected:
+A malformed pipeline raises `PipelineValidationError` with a message describing what was wrong:
 
 ```python
 bad_pipe = vt.Pipeline().add(vt.commands.Raw("--no-such-flag"))
 try:
     bad_pipe.validate()
 except vt.PipelineValidationError as e:
-    print(e.stderr)   # vartools usage block
-    print(e.argv)     # full argv that was run, for reproduction
+    print(e)   # human-readable error message
 ```
 
 For pipelines that reference per-LC variables by name (e.g.
@@ -405,11 +398,7 @@ Both values-form (`{name: [vals, ...]}`) and schema-form (`{name: int}`,
 `{name: PerLCColumn(...)}`) are accepted — `validate()` only needs the
 names to resolve, not the values themselves.
 
-`validate()` runs vartools once per call, so it's intended for
-construction-time / debug use rather than tight inner loops.  The
-[resume path](#streaming-output-and-resume) calls it internally to check
-that a partial stats file was produced by the same pipeline that's now
-trying to resume from it.
+`validate()` is intended for construction-time / debug use rather than tight inner loops.  The [resume path](#streaming-output-and-resume) calls it internally to check that a partial stats file was produced by the same pipeline that's now trying to resume from it.
 
 ---
 
@@ -595,18 +584,14 @@ else:
 
 ---
 
-## Additional columns (`-inputlcformat`)
+## Additional columns
 
-By default vartools treats a light curve file as having three columns: time (column 1), magnitude (column 2), and uncertainty (column 3). To make extra columns available to commands under a named variable, vartools accepts a `-inputlcformat` flag of the form:
-
-```
--inputlcformat t:1,mag:2,err:3,airmass:4,xpos:5
-```
+A light curve file is treated as having three default columns — time, magnitude, and uncertainty — in columns 1, 2, and 3.  Any additional columns can be made available to commands under a named variable (so that, e.g., `cmd.expr("detrended = mag - 0.05*airmass")` can reference an `airmass` column).
 
 pyvartools handles this automatically:
 
-- **`run()` and `run_batch()`** — when the `LightCurve` object contains columns beyond `t`, `mag`, `err`, the format string is built from the DataFrame column list and passed to vartools automatically.
-- **`run_file()` and `run_filelist()`** — the file is read directly by vartools, so the column layout must be supplied by the caller via the `columns` parameter.
+- **`run()` and `run_batch()`** — when the input `LightCurve` carries extra columns (e.g. via `LightCurve.from_arrays(..., aux={"airmass": ...})`), pyvartools propagates them by name so commands can reference them directly.
+- **`run_file()` and `run_filelist()`** — the file is read directly from disk, so you tell pyvartools its column layout through the `columns` / `perpoint_columns` parameter.
 
 ### Specifying columns for disk-based runs
 
@@ -640,10 +625,7 @@ result = pipe.run_file(
 
 ### Automatic discovery in memory-based runs
 
-A `-inputlcformat` flag is emitted automatically whenever the `LightCurve`
-column layout differs from the default `[t, mag, err]` — whether that means
-extra columns are present, standard columns are absent, or the order is
-non-standard.
+Extra (or non-standard) columns on a `LightCurve` are propagated automatically — pyvartools makes them available to commands by name without you having to declare anything.
 
 ```python
 import numpy as np
@@ -655,31 +637,27 @@ mag     = 10.0 + 0.1 * np.sin(2 * np.pi * t / 2.3)
 err     = np.full(500, 0.01)
 airmass = 1.0 + 0.5 * np.abs(np.sin(np.pi * t / 15.0))
 
-# Extra column
+# Extra column "airmass" — directly referenceable in cmd.expr, cmd.linfit, etc.
 lc = vt.LightCurve.from_arrays(t, mag, err, aux={"airmass": airmass})
-# → -inputlcformat t:1,mag:2,err:3,airmass:4  (auto-generated)
 result = vt.Pipeline().rms().run(lc)
 
-# Only t and mag — vartools receives -inputlcformat t:1,mag:2
+# Only t and mag — fine; commands that don't need err just won't see it.
 lc2 = vt.LightCurve.from_arrays(t=t, mag=mag)
 result2 = vt.Pipeline().rms().run(lc2)
 
-# No standard columns at all — only custom vectors
+# No standard columns at all — only custom vectors named "phase" and "flux".
 phase_arr = (t % 2.3) / 2.3
 flux_arr  = 1.0 - 0.01 * np.sin(2 * np.pi * phase_arr)
 lc3 = vt.LightCurve.from_arrays(aux={"phase": phase_arr, "flux": flux_arr})
-# → -inputlcformat phase:1,flux:2
 ```
 
-The same applies to `run_batch()` — all light curves in the batch should share
-the same column structure, as a single `-inputlcformat` is inferred from the
-first light curve and applied to the whole batch.
+The same applies to `run_batch()` — all light curves in the batch should share the same column structure, since the layout is inferred from the first light curve and applied to the whole batch.
 
 ---
 
 ## Initialised LC variables (`perpoint_vars`)
 
-vartools supports a special column number `0` in `-inputlcformat`. Instead of reading a value from a file column, vartools **creates a per-observation variable** and initialises it from an analytic expression. This is useful for creating mask flags, synthetic indices, or any per-point derived quantity before the pipeline begins.
+`perpoint_vars` lets you **create a new per-observation variable** on each light curve before the pipeline runs, initialising it from an analytic expression rather than reading it from a file column.  This is useful for creating mask flags, synthetic indices, or any per-point derived quantity that downstream commands can reference.
 
 The expression is evaluated once per observation. The special variable `NR` holds the 0-based observation index.
 
@@ -694,12 +672,12 @@ PerPointVar(type="double", init="0")
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `type` | `str` | `"double"` | Variable type: `"double"`, `"float"`, `"int"`, `"long"`, `"short"`, `"string"`, `"char"`, or `"utc"`. |
-| `init` | `str` | `"0"` | Initialisation expression. May reference `NR` (0-based obs index) or other variables already defined by earlier `-inputlcformat` entries. |
+| `init` | `str` | `"0"` | Initialisation expression. May reference `NR` (0-based obs index) or other per-point variables already defined on the light curve. |
 
 Pass a `dict[str, PerPointVar]` as `perpoint_vars` to any run method. The dictionary key is the variable name used inside vartools commands.
 
 !!! note
-    Supplying `perpoint_vars` **replaces** vartools' implicit default column mapping. pyvartools prepends `t:1,mag:2,err:3` automatically so the standard columns remain mapped. If your light curve has a non-standard column layout, also supply the `columns` parameter (`run_file`/`run_filelist`) or use a `LightCurve` with the correct column names (`run`/`run_batch`).
+    `perpoint_vars` is for **creating new** per-observation variables. If your light curve has a non-standard layout of the actual data columns (e.g. time is not in column 1), use `columns` / `perpoint_columns` on `run_file()` / `run_filelist()` (or pass a `LightCurve` with the correct column names for `run()` / `run_batch()`) to declare the layout — the standard columns continue to work alongside any `perpoint_vars` entries you add.
 
 ### Examples
 
