@@ -1,37 +1,18 @@
 # Pipeline
 
-`Pipeline` is an alternative to the [Chaining API](chaining.md). Use it when:
+A `Pipeline` is an ordered sequence of VARTOOLS analysis commands that can be applied to one or more light curves. The same `Pipeline` instance may be reused for any number of light curves; commands are appended to it once and then executed by calling one of the `run_*` methods.
 
-- **You're running a survey-scale batch.** `run_batch()` and
-  `run_filelist()` process all the light curves in one call, amortising
-  setup cost across the whole batch and supporting multi-threaded
-  parallel processing via `nthreads=N`.
-- **You want to attach per-LC values that aren't simple command
-  parameters.** `perlc_vars` lets you supply a different value per
-  light curve for things like search period bounds, output filenames,
-  or metadata referenced by name in analytic expressions.
-- **You want to initialise per-observation variables before the chain
-  runs.** `perpoint_vars` lets you create custom per-point variables
-  (masks, weights, indices) without modifying your light curves.
-- **You want to reuse the same command sequence many times.** A
-  `Pipeline` instance can be run repeatedly against different inputs.
-- **Your light curves are already on disk and you don't want to round-trip
-  through Python.** `run_file()` and `run_filelist()` read the files
-  directly.
-- **You need to checkpoint a long-running job.** Set `stats_file=PATH`
-  to flush statistics to disk as each light curve completes, and
-  `resume=True` to pick up where a killed run left off.  See
-  [Streaming output and resume](#streaming-output-and-resume).
-- **You want to validate the pipeline shape before running it.**
-  `Pipeline.validate()` returns the list of output column names the
-  pipeline would produce, or raises `PipelineValidationError` if the
-  pipeline is malformed — useful for fast turnaround during pipeline
-  construction.
+A `Pipeline` is the natural form for:
 
-A `Pipeline` is built by chaining command builders and run on one or more
-light curves. The same `Pipeline` produces identical results regardless
-of which execution path pyvartools chooses internally; you don't need to
-think about it.
+- Batch analyses — `run_batch()` and `run_filelist()` execute the full chain in a single call across all input light curves, which is more efficient than running commands one at a time for large numbers of light curves. With `nthreads=N` the work is distributed across multiple threads.
+- Per-LC value injection — `perlc_vars` supplies a different value per light curve for parameters such as search period bounds, output filenames, or metadata referenced by name in analytic expressions.
+- Per-observation variable initialisation — `perpoint_vars` creates custom per-point variables (masks, weights, indices) before the chain begins.
+- Direct processing of files on disk — `run_file()` and `run_filelist()` avoid Python-side I/O.
+- Checkpointed long-running runs — `stats_file=PATH` flushes statistics to disk as each light curve completes; `resume=True` restarts from the point of interruption.
+
+See [`validate()`](#validate) for a method to verify pipeline correctness and inspect the column structure of the output table without processing any data.
+
+The [Chaining API](chaining.md) is an alternative form, in which commands are invoked one at a time as methods on a `LightCurve` or `Result`. It is more convenient for interactive and one-off use, but carries per-step overhead and does not support per-LC array parameters or per-observation variable injection.
 
 ---
 
