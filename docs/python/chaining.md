@@ -1,11 +1,6 @@
 # Method Chaining API
 
-pyvartools exposes every VARTOOLS command as a method directly on
-`LightCurve`, `Result`, `LightCurveBatch`, and `BatchResult`.
-
-Every command method executes **immediately** and returns a result object —
-there is no separate "deferred chain" step or `.run()` call needed on
-`LightCurve` or `Result`.
+pyvartools exposes every VARTOOLS command as a method on `LightCurve`, `Result`, `LightCurveBatch`, and `BatchResult`. Commands invoked on a `LightCurve` or `Result` execute immediately and return a `Result`; commands invoked on a `LightCurveBatch` or `BatchResult` are deferred and added to a chain, which is then executed by calling `.run()`. The table below summarises the four cases.
 
 | Object | `CMD(...)` returns | Notes |
 |--------|--------------------|-------|
@@ -39,8 +34,7 @@ print(result.lc)   # output LightCurve
 
 ### Chaining multiple commands
 
-Because each call returns a `Result`, you can chain commands using Python's
-normal method-call syntax. Each step is a separate vartools invocation:
+Because each call returns a `Result`, commands can be chained using Python's normal method-call syntax. Each step is a separate vartools invocation:
 
 ```python
 result = lc.clip(sigclip=5.0).LS(0.5, 10.0, 0.1).rms()
@@ -53,7 +47,7 @@ The output variables from all commands in the chain are available together in
 the final `result.vars` and `result.varobjs` — the same as if you had run them
 all in a single `Pipeline`.
 
-You can also branch the chain from any intermediate point:
+The chain may also be branched from any intermediate point:
 
 ```python
 r_clip = lc.clip(sigclip=5.0)        # Result after clipping
@@ -63,7 +57,7 @@ r_bls = r_clip.BLS(qmin=0.01, qmax=0.1, minper=0.5, maxper=10.0,
                    nfreq=10000, nbins=200)  # branch: BLS on same clipped LC
 ```
 
-### For maximum efficiency: use Pipeline
+### Pipeline as an alternative for long chains
 
 Each `.CMD()` call on `LightCurve` or `Result` carries some per-step overhead. When running many commands, a single `Pipeline` invocation may be faster:
 
@@ -142,7 +136,7 @@ except NotImplementedError as exc:
     print(exc)   # "-columnsuffix is a pipeline-stateful command …"
 ```
 
-Use `Pipeline` when you need these commands:
+`Pipeline` is required when these commands are needed:
 
 ```python
 from pyvartools import commands as cmd
