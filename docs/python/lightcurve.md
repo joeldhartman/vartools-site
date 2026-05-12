@@ -14,22 +14,35 @@ light curve identifier in its output table.
 
 ## Construction methods
 
-### `LightCurve.from_file(path, format=None, t_col='BJD', mag_col='Mag', err_col='Err', hdu=1, name='')`
+### `LightCurve.from_file(path, format=None, t_col=<unset>, mag_col=<unset>, err_col=<unset>, hdu=1, name='')`
 
 Load a light curve from disk. The file format is auto-detected from the file
 extension:
 
 - Files whose names end in `.fits`, `.fit`, or `.fts` (case-insensitive) are
-  read as FITS binary tables using `astropy.io.fits`. The keyword arguments
-  `t_col`, `mag_col`, `err_col`, and `hdu` select which FITS columns map to
-  `t`, `mag`, and `err`, and which HDU to use (default: HDU 1, the first
-  extension). All remaining table columns are preserved as auxiliary columns.
-- All other files are treated as whitespace-delimited ASCII. If the file has
-  three or more columns the first three are named `t`, `mag`, `err` and any
-  further columns are named `col4`, `col5`, …  If the file has fewer than
-  three columns the columns are named `col1`, `col2`, … (since the semantic
-  meaning cannot be inferred). All columns are passed to vartools
-  automatically via `-inputlcformat` when a `Pipeline` run method is called.
+  read as FITS binary tables using `astropy.io.fits`. Every column in the
+  table HDU is loaded into the resulting LightCurve under its original FITS
+  column name. The user must explicitly tell `from_file` which (if any)
+  columns correspond to `t`, `mag`, and `err` via `t_col=`, `mag_col=`,
+  `err_col=`:
+
+    - Pass a string FITS column name to map that column to `t/mag/err`.
+    - Pass `None` to indicate the LC has no such column (vartools defaults
+      `t=NR`, `mag=0`, `err=1` at run time).
+    - Leaving any of the three unset raises `ValueError` listing the
+      available FITS columns so you can decide.
+
+- ASCII files (anything not matching the FITS extensions) are
+  whitespace-delimited. If the file has three or more columns the first
+  three are named `t`, `mag`, `err` and any further columns are named
+  `col4`, `col5`, ….  If the file has fewer than three columns the columns
+  are named `col1`, `col2`, … (since the semantic meaning cannot be
+  inferred).  Compressed ASCII files (`.gz`, `.Z`, `.bz2`) are detected by
+  extension and read transparently. `t_col`, `mag_col`, `err_col` are
+  FITS-specific and have no effect for ASCII inputs.
+
+All columns present in the resulting DataFrame are passed to vartools
+automatically via `-inputlcformat` when a `Pipeline` run method is called.
 
 `name` defaults to the stem of `path` (filename without directory or
 extension) if not supplied.
@@ -44,13 +57,22 @@ extension) if not supplied.
 # ASCII, columns 1-2-3
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
-# FITS binary table with default column names (BJD, Mag, Err)
-lc = vt.LightCurve.from_file("EXAMPLES/example.fits")
+# Gzipped ASCII — handled transparently.
+lc_gz = vt.LightCurve.from_file("EXAMPLES/1.gz")
 
-# FITS with non-default column names (here: time, mag, err instead of BJD, Mag, Err)
+# FITS: explicit column mapping is required.  All FITS columns also land
+# in the LC's DataFrame under their original names.
 lc = vt.LightCurve.from_file(
-    "EXAMPLES/2.fits", t_col="time", mag_col="mag", err_col="err"
+    "EXAMPLES/2.fits",
+    t_col="time", mag_col="mag", err_col="err",
 )
+# lc._df.columns == ['t', 'mag', 'err', 'time', 'mag', 'err', ...]
+
+# FITS where no t-equivalent column exists — pass None, and vartools
+# defaults t=NR at run time.
+# lc = vt.LightCurve.from_file(
+#     "no_time.fits", t_col=None, mag_col="flux", err_col="flux_err",
+# )
 ```
 
 ---
@@ -109,7 +131,10 @@ lc2 = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"], sort=False)
 lc3 = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"], lcnum_col="segment")
 ```
 
-For FITS inputs with non-default column names, forward the keyword arguments to `from_file`:
+For FITS inputs, forward the required `t_col=` / `mag_col=` / `err_col=`
+keyword arguments to `from_file` (FITS has no defaults — see the
+[`from_file` description](#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name)
+for the rationale):
 
 ```python
 # lc = vt.LightCurve.from_files(
@@ -470,8 +495,11 @@ import pyvartools as vt
 # From file (auto-detects ASCII)
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 
-# From FITS (default column names BJD, Mag, Err — no t_col/mag_col/err_col needed)
-lc = vt.LightCurve.from_file("EXAMPLES/example.fits")
+# From FITS — t_col/mag_col/err_col are required (no defaults).  Pass the
+# matching FITS column names, or None for any LC that doesn't have that
+# column.
+lc = vt.LightCurve.from_file("EXAMPLES/example.fits",
+                              t_col="BJD", mag_col="Mag", err_col="Err")
 
 # From arrays
 t = np.linspace(0, 30, 300)
