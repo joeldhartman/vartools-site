@@ -1,14 +1,6 @@
 # LightCurve
 
-`pyvartools.LightCurve` is the primary data container for a single photometric
-time series. Internally it stores data in a pandas DataFrame. The three
-standard columns — `t` (time), `mag` (magnitude), and `err` (magnitude
-uncertainty) — are treated specially when present, but **all three are
-optional**. Any combination of columns is accepted; VARTOOLS reads whatever
-is in the file and uses the column mapping supplied via `-inputlcformat`
-(which pyvartools constructs automatically) to identify each vector. An
-optional `name` attribute provides a string label that VARTOOLS uses as the
-light curve identifier in its output table.
+`pyvartools.LightCurve` is the primary data container for a single photometric time series. Internally it stores data in a pandas DataFrame. The three standard columns — `t` (time), `mag` (magnitude), and `err` (magnitude uncertainty) — are treated specially when present, but all three are optional; any combination of columns is accepted, and pyvartools automatically informs VARTOOLS of the column layout when the light curve is processed. An optional `name` attribute provides a string label that VARTOOLS uses as the light curve identifier in its output table.
 
 ---
 
@@ -82,11 +74,7 @@ lc = vt.LightCurve.from_file(
 Construct a `LightCurve` directly from NumPy arrays (or anything that converts
 to a 1-D NumPy array). All three arrays must have the same length.
 
-`t`, `mag`, and `err` are all optional — pass `None` (or omit them) when
-VARTOOLS will generate or ignore those vectors internally. `aux` is an
-optional dict for any additional named columns. All columns present in the
-DataFrame are written to the temporary input file; pyvartools constructs a
-`-inputlcformat` flag automatically so VARTOOLS can identify each one by name.
+`t`, `mag`, and `err` are all optional — pass `None` (or omit them) when VARTOOLS will generate or ignore those vectors internally. `aux` is an optional dict for any additional named columns. All columns present in the resulting DataFrame are accessible by name to any command when a `Pipeline` run method is called.
 
 ```python
 import numpy as np
@@ -98,17 +86,14 @@ airmass = 1.0 + 0.5 * np.abs(np.sin(np.pi * t / 15.0))
 
 # Standard three columns plus an extra
 lc = vt.LightCurve.from_arrays(t, mag, err, aux={"airmass": airmass}, name="my_star")
-# → -inputlcformat t:1,mag:2,err:3,airmass:4 (built automatically)
 
 # Only t and mag — no uncertainty column
 lc2 = vt.LightCurve.from_arrays(t=t, mag=mag)
-# → -inputlcformat t:1,mag:2
 
 # Only auxiliary data — no standard columns at all
 phase_arr = (t % 2.3) / 2.3          # phase-fold at 2.3 d period
 flux_arr  = 1.0 - 0.01 * np.sin(2 * np.pi * phase_arr)
 lc3 = vt.LightCurve.from_arrays(aux={"phase": phase_arr, "flux": flux_arr})
-# → -inputlcformat phase:1,flux:2
 ```
 
 ---
@@ -117,7 +102,7 @@ lc3 = vt.LightCurve.from_arrays(aux={"phase": phase_arr, "flux": flux_arr})
 
 Read several light-curve files and combine them into a single `LightCurve`. Each file is loaded via [`from_file`](#lightcurvefrom_filepath-formatnone-t_colbjd-mag_colmag-err_colerr-hdu1-name), the resulting frames are concatenated, and an integer `lcnum_col` is filled in (0 for the first file, 1 for the second, …). The combined frame is time-sorted by default.
 
-Use this when you want to feed a single combined LC to `Pipeline.run(lc)` or to any non-batch entry point. (For combining files inside the pipeline run itself, see [`Pipeline.run_combinelc()` / `run_combinelcs()`](pipeline.md#run_combinelc).)
+`from_files` is appropriate when a single combined LC needs to be fed to `Pipeline.run(lc)` or to any non-batch entry point. (For combining files inside the pipeline run itself, see [`Pipeline.run_combinelc()` / `run_combinelcs()`](pipeline.md#run_combinelc).)
 
 ```python
 lc = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"])
@@ -452,7 +437,7 @@ column is present, otherwise falls back to `ax.plot`. The y-axis is
 inverted automatically to match astronomical magnitude convention; the
 light curve's `name` is used as the plot title when set. Any keyword
 arguments are forwarded to the underlying `errorbar` / `plot` call, so
-you can override defaults like `fmt`, `markersize`, `color`, etc.
+defaults like `fmt`, `markersize`, `color`, etc. can be overridden.
 
 Raises `ValueError` if the light curve has no `t` or `mag` column.
 Requires matplotlib.
