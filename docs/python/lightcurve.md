@@ -117,7 +117,7 @@ lc3 = vt.LightCurve.from_arrays(aux={"phase": phase_arr, "flux": flux_arr})
 
 Read several light-curve files and combine them into a single `LightCurve`. Each file is loaded via [`from_file`](#lightcurvefrom_filepath-formatnone-t_colbjd-mag_colmag-err_colerr-hdu1-name), the resulting frames are concatenated, and an integer `lcnum_col` is filled in (0 for the first file, 1 for the second, …). The combined frame is time-sorted by default.
 
-This is the Python-side counterpart to vartools' `-l ... combinelcs` mode — useful when you want to feed a single combined LC to `Pipeline.run(lc)` or to any non-batch entry point. (For vartools' built-in combine path, see [`Pipeline.run_combinelc()` / `run_combinelcs()`](pipeline.md#run_combinelcfiles-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-columnsnone-init_lc_varsnone-inlistvarsnone-lcnumvarlcnum-delimiter-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse--result).)
+Use this when you want to feed a single combined LC to `Pipeline.run(lc)` or to any non-batch entry point. (For combining files inside the pipeline run itself, see [`Pipeline.run_combinelc()` / `run_combinelcs()`](pipeline.md#run_combinelc).)
 
 ```python
 lc = vt.LightCurve.from_files(["EXAMPLES/2", "EXAMPLES/3"])

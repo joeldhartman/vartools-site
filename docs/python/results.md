@@ -119,19 +119,19 @@ pgram = result.files["LS_periodogram_0"]   # pd.DataFrame with frequency/power c
 pgram.plot(x=0, y=1)
 ```
 
-### Per-star scalars — `result.lc.scalars`
+### Per-LC scalars — `result.lc.scalars`
 
-Per-star scalars (vectortype `SCALAR`, `PERSTARDATA`, or `INLIST`) are
-stored directly on the captured light curve at
-[`LightCurve.scalars`](lightcurve.md#scalars).  These come from `-expr
-scalar ...`, `-expr listvar ...`, or `-inlistvars`.  Keys are the raw
+Per-LC scalar values produced by the pipeline are stored on the
+captured light curve at
+[`LightCurve.scalars`](lightcurve.md#scalars).  These cover scalar
+variables created by `cmd.expr(vartype="scalar")` / `cmd.expr(vartype="listvar")`,
+plus any `perlc_vars` entries supplied at run time.  Keys are the raw
 variable names with no `_N` suffix, in contrast to `result.vars`, which
 holds OUTCOLUMN values whose names carry a `_N` suffix reflecting the
 command's position (e.g. `"LS_Period_1_0"`).
 
-pyvartools enables the underlying [`-printallscalars`](../cli/options.md#-printallscalars)
-option automatically when running chained commands, so user-defined
-scalars round-trip into `result.lc.scalars` with no extra configuration.
+Scalar values round-trip into `result.lc.scalars` with no extra
+configuration when running chained commands.
 
 ```python
 # -expr scalar creates a SCALAR variable — it lives in lc.scalars, not .vars

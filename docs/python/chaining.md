@@ -1,8 +1,7 @@
 # Method Chaining API
 
 pyvartools exposes every VARTOOLS command as a method directly on
-`LightCurve`, `Result`, `LightCurveBatch`, and `BatchResult`, eliminating the
-need to construct an explicit `Pipeline` for most tasks.
+`LightCurve`, `Result`, `LightCurveBatch`, and `BatchResult`.
 
 Every command method executes **immediately** and returns a result object —
 there is no separate "deferred chain" step or `.run()` call needed on
@@ -135,10 +134,9 @@ suffixes continue the numbering from where the prior one left off
 `-printallscalars` so any new scalar state round-trips back to
 `result.lc.scalars`.
 
-For batch chains (continuations from a `BatchResult`), the per-LC scalar
-values are injected via `-inlistvars` list-file columns instead of
-`-expr const`, so each LC sees its own value rather than a shared
-constant. This is done automatically by `LightCurveBatch.run()`.
+For batch chains (continuations from a `BatchResult`), each LC sees its
+own per-LC scalar values rather than a shared constant.  This is done
+automatically by `LightCurveBatch.run()`.
 
 See [`LightCurve.scalars`](lightcurve.md#scalars),
 [`BatchResult.lcscalars`](results.md#lcscalars-pddataframe),

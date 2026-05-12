@@ -262,9 +262,8 @@ This mode of processing can be used to merge light curve files from multiple tel
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
 | `columns` | `list[str]`, `dict`, or `None` | Column specification passed to vartools as `-inputlcformat`. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. |
-| `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-star variables read from columns of an existing list file or initialised from an expression. See [Per-star variables](#per-star-variables-inlistvars). For attaching Python values to each segment / group, use `perlcsegment_vars` / `perlc_vars` below — they auto-build the list-file column. |
-| `perlcsegment_vars` | `dict` or `None` | Per-segment variables to broadcast across the points of each input file. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])` — one value per segment. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `-stitch` that take a per-observation string field label. |
-| `perlc_vars` | `dict` or `None` | Per-LC scalar variables, one value per group (length `len(groups)`). Tuple form `(values, type)` overrides the auto-detected type. Used to attach metadata such as star names that the pipeline references via vartools variable names (e.g. the `starnamevar` of `-stitch shifts_file`). |
+| `perlc_vars` | `dict` or `None` | Per-LC variables, one value per group (length `len(groups)`). Accepts a sequence of values, a `(values, type)` tuple to override the auto-detected type, or schema entries (`int` or `PerLCColumn`) that reference a column in an existing list file. See [Per-LC variables](#per-lc-variables-perlc_vars). |
+| `perlcsegment_vars` | `dict` or `None` | Per-segment variables, with a value for each segment within each group. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])`. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `stitch` that need a per-segment label. |
 | `lcnumvar` | `str` or `None` | Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out of emitting the `lcnumvar` qualifier. |
 | `delimiter` | `str` | Delimiter used to join paths within a group in the list file. Default `","` (the vartools `combinelcs` default). The same delimiter is used for `perlcsegment_vars` sub-columns. |
 | `randseed` | `int` or `None` | Pass `-randseed N` to vartools. |
@@ -756,9 +755,9 @@ print(result.vars["RMS_1"])
 
 ---
 
-## Per-star variables (`perlc_vars`)
+## Per-LC variables (`perlc_vars`)
 
-vartools `-inlistvars` defines **per-star (scalar) variables** read from extra columns in the input list file, one value per light curve. These variables are accessible to commands like `LS`, `aov`, and `BLS` via the `var` keyword (e.g. `minp="myperiod"` in `cmd.LS`).
+`perlc_vars` defines **per-LC scalar variables** — one value per light curve in the batch.  These variables are accessible to commands like `LS`, `aov`, and `BLS` by name (e.g. `minp="myperiod"` in `cmd.LS`).
 
 ### `PerLCColumn`
 
@@ -807,7 +806,7 @@ batch = pipe.run_filelist(
 print(batch.vars[["Name", "LS_Period_1_0"]])
 ```
 
-Here `minp="myperiod"` is a bare identifier string, so pyvartools emits `var myperiod` — a per-star variable read from the list file.
+Here `minp="myperiod"` is a bare identifier string, so each LC's `minp` is taken from its row of the `myperiod` column.
 
 **Expression-initialised per-star variable (`col=0`) using the line number `NF`:**
 
@@ -932,13 +931,7 @@ Any numeric parameter listed above can be passed as a number (fixed), a string v
 
 ### How it works
 
-When `run_batch()` detects a per-LC array on any command parameter, it:
-
-1. Adds the values as an extra column in the temporary list file it writes for vartools.
-2. Passes `-inlistvars name:col` to vartools so the column is loaded as a named per-star variable.
-3. Replaces the parameter value in the command with the variable name, emitting `var name` in the vartools CLI.
-
-This is all automatic — no manual list file or `-inlistvars` specification is needed.
+When `run_batch()` detects a per-LC array on any command parameter, the value is automatically registered as a per-LC variable (one entry per LC) and the command's parameter is rewritten to read from it. This is all transparent — you don't need to set up `perlc_vars` yourself.
 
 ### Constraints
 
@@ -949,11 +942,12 @@ This is all automatic — no manual list file or `-inlistvars` specification is 
 
 !!! tip "Need per-LC values on unsupported parameters?"
     `Pipeline.run_batch()` only supports per-LC arrays for the parameters listed
-    in the table above, because it relies on vartools' `-inlistvars` / `var varname`
-    mechanism.  If you need to vary a parameter that is **not** in the supported
-    list — for example `harmonicfilter.period`, `MandelAgolTransit.P0`, or any parameter
-    on a custom command — use [`LightCurveBatch`](chaining.md#batch-chaining-lightcurvebatch)
-    instead.  `LightCurveBatch` resolves arrays to scalars in Python before each
+    in the table above — those are the parameters that vartools knows how to
+    read from a named per-LC variable.  If you need to vary a parameter that is
+    **not** in the supported list — for example `harmonicfilter.period`,
+    `MandelAgolTransit.P0`, or any parameter on a custom command — use
+    [`LightCurveBatch`](chaining.md#batch-chaining-lightcurvebatch) instead.
+    `LightCurveBatch` resolves arrays to scalars in Python before each
     individual run, so it works for **any** parameter on **any** command with no
     restrictions.  The trade-off is one vartools invocation per light curve rather
     than one for the entire batch.

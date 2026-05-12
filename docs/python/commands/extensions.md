@@ -503,7 +503,7 @@ print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
 
 #### Per-segment field labels and per-LC star names with `shifts_file`
 
-`shifts_file=(fieldlabelsvar, starnamevar)` enables shifts-file mode, which writes (and optionally reads) measured offsets keyed by a per-observation field label and per-LC star name. The two variables are different vector types in vartools — `fieldlabelsvar` is a per-point string (one value broadcast across all rows of a segment) and `starnamevar` is a per-LC scalar — so they need to be supplied differently. The `perlcsegment_vars` and `perlc_vars` keywords on `run_combinelc()` / `run_combinelcs()` build the right list-file columns automatically:
+`shifts_file=(fieldlabelsvar, starnamevar)` enables shifts-file mode, which writes (and optionally reads) measured offsets keyed by a per-observation field label and per-LC star name.  The two values play different roles: `fieldlabelsvar` is a per-segment label (one value for each input file in the combined LC) and `starnamevar` is a single value for the combined LC as a whole.  Supply them through the matching `perlcsegment_vars` and `perlc_vars` keywords on `run_combinelc()` / `run_combinelcs()`:
 
 ```python
 import pyvartools as vt
