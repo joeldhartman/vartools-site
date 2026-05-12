@@ -101,10 +101,10 @@ CLI equivalent: [`-o`](../../cli/control-flow.md#-o).
 | `noclobber` | `bool` | Do not overwrite an existing output file. |
 | `copyheader` | `bool` | Copy the FITS header from the input file to the output file. |
 | `namecommand` | `str` or `None` | Shell command used to generate the output filename dynamically (list mode only). |
-| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list (list mode only). `True` uses the default column; a string specifies a column name/number (emits `namefromlist column <col>`). To supply per-LC output names from Python rather than from a column already on the list file, pass the names via `perlc_vars` on `run_batch()` or `LightCurveBatch.run()` — see [Per-LC values from Python](../pipeline.md#per-lc-values-from-python). |
+| `namefromlist` | `bool`, `str`, or `None` | Derive output filename from the input list (list mode only). `True` uses the default column; a string specifies a per-LC variable name to read the basename from. To supply per-LC output names from Python rather than from a column already on the list file, pass the names via `perlc_vars` on `run_batch()` or `LightCurveBatch.run()` — see [Per-LC values from Python](../pipeline.md#per-lc-values-from-python). |
 | `changesuffix` | `tuple[str, str]` or `None` | After the default basename has been built, strip a trailing `old_suffix` (if present) and append `new_suffix`. Either may be empty. Applied **before** any `fits` / `gzip` / `bzip2` suffix. Mutually exclusive with `nameformat` / `namecommand` / `namefromlist`. E.g. `changesuffix=(".fits", ".txt")` rewrites `foo.fits` → `foo.txt`. List-mode only. |
 | `delimiter` | `str` or `None` | Column delimiter character for the output file (default: whitespace). |
-| `logcommandline` | `bool` | Write the full vartools command line into the output file header. |
+| `logcommandline` | `bool` | Record the full pipeline invocation into the output file header (for provenance). |
 | `gzip` / `bzip2` | `bool` | Compress the output. The corresponding `.gz` / `.bz2` extension is appended if not already present, and the data are piped through the `gzip` or `bzip2` external program (must be on `PATH`). Combined with `fits=True`, `gzip=True` produces a gzip-compressed FITS file via cfitsio's native `.fits.gz` driver; `bzip2=True` cannot be combined with `fits=True`. Compression cannot be combined with stdout (`outname="-"`) when `fits=True`. Compressed inputs (`.gz`, `.Z`, `.bz2` for ASCII; `.fits.gz`, `.fits.fz`, `.fits.Z`, `.fits.bz2` for FITS) are auto-detected and decompressed on read. Mutually exclusive. |
 | `capture` | `bool` | If `True`, capture the written light curve into `result.files[key]`. For single-LC runs this is a `LightCurve`; for batch runs it is a list of `LightCurve` objects. When neither `outname` nor `outdir` is supplied, the output goes to a mode-appropriate temporary path that is cleaned up automatically. Default `False`. |
 | `key` | `str` | Key under which the captured LC(s) appear in `result.files`. Default `"o"`. Use a unique key when the pipeline contains more than one `cmd.o(capture=True)`. |
@@ -268,9 +268,9 @@ cmd.print_cols(variables, columnnames=None, fmt=None)
 
 **Description**
 
-Include the values of one or more user-computed variables (e.g. results of `-expr` commands, list-input columns, or carried-forward scalars) as additional columns in the per-LC statistics table. This is the primary way to surface user-defined scalars in the final results table. Light-curve vectors are reduced to their first element.
+Include the values of one or more user-computed variables (e.g. results of `expr` commands, per-LC variables from `perlc_vars`, or carried-forward scalars) as additional columns in the per-LC statistics table. This is the primary way to surface user-defined scalars in the final results table. Light-curve vectors are reduced to their first element.
 
-The Python wrapper class is named `print_cols` because `print` is a Python built-in; the underlying CLI command is `-print`.
+The Python class is named `print_cols` because `print` is a Python built-in.
 
 CLI equivalent: [`-print`](../../cli/control-flow.md#-print).
 
@@ -412,16 +412,16 @@ cmd.ficmd()
 
 **Description**
 
-Build a conditional block using the four vartools flow-control commands (`-if`, `-elif`, `-else`, `-fi`). Each wrapper emits a single CLI token; `ifcmd` and `elifcmd` additionally take the condition expression as a single token. A block **must** be closed with `ficmd()`. Nested blocks are supported.
+Build a conditional block: commands placed between `ifcmd(...)` / `elifcmd(...)` / `elsecmd()` and the closing `ficmd()` execute only when the corresponding condition is satisfied. A block **must** be closed with `ficmd()`. Nested blocks are supported.
 
 If `condition` evaluates to `0` (cast to integer), commands inside that branch are skipped; any non-zero integer value causes the branch to execute. Conditions may reference any per-LC scalar produced by an earlier command in the pipeline (e.g. `RMS_0`, `Log10_LS_Prob_1_0`).
 
-The classes are named `ifcmd` / `elifcmd` / `elsecmd` / `ficmd` because `if`, `elif`, `else`, and `fi` overlap with Python reserved words. The corresponding CLI tokens are `-if`, `-elif`, `-else`, `-fi`.
+The classes are named `ifcmd` / `elifcmd` / `elsecmd` / `ficmd` because `if`, `elif`, `else`, and `fi` overlap with Python reserved words.
 
 CLI equivalent: [`-if` / `-elif` / `-else` / `-fi`](../../cli/control-flow.md#-if-elif-else-fi).
 
 !!! caution
-    Conditional constructs are **ignored** by commands that process all light curves simultaneously (e.g. `-SYSREM`, `-findblends`) and by `savelc` / `restorelc` — those always execute.
+    Conditional constructs are **ignored** by commands that process all light curves simultaneously (`SYSREM`, `findblends`) and by `savelc` / `restorelc` — those always execute.
 
 **Parameters**
 

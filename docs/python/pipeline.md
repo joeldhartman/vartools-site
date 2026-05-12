@@ -178,7 +178,7 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `perpoint_columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns) below. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
 | `perlc_vars` | `dict[str, int \| PerLCColumn]` or `None` | Per-LC variables, read from columns of the on-disk list file (`int` or `PerLCColumn` — schema form only).  To supply values directly from Python, use `run_batch()` instead. |
-| `combinelcs` | `bool` | If `True`, append `combinelcs` to the `-l` flag — vartools then treats each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
+| `combinelcs` | `bool` | If `True`, treat each line of the list file as a *group* of comma-separated paths combined into one in-memory light curve before processing. The list file (or list of strings passed as `paths`) is responsible for the grouping; pyvartools does not split anything itself. PerLC parameter values are rejected when `combinelcs=True`. |
 | `lcnumvar` | `str` or `None` | Only used when `combinelcs=True`. Name of the per-observation integer variable vartools creates to record which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
 | `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
@@ -1076,7 +1076,7 @@ All commands with `save_*` parameters and their corresponding key patterns (comm
 
 ### `autocorrelation` — special case
 
-`autocorrelation` always writes its output file (the vartools CLI provides no option to suppress it). `save_result=False` suppresses Python capture but the file is still written to a temp directory and discarded after the run.
+`autocorrelation` always writes its output file (the command provides no option to suppress it). `save_result=False` suppresses Python capture but the file is still written to a temp directory and discarded after the run.
 
 ### Batch runs
 

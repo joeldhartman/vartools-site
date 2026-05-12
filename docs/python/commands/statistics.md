@@ -257,7 +257,7 @@ cmd.autocorrelation(start, stop, step, save_result=True, maskpoints=None)
 
 Compute the discrete autocorrelation function (DACF) of the magnitude series following Edelson and Krolik (1988). The DACF is sampled at lags from `start` to `stop` in steps of `step` (all in days). Unlike the original Edelson and Krolik formulation, the formal measurement uncertainties are used in the denominator rather than the variance, which avoids imaginary values when errors are over-estimated; precede with `-changeerror` (in the same Pipeline) to recover the variance-based form.
 
-The vartools CLI **always** writes the autocorrelation file to disk; `save_result=False` only suppresses Python capture. The file in that case is written to a temporary directory and discarded after the run.
+The autocorrelation output file is **always** written to disk; `save_result=False` only suppresses Python capture. The file in that case is written to a temporary directory and discarded after the run.
 
 CLI equivalent: [`-autocorrelation`](../../cli/statistics.md#-autocorrelation).
 
@@ -270,7 +270,7 @@ CLI equivalent: [`-autocorrelation`](../../cli/statistics.md#-autocorrelation).
 | `maskpoints` | `str` or `None` | Name of a mask variable; only points with `maskvar > 0` are included. |
 
 !!! note "File is always written"
-    The vartools CLI always writes the autocorrelation file to disk — there is no CLI option to suppress it. Setting `save_result=False` only suppresses Python capture; the file is still written to a temp directory and discarded after the run completes.
+    The autocorrelation output file is always written to disk — `autocorrelation` has no option to suppress the write. Setting `save_result=False` only suppresses Python capture; the file is still written to a temp directory and discarded after the run completes.
 
 **Output**
 

@@ -73,7 +73,7 @@ cmd.columnsuffix(suffix)
 
 **Description**
 
-Replace the default 0-based command-index suffix on subsequent commands' output column names with a user-supplied string. By default vartools appends the command's pipeline position (e.g. `LS_Period_1_0`, `LS_Period_1_1`) to every output column; `columnsuffix` substitutes `suffix` instead, making column names predictable regardless of the command's position in the pipeline. The suffix applies to all commands that follow until another `columnsuffix` is encountered.
+Replace the default 0-based command-index suffix on subsequent commands' output column names with a user-supplied string. By default each command's output column names carry its pipeline position as a suffix (e.g. `LS_Period_1_0`, `LS_Period_1_1`); `columnsuffix` substitutes `suffix` instead, making column names predictable regardless of the command's position in the pipeline. The suffix applies to all commands that follow until another `columnsuffix` is encountered.
 
 This command does not produce any per-light-curve statistics output of its own.
 

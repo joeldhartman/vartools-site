@@ -301,11 +301,11 @@ CLI equivalent: [`-MandelAgolTransit`](../../cli/model-fitting.md#-mandelagoltra
 | `r0` | `float` | Initial planet-to-star radius ratio. |
 | `a0` | `float` | Initial semi-major axis in stellar radii. |
 | `inclination` | `float` | Initial orbital inclination in degrees. Used when `bimpact` is `None`. |
-| `bimpact` | `float` or `None` | Initial impact parameter. When set, replaces `inclination` in the CLI (`"b" bimpact` instead of `"i" inclination`). |
+| `bimpact` | `float` or `None` | Initial impact parameter. When set, used in place of `inclination` to parameterise the orbital geometry. |
 | `e0`, `omega0`, `mconst0` | `float` | Initial eccentricity, argument of periastron (degrees), and out-of-transit magnitude (negative `mconst0` ⇒ estimate from the data). |
 | `ld_type` | `str` | Limb-darkening law: `"quad"` (2 coefficients) or `"nonlin"` (4 Claret coefficients). |
 | `ld_coeffs` | list | Initial limb-darkening coefficients. Default `[0.3, 0.3]`. |
-| `fitephem` | `int` | Fit the transit epoch and period together (0 = fixed, 1 = free). The CLI `fitephem` flag controls both simultaneously. |
+| `fitephem` | `int` | Fit the transit epoch and period together (0 = fixed, 1 = free). Both parameters are toggled simultaneously. |
 | `fitr`, `fita`, `fitinclterm`, `fite`, `fitomega`, `fitmconst` | `int` | Toggle fitting of each parameter (0 = fixed, 1 = free). |
 | `fitldcoeffs` | list of `int` or `None` | Toggle fitting of each limb-darkening coefficient. |
 | `rv_file` | `str` or `None` | Path to an RV data file (columns: JD, RV, RV-error). When provided, simultaneous RV fitting is enabled. |

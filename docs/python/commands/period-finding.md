@@ -925,7 +925,7 @@ CLI equivalent: [`-GetLSAmpThresh`](../../cli/period-finding.md#-getlsampthresh-
 | `noGLS` | `bool` | Use classical Lomb-Scargle instead of the generalised (GLS) form. |
 
 !!! tip "Back-reference for `period`"
-    `period` accepts the `"ls"` keyword to inherit the best period from the most recent prior `-LS`. Unlike most back-references, this is resolved by the vartools CLI itself — the CLI only understands `"ls"` / `"list"` and cannot take a bare number in this slot. Within a single `Pipeline` the keyword passes through verbatim. Across a chain boundary, pyvartools detects the mismatch and raises `NotImplementedError` when no prior `-LS` is present in the chain — in that case, use a single `Pipeline` invocation that includes the LS step.
+    `period` accepts the `"ls"` keyword to inherit the best period from the most recent prior `LS`. Unlike most back-references, this one is *only* meaningful in single-`Pipeline` usage and cannot take a bare number — only `"ls"` or `"list"` is accepted in this slot. Across a chain boundary the lookup is not supported; pyvartools raises `NotImplementedError` when no prior `LS` is present in the chain. In that case, use a single `Pipeline` invocation that includes the `LS` step.
 
 **Output**
 
@@ -994,20 +994,20 @@ For `aov_harm`:
 | `AOV_HARM_SNR_PeriodFix_N` | SNR at that period. |
 | `AOV_HARM_NEG_LN_FAP_PeriodFix_N` | `−ln(FAP)` at that period. Only when `nharm > 0`. |
 
-Accepted Python values and the CLI tokens they emit:
+Accepted Python values:
 
-| Python value | Emitted CLI tokens | When to use |
-|---|---|---|
-| `1.234` (number) | `fixperiodSNR fix 1.234` | Period known at pipeline-construction time. |
-| `"ls"` | `fixperiodSNR ls` | Use the best period found by the most recent prior `-LS` run. |
-| `"aov"` | `fixperiodSNR aov` | Use the best period found by the most recent prior `-aov` (or `-aov_harm`) run. |
-| `"injectharm"` | `fixperiodSNR injectharm` | Use the injected-signal period from a prior injection run. |
-| `"fixcolumn LS_Period_1_0"` | `fixperiodSNR fixcolumn LS_Period_1_0` | Read the period from a named per-star column. |
-| `"list"` | `fixperiodSNR list` | Read the period from the current list-file column. |
-| `"list column 2"` | `fixperiodSNR list column 2` | Read the period from column 2 of the list file. |
+| Python value | When to use |
+|---|---|
+| `1.234` (number) | Period known at pipeline-construction time. |
+| `"ls"` | Use the best period found by the most recent prior `LS` run. |
+| `"aov"` | Use the best period found by the most recent prior `aov` (or `aov_harm`) run. |
+| `"injectharm"` | Use the injected-signal period from a prior injection run. |
+| `"fixcolumn LS_Period_1_0"` | Read the period from a named per-LC variable. |
+| `"list"` | Read the period from a list-file column (list-mode runs only). |
+| `"list column 2"` | Read the period from column 2 of the list file. |
 
 !!! tip "Back-references work across chain steps"
-    `fixperiod_snr` accepts `"ls"`, `"aov"`, `"injectharm"`, and `"fixcolumn NAME"` in both single-Pipeline usage and across chain boundaries (e.g. `lc.LS(...).LS(fixperiod_snr="ls")`). When the keyword appears, pyvartools substitutes the concrete numeric value pulled from the prior `Result` before invoking vartools. The `"aov"` keyword picks the most recent prior `-aov` *or* `-aov_harm`, whichever ran later. `"fixcolumn NAME"` requires a column name (not a numeric column index) when used across a chain boundary. A missing prior command raises `LookupError`.
+    `fixperiod_snr` accepts `"ls"`, `"aov"`, `"injectharm"`, and `"fixcolumn NAME"` in both single-`Pipeline` usage and across chain boundaries (e.g. `lc.LS(...).LS(fixperiod_snr="ls")`). Across a chain boundary, pyvartools substitutes the concrete numeric value pulled from the prior `Result`. The `"aov"` keyword picks the most recent prior `aov` *or* `aov_harm`, whichever ran later. `"fixcolumn NAME"` requires a column name (not a numeric column index) when used across a chain boundary. A missing prior command raises `LookupError`.
 
 ---
 
@@ -1017,12 +1017,12 @@ Most numeric parameters throughout pyvartools accept variable names and expressi
 
 As an example, `minp`, `maxp`, and `subsample` on `LS` each accept four forms:
 
-| Value | Emitted CLI tokens | When to use |
-|-------|--------------------|-------------|
-| A number (`float` or `int`) | `0.5` | Fixed value known at pipeline-construction time. |
-| A bare identifier string, e.g. `"minperiod"` | `var minperiod` | Value is read from a named per-star vartools variable — typically one loaded from a list file via `run_filelist`. |
-| Any other string, e.g. `"tspan/200"` | `expr tspan/200` | Evaluated as a math expression using vartools' built-in expression engine, per light curve. |
-| A numpy array, `PerLC`, or `pd.Series` | *(handled automatically)* | A different value for each light curve in a batch run. See [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| Value | When to use |
+|-------|-------------|
+| A number (`float` or `int`) | Fixed value known at pipeline-construction time. |
+| A bare identifier string, e.g. `"minperiod"` | Value is read from a named per-LC variable — typically one supplied via `perlc_vars` on the run method, or by an earlier command in the chain. |
+| Any other string, e.g. `"tspan/200"` | Evaluated as a math expression per light curve. |
+| A numpy array, `PerLC`, or `pd.Series` | A different value for each light curve in a batch run. See [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
 
 The identifier rule is: if the string matches `[A-Za-z_]\w*` it is treated as a variable name; otherwise it is treated as an expression.
 

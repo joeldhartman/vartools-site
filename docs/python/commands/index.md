@@ -89,7 +89,7 @@ In a batch run (`run_batch` / `run_filelist`) each key maps to a list of DataFra
 
 ### Note on `autocorrelation`
 
-`autocorrelation` is a special case: the vartools CLI always writes the output file regardless of the `save_result` setting. Passing `save_result=False` suppresses Python capture but the file is still written to a temp directory (and discarded after the run).
+`autocorrelation` is a special case: the output file is always written to disk regardless of the `save_result` setting. Passing `save_result=False` suppresses Python capture but the file is still written to a temp directory (and discarded after the run).
 
 ---
 

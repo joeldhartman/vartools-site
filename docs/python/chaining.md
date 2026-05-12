@@ -65,10 +65,7 @@ r_bls = r_clip.BLS(qmin=0.01, qmax=0.1, minper=0.5, maxper=10.0,
 
 ### For maximum efficiency: use Pipeline
 
-Each `.CMD()` call on `LightCurve` or `Result` carries some overhead
-in communicating with the vartools library, or in launching a separate
-vartools subprocess.  When running many commands, a single `Pipeline`
-invocation may be faster:
+Each `.CMD()` call on `LightCurve` or `Result` carries some per-step overhead. When running many commands, a single `Pipeline` invocation may be faster:
 
 ```python
 from pyvartools import commands as cmd
@@ -125,30 +122,16 @@ r2.lc.scalars["halfper"]        # LS_Period_1_0 / 2
 r2.lc.scalars["quarterper"]     # LS_Period_1_0 / 4
 ```
 
-**How it works (brief).** pyvartools assembles a CLI for each continuation
-that (a) prepends `-expr const '<name>=<value>'` tokens for every scalar
-carried forward from the prior segment, (b) emits an explicit
-`-columnsuffix <N>` before each user command so the new segment's output
-suffixes continue the numbering from where the prior one left off
-(avoiding collision with the injected scalar names), and (c) appends
-`-printallscalars` so any new scalar state round-trips back to
-`result.lc.scalars`.
+Scalars carried forward from a prior segment are also accessible to any analytic-expression command later in the chain. For batch chains (continuations from a `BatchResult`), each light curve sees its own per-LC scalar values rather than a shared constant — this is handled automatically by `LightCurveBatch.run()`.
 
-For batch chains (continuations from a `BatchResult`), each LC sees its
-own per-LC scalar values rather than a shared constant.  This is done
-automatically by `LightCurveBatch.run()`.
-
-See [`LightCurve.scalars`](lightcurve.md#scalars),
-[`BatchResult.lcscalars`](results.md#lcscalars-pddataframe),
-and the CLI docs for
-[`-startcommandnumber`](../cli/options.md#-startcommandnumber-n) and
-[`-printallscalars`](../cli/options.md#-printallscalars).
+See [`LightCurve.scalars`](lightcurve.md#scalars) and
+[`BatchResult.lcscalars`](results.md#lcscalars-pddataframe) for where these values live.
 
 ---
 
 ## Pipeline-stateful commands
 
-A handful of VARTOOLS commands — `savelc`, `restorelc`, `columnsuffix`,
+A handful of commands — `savelc`, `restorelc`, `columnsuffix`,
 `ifcmd`, and `o` — work only within a single vartools invocation. Calling
 them as methods on `LightCurve` or `Result` raises `NotImplementedError`:
 
@@ -183,12 +166,12 @@ running one vartools invocation per LC and collecting results into a
 `BatchResult`.
 
 !!! note "Performance for large surveys" 
-    `LightCurveBatch` runs one
-    vartools invocation per light curve, which is convenient but
-    carries per-call overhead. For large collections (hundreds of
-    light curves or more), `Pipeline.run_batch()` or
-    `Pipeline.run_filelist()` submit all light curves in a single
-    vartools call and are typically several times faster, depending on
+    `LightCurveBatch` processes one
+    light curve at a time, which is convenient but carries
+    per-LC overhead. For large collections (hundreds of light
+    curves or more), `Pipeline.run_batch()` or
+    `Pipeline.run_filelist()` process all light curves in a single
+    call and are typically several times faster, depending on
     light curve size and command mix. Use `LightCurveBatch` for
     interactive work and moderate-sized batches; switch to `Pipeline`
     for survey-scale processing.
@@ -369,12 +352,7 @@ result = vt.LightCurveBatch(lcs).LS(minp=PerLC([0.5, 0.5, 1.0, 0.5, 0.5]),
 
 ### Per-LC values via `perlc_vars`
 
-`LightCurveBatch.run()` accepts a `perlc_vars=` kwarg for per-LC values
-that don't fit on a command attribute — typically per-LC strings (output
-names, labels) or numeric values referenced by name elsewhere in the
-chain.  Supplying it routes the run through `Pipeline.run_batch()` (a
-single vartools invocation), so each LC sees its own value through the
-`-inlistvars` mechanism.
+`LightCurveBatch.run()` accepts a `perlc_vars=` kwarg for per-LC values that don't fit on a command attribute — typically per-LC strings (output names, labels) or numeric values referenced by name elsewhere in the chain.  Each light curve sees its own value:
 
 ```python
 import os, tempfile

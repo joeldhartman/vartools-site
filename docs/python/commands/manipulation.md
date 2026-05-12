@@ -191,10 +191,10 @@ CLI equivalent: [`-resample`](../../cli/manipulation.md#-resample).
 | `right` | `float` or `None` | First-derivative boundary condition at the right edge of the spline. |
 | `nbreaks` | `int` or `None` | Number of interior break points for B-spline fitting. Only for `method="bspline"`. If `< 2`, breaks are increased until χ²/dof ≤ 1 (can be slow). |
 | `order` | `int` or `None` | Polynomial order of the B-spline (only for `method="bspline"`). |
-| `file_times` | `str` or `None` | Source for the new time grid. Either: (a) a path string → resample to the times in that file (CLI `file fix <path>`), or (b) the literal `"list"` → resample, *per LC*, to the times in a file whose path is read from a column of the input list file (CLI `file list`). |
+| `file_times` | `str` or `None` | Source for the new time grid. Either: (a) a path string → resample to the times in that file (the same grid is used for every LC), or (b) the literal `"list"` → resample, *per LC*, to the times in a file whose path is read from a column of the input list file (list-mode runs only). |
 | `file_column` | `int` or `None` | **Legacy alias** for `t_column` in path mode. Prefer `t_column`. |
-| `list_column` | `int` or `None` | Only with `file_times="list"`. 1-based column number in the *input list file* that holds the per-LC time-grid filename (CLI `listcolumn`). When omitted, vartools consumes the next available list-file column. |
-| `t_column` | `int` or `None` | 1-based column number in the *time-grid file* that holds the time values. Maps to CLI `column` (path mode) or `tcolumn` (list mode). Defaults to `1`. |
+| `list_column` | `int` or `None` | Only with `file_times="list"`. 1-based column number in the *input list file* that holds the per-LC time-grid filename. When omitted, the next unused list-file column is consumed. |
+| `t_column` | `int` or `None` | 1-based column number in the *time-grid file* that holds the time values. Defaults to `1`. |
 | `gaps` | `str` or `None` | Gap-handling spec, e.g. `"percentile_sep 80 bspline"` — switches interpolation method beyond a separation threshold. |
 | `tstart`, `tstop` | `float`, `str`, or `None` | Start and stop of the new time grid. Accepts variable/expression/per-LC forms. |
 | `delt` | `float`, `str`, or `None` | Time step of the new grid. |

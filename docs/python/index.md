@@ -17,26 +17,12 @@ that contain computed statistics, possibly modified light curves, and
 any other auxiliary datasets (e.g., periodograms computed by a
 period-finding command).
 
-Internally, pyvartools passes the light curves and command sequence to the
-VARTOOLS engine in one of two ways:
+Internally, pyvartools has two execution paths and picks between them automatically:
 
-- **Library mode** — if `libvartoolspipeline.so` is installed (which
-  `make install` does automatically), the engine runs **in-process**:
-  light curve arrays are passed directly to the C library. Results,
-  including modified light curves, are read back from C memory without
-  writing to disk.
-- **Subprocess mode** — if the shared library is not available, pyvartools
-  launches the `vartools` binary as a subprocess, passing the light curve
-  via stdin and parsing its stdout. The results are identical; only
-  performance differs. This mode is also used automatically when
-  multi-threaded batch processing is requested (`nthreads > 1`),
-  when resuming a streamed `stats_file`, or for the few command
-  configurations the in-process C entry point doesn't yet expose
-  (see [Performance: library mode](pipeline.md#performance-library-mode)
-  for the full coverage matrix).
+- **Library mode** — the default fast path. The VARTOOLS engine runs in-process via a shared library (`libvartoolspipeline.so`, installed by `make install`).
+- **Subprocess mode** — used when library mode isn't available, or for combinations of options the fast path doesn't cover (e.g. `nthreads > 1`, `timeout=...`, resuming from a partial `stats_file`). The `vartools` binary runs as a separate process; results are identical.
 
-From the user's perspective both modes behave identically; the choice is made
-automatically.
+Both modes produce the same outputs; you don't need to think about which one is used. See [Performance and reusing a Pipeline](pipeline.md#performance-and-reusing-a-pipeline) for the details.
 
 ---
 
@@ -94,8 +80,7 @@ lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = lc.LS(0.5, 10.0, 0.1)
 print(result.varobjs.LS.Period_1)
 
-# Chain multiple commands — each step runs immediately and returns a Result;
-# the chain is split into one vartools call per step
+# Chain multiple commands — each step runs immediately and returns a Result
 result = lc.clip(sigclip=5.0).LS(0.5, 10.0, 0.1).rms()
 print(result.varobjs.LS.Period_1)   # top LS period
 print(result.varobjs.rms.RMS)       # RMS of the clipped, period-corrected LC
@@ -113,8 +98,8 @@ r2 = r1.harmonicfilter(period=r1.varobjs.LS.Period_1, nharm=2)
 
 !!! note "Pipeline-stateful commands"
     A handful of commands (`savelc`, `restorelc`, `columnsuffix`, `ifcmd`, `o`)
-    only work correctly within a single vartools invocation.  Calling them as
-    methods on `LightCurve` or `Result` raises a `NotImplementedError` with a
+    only make sense inside a single `Pipeline` invocation.  Calling them as
+    methods on `LightCurve` or `Result` raises `NotImplementedError` with a
     message directing you to use `Pipeline` instead.
 
 See the [Method Chaining API](chaining.md) page for the full reference.
@@ -138,7 +123,7 @@ result = pipe.run("EXAMPLES/2")
 lc = vt.LightCurve.from_file("EXAMPLES/2")
 result = pipe.run(lc)
 
-# Run on a list of paths (or LightCurves) — one vartools call for all of them
+# Run on a list of paths (or LightCurves) — all processed in one batch call
 batch = pipe.run_batch([f"EXAMPLES/{i}" for i in range(1, 11)])
 print(batch.vars[["Name", "LS_Period_1_1"]])
 
