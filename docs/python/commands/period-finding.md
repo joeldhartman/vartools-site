@@ -288,6 +288,110 @@ print(result.vars["AOV_HARM_SNR_PeriodFix_0"])
 
 ---
 
+### `PDM` — Phase Dispersion Minimization
+
+**Syntax**
+
+```python
+cmd.PDM(variant, minp, maxp, subsample, finetune, *,
+        npeaks=5, nbin=None, nc=None, dphi=None,
+        save_periodogram=False, clip=None, clipiter=None,
+        noerr=False, whiten=False,
+        fixperiod_snr=None, bootstrap=None, maskpoints=None)
+```
+
+**Description**
+
+Perform a Phase Dispersion Minimization period search. For each trial frequency the light curve is phase-folded and a statistic θ ∈ [0, 1] measures the residual dispersion against a phase-fold model. A signal at the correct period drives θ toward 0; pure noise has θ near 1. The first argument selects one of five variants:
+
+| `variant` | Model | Notes |
+|-----------|-------|-------|
+| `"step"` | Per-bin mean over `nbin` fixed phase bins (Stellingwerf 1978). | Classic PDM. |
+| `"linterp"` | Linear interpolation between adjacent bin means (cuvarbase default). | Smoother periodogram than `step` for the same `nbin`. |
+| `"multicover"` | Average of `nc` phase-shifted `nbin`-bin sets. | Reduces bin-edge sensitivity. Schwarzenberg-Czerny 1997 explicitly notes that no analytic FAP exists for `nc > 1`; the reported FAP uses the single-cover formula and should be treated as approximate. |
+| `"tophat"` | Per-point weighted mean of phase-neighbours inside `\|Δφ\| ≤ dphi`. | Binless. Costs O(N²) per trial period. |
+| `"gauss"` | Per-point weighted mean with Gaussian phase kernel of sigma `dphi`. | Smoother binless variant; same O(N²) cost. |
+
+PDM is most useful for non-sinusoidal but smoothly-varying signals (eclipsing binaries, RR Lyrae, Cepheids).
+
+CLI equivalent: [`-PDM`](../../cli/period-finding.md#-pdm-phase-dispersion-minimization).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `variant` | `str` | Required. One of `"step"`, `"linterp"`, `"multicover"`, `"tophat"`, `"gauss"`. |
+| `minp`, `maxp`, `subsample` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period range and frequency step (same forms as `LS`). The coarse-grid frequency step is `Δf = subsample / T`, where `T` is the time-span of the light curve. See [Variable and expression parameters](#variable-and-expression-parameters); for batch per-LC values see [Per-LC array parameters](../pipeline.md#per-lc-array-parameters). |
+| `finetune` | `float` or `str` | Fine-tuning frequency step factor applied near peak frequencies. The fine-tune step is `Δf_fine = finetune / T`. |
+| `npeaks` | `int` | Number of peaks to report. Default `5`. |
+| `nbin` | `int`, `str`, or `None` | Phase-bin count for `step`/`linterp` (or bins-per-cover for `multicover`). Default `None` (in this case use the internal vartools default value of 8). Rejected for binless variants. |
+| `nc` | `int`, `str`, or `None` | Number of phase-shifted bin sets for `multicover` only. Default `None` (in this case use the internal vartools default value of 2). Rejected for other variants. |
+| `dphi` | `float`, `str`, or `None` | Phase-window half-width (`tophat`) or kernel sigma (`gauss`). Default `None` (in this case use the internal vartools default value of 0.05). Rejected for binned variants. |
+| `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["pdm_periodogram_N"]`. When `whiten=True`, the file contains one column per whitening cycle. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `clip`, `clipiter` | `float`, `int` | σ-clipping factor and iterate-flag for the SNR noise estimate. Default: iterative 5σ. |
+| `noerr` | `bool` | Use uniform point weights instead of `1/σ²`. |
+| `whiten` | `bool` | Subtract the step-bin phase model at each peak before searching for the next. |
+| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the PDM periodogram at a known period. Accepts numeric values; `"aov"` / `"ls"` / `"pdm"` / `"injectharm"` back-references to the most recent prior period-finder of that type; `"fixcolumn <name>"`; or `"list"` (with optional `"column N"`). See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
+| `bootstrap` | `int` or `None` | If set, recalibrate the FAP empirically from this many shuffled-light-curve trials. Bootstrap can be used to calibrate the FAP; in practice it may be too slow for large analysis projects. |
+| `maskpoints` | `str` or `None` | Name of a mask vector; points where the variable is `≤ 0` are excluded. |
+
+Constructor-time validation rejects unknown `variant` values and the variant/parameter mismatches above; misuse fails at pipeline-build time rather than at vartools-invocation time.
+
+**Output**
+
+Per peak `k` (1 to `npeaks`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `PDM_Period_k_N` | Best period of peak `k` (days). |
+| `PDM_Theta_k_N` | θ statistic (lower is better; 1 = random, 0 = perfectly coherent). |
+| `PDM_SNR_k_N` | `(θ_mean − θ_peak) / θ_rms`. PDM SNR is a known-poor significance statistic — it is reported for consistency with `aov`; for thresholding prefer `PDM_NEG_LN_FAP_k_N`. |
+| `PDM_NEG_LN_FAP_k_N` | `−ln(FAP)`. Schwarzenberg-Czerny 1997 analytic Beta distribution with an effective-trials-factor correction by default; empirical CDF from the bootstrap distribution when `bootstrap` is set. |
+| `Mean_PDM_Theta_N` / `RMS_PDM_Theta_N` | Periodogram mean / RMS used for the SNR. Replaced by per-cycle `Mean_PDM_Theta_k_N` / `RMS_PDM_Theta_k_N` when `whiten=True`. |
+
+When `fixperiod_snr` is set, four additional columns are appended — see [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance).
+
+When `save_periodogram` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["pdm_periodogram_N"]` | DataFrame: period vs. θ. With `whiten=True`, one column per cycle. |
+
+**References**
+
+Stellingwerf 1978, ApJ, 224, 953; Schwarzenberg-Czerny 1997, ApJ, 489, 941; Zalian, Chadid & Stellingwerf 2014, MNRAS, 440, 68. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
+
+**Examples**
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+
+# linterp variant (cuvarbase-style smoothing), top peak, periodogram captured.
+result = lc.PDM("linterp", 0.1, 10.0, 0.1, 0.01, npeaks=1, nbin=20,
+                save_periodogram=True)
+print(round(result.vars["PDM_Period_1_0"], 4))    # 1.2348 -- dominant signal
+
+# Multicover variant -- averages 8-bin theta over 4 phase-shifted covers.
+result = lc.PDM("multicover", 0.1, 10.0, 0.1, 0.01,
+                npeaks=1, nbin=8, nc=4)
+print(round(result.vars["PDM_Period_1_0"], 4))
+
+# Binless tophat (narrow period range -- O(N^2) cost per trial frequency).
+result = lc.PDM("tophat", 0.5, 2.0, 0.5, 0.05, npeaks=1, dphi=0.05)
+print(round(result.vars["PDM_Period_1_0"], 4))
+
+# fixperiod_snr -- back-reference the prior -aov call to evaluate PDM at
+# its peak period.  Both steps must share one vartools invocation; use
+# Pipeline to chain.
+result = (vt.Pipeline()
+        .aov(0.1, 10.0, 0.1, 0.01)
+        .PDM("linterp", 0.1, 10.0, 0.1, 0.01, npeaks=1,
+             fixperiod_snr="aov")).run(lc)
+print(round(result.vars["PDM_Theta_PeriodFix_1"], 4))
+```
+
+---
+
 ### `BLS` — Box-fitting Least Squares
 
 **Syntax**

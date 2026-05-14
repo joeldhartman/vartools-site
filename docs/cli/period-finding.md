@@ -215,6 +215,114 @@ Output: Period values and AOV_HARM, SNR, and logarithmic FAP values for 2 identi
 
 ---
 
+### `-PDM` — Phase Dispersion Minimization
+
+**Syntax**
+```
+-PDM < "step" | "linterp" | "multicover" | "tophat" | "gauss" >
+    ["Nbin" < "var" Nbinvar | "expr" Nbinexpr | Nbin >]
+    ["Nc"   < "var" Ncvar   | "expr" Ncexpr   | Nc >]
+    ["dphi" < "var" dphivar | "expr" dphiexpr | dphi >]
+    < "var" minpvar | "expr" minpexpr | minp >
+    < "var" maxpvar | "expr" maxpexpr | maxp >
+    < "var" subsamplevar | "expr" subsampleexpr | subsample >
+    < "var" finetunevar | "expr" finetuneexpr | finetune >
+    Npeaks operiodogram [outdir]
+    ["clip" clip clipiter] ["noerr"] ["whiten"]
+    ["fixperiodSNR" < "aov" | "ls" | "pdm" | "injectharm" | "fix" period
+                    | "list" ["column" col]
+                    | "fixcolumn" <colname | colnum> >]
+    ["bootstrap" Nboot] ["maskpoints" maskvar]
+```
+
+**Description**
+
+Perform a Phase Dispersion Minimization (PDM) period search. For each trial frequency the light curve is phase-folded and a statistic θ ∈ [0, 1] measures the residual dispersion against a phase-fold model. A signal at the correct period produces θ near 0; pure noise yields θ near 1. The first argument selects one of five variants:
+
+| Variant | Model | Notes |
+|---------|-------|-------|
+| `step` | Per-bin mean over `Nbin` fixed phase bins (Stellingwerf 1978). | Classic PDM. |
+| `linterp` | Linear interpolation between adjacent bin means (cuvarbase default). | Smoother periodogram than `step`; less bin-edge sensitivity for the same `Nbin`. |
+| `multicover` | Average of `Nc` phase-shifted `Nb`-bin sets (each shifted by `1/(Nb·Nc)`). | Reduces bin-edge sensitivity at the cost of more computation. Schwarzenberg-Czerny 1997 explicitly notes that no analytic FAP exists for `Nc > 1`; the reported `PDM_NEG_LN_FAP` uses the single-cover Beta formula and should be treated as approximate. |
+| `tophat` | Per-point weighted mean of phase-neighbours inside `\|Δφ\| ≤ dphi`. | Binless — no phase grid. Useful for sparse light curves where bin occupancy is irregular. Costs O(N²) per trial period. |
+| `gauss` | Per-point weighted mean with Gaussian phase kernel of sigma `dphi`. | Smoother binless variant. Same O(N²) cost. |
+
+The initial search uses a frequency step of `subsample/T`. The top peaks are refined to a resolution of `finetune/T`. Defaults: `Nbin = 8`, `Nc = 2` (for `multicover`), `dphi = 0.05` (for `tophat`/`gauss`).
+
+Python equivalent: [`PDM`](../python/commands/period-finding.md#pdm-phase-dispersion-minimization).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `variant` | Required: one of `step`, `linterp`, `multicover`, `tophat`, `gauss`. |
+| `"Nbin"` | Number of phase bins (per cover for `multicover`). Default 8. Rejected with `tophat`/`gauss`. Accepts `"var"`/`"expr"`. |
+| `"Nc"` | Number of phase-shifted bin sets, multicover only. Default 2. Accepts `"var"`/`"expr"`. |
+| `"dphi"` | Phase-window half-width (`tophat`) or kernel sigma (`gauss`). Default 0.05. Rejected with binned variants. Accepts `"var"`/`"expr"`. |
+| `minp` / `maxp` | Period search range (days). Accepts `"var"`/`"expr"`. |
+| `subsample` | Coarse frequency step factor. The coarse-grid frequency step is `Δf = subsample / T`, where `T` is the time-span of the light curve. |
+| `finetune` | Fine-tuning frequency step factor applied near peak periods. The fine-tune step is `Δf_fine = finetune / T`. |
+| `Npeaks` | Number of peaks to report. |
+| `operiodogram` | `1` to write period vs. θ to `outdir/$basename.pdm`. When `whiten` is set, the file gains one column per whitening cycle. |
+| `"clip" clip clipiter` | σ-clipping factor and iterate-flag for the periodogram mean/RMS used in the SNR. Default 5σ iterative, matching `-aov`. |
+| `"noerr"` | Use uniform point weights instead of `1/σ²`. |
+| `"whiten"` | Subtract the step-bin phase model at each peak before searching for the next. Adds per-cycle `Mean_PDM_Theta_k_N` and `RMS_PDM_Theta_k_N` output columns; the periodogram dump gains one column per cycle. |
+| `"fixperiodSNR" ...` | Report θ/SNR/FAP at a specified period in addition to the peak search. Sources: `aov` / `ls` / `pdm` (the most recent prior period-finder of that type), `injectharm`, `fix` *period*, `list` (with optional `column N`), or `fixcolumn` *name*. |
+| `"bootstrap" Nboot` | Replace the analytic Schwarzenberg-Czerny FAP with an empirical FAP calibrated from `Nboot` shuffled-light-curve trials. Bootstrap can be used to calibrate the FAP; in practice it may be too slow for large analysis projects. |
+| `"maskpoints" maskvar` | Exclude points where `maskvar ≤ 0`. |
+
+The trailing keyword block is parsed in a strict order matching the syntax shown above; mis-ordering or duplicating these keywords produces a command-syntax error.
+
+**Output columns** (per peak `k`, command index `N`)
+
+| Column | Description |
+|--------|-------------|
+| `PDM_Period_k_N` | Best period of peak `k` (days). |
+| `PDM_Theta_k_N` | θ statistic (lower is better; 1 = random, 0 = perfectly coherent). |
+| `PDM_SNR_k_N` | `(θ_mean − θ_peak) / θ_rms` using the (possibly clipped) periodogram noise estimate. A poor significance statistic for PDM — included for consistency with `-aov`; prefer `PDM_NEG_LN_FAP_k_N` for thresholding. |
+| `PDM_NEG_LN_FAP_k_N` | `−ln(FAP)`. Computed analytically from the Schwarzenberg-Czerny 1997 Beta((N−Nb)/2, (Nb−1)/2) distribution with an effective-trials-factor correction, or empirically from the bootstrap distribution when `"bootstrap"` is set. Rigorous for `step` under standard ANOVA assumptions; approximate for the other variants. |
+| `Mean_PDM_Theta_N` / `RMS_PDM_Theta_N` | Periodogram mean and RMS used for the SNR (one set per command unless `whiten` is set, in which case the per-cycle pairs `Mean_PDM_Theta_k_N` / `RMS_PDM_Theta_k_N` are emitted instead). |
+
+When `fixperiodSNR` is set, four additional columns are appended: `PDM_PeriodFix_N`, `PDM_Theta_PeriodFix_N`, `PDM_SNR_PeriodFix_N`, `PDM_NEG_LN_FAP_PeriodFix_N`.
+
+**References**
+
+Cite Stellingwerf 1978, ApJ, 224, 953 and Schwarzenberg-Czerny 1997, ApJ, 489, 941. See also Zalian, Chadid & Stellingwerf 2014, MNRAS, 440, 68 for a modern restatement. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
+
+**Examples**
+
+**Example 1.** Phase-binned PDM with linear interpolation between bin means, top 5 peaks, iterative 5σ clipping, periodogram dump.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -PDM linterp Nbin 20 0.1 10. 0.1 0.01 5 1 EXAMPLES/OUTDIR1 \
+        clip 5. 1 whiten
+```
+
+**Example 2.** Multicover variant with 8 bins per cover and 4 phase-shifted covers — useful when bin-edge sensitivity dominates a step-PDM analysis.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -PDM multicover Nbin 8 Nc 4 0.1 10. 0.1 0.01 3 1 EXAMPLES/OUTDIR1
+```
+
+**Example 3.** Binless tophat variant on a narrower period range (binless variants cost O(N²) per trial frequency).
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -PDM tophat dphi 0.05 0.5 2.0 0.5 0.05 2 1 EXAMPLES/OUTDIR1
+```
+
+**Example 4.** Bootstrap-calibrated empirical FAP (2000 trials, fixed RNG seed for reproducibility).
+
+```bash
+vartools -i EXAMPLES/2 -oneline -randseed 1 \
+    -PDM linterp Nbin 8 0.1 10. 0.1 0.01 3 0 \
+        bootstrap 2000
+```
+
+---
+
 ### `-BLS` — Box-fitting Least Squares
 
 **Syntax**
