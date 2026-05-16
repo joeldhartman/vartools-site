@@ -370,7 +370,7 @@ The initial search uses a frequency step of `subsample/T`; the top peaks are ref
 
 For non-sinusoidal templates an amplitude `θ₁ < 0` is **not** a phase shift — it corresponds to a flipped template, which generally does not match the input signal. By default the search reports the global maximum of the periodogram regardless of sign, with `FTP_NegAmp_k_N = 1` flagging suspect peaks; pass `"posamponly"` to skip negative-amplitude solutions during the search.
 
-No analytic FAP has been published for the FTP distribution, so no analytic FAP column is emitted. Use `"bootstrap" Nboot` to enable an empirical-CDF FAP calibrated from `Nboot` shuffled-light-curve trials (mirrors `-LS` / `-PDM` bootstrap; with `whiten` the distribution is calibrated once from the original LC). For peaks more extreme than any trial a log-log polynomial extrapolation to the most-extreme 10% of the bootstrap distribution is used.
+By default the Beta distribution from GLS is used to estimate the false alarm probability (FAP) - this is not formally correct, but should have similar asymptotic behavior to the true FAP. Use `"bootstrap" Nboot` to enable an empirical-CDF FAP calibrated from `Nboot` shuffled-light-curve trials (mirrors `-LS` / `-PDM` bootstrap; with `whiten` the distribution is calibrated once from the original LC). For peaks more extreme than any trial a log-log polynomial extrapolation to the most-extreme 10% of the bootstrap distribution is used.
 
 Python equivalent: [`FTP`](../python/commands/period-finding.md#ftp-fast-template-periodogram).
 
@@ -396,7 +396,7 @@ Python equivalent: [`FTP`](../python/commands/period-finding.md#ftp-fast-templat
 | `"posamponly"` | Skip negative-amplitude solutions during the search — the periodogram becomes the best positive-amplitude fit at each frequency. |
 | `"whiten"` | After each peak, subtract `θ₁ · M(ω t − θ₂) + θ₃` from the LC and recompute the periodogram for the next peak. Adds per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` columns (one pair per peak instead of the per-LC pair). |
 | `"fixperiodSNR" …` | Additionally report FTP power / SNR / θ₂ / NegAmp at a specified period. Sources: `aov` / `ls` / `pdm` / `ftp` (the most recent prior period-finder of that type), `injectharm`, `fix` *period*, `list` (with optional `column N`), or `fixcolumn` *name*. Evaluation is against the **original** light curve even when `whiten` is set. |
-| `"bootstrap" Nboot` | Enable empirical-CDF FAP via `Nboot` shuffled-LC trials. Adds `FTP_NEG_LN_FAP_k_N` to the output. |
+| `"bootstrap" Nboot` | Enable empirical-CDF FAP via `Nboot` shuffled-LC trials. |
 | `"maskpoints" maskvar` | Exclude points where `maskvar ≤ 0`. |
 | `"method" mode` | Per-frequency optimisation: `auto` (default; poly for H ≤ 2, brute otherwise), `brute` (720-sample θ₂ scan + golden refinement; correct to ~1e-12), `poly` (root-finding via the Hoffman et al. polynomial), or `verify` (run both methods and emit a per-LC stderr comparison summary; returns the brute result). |
 | `"sums" mode` | Per-LC summation strategy: `auto` (NFFT if built with `--with-nfft`, else `direct`), `direct`, or `nfft`. |
@@ -413,9 +413,9 @@ The trailing keyword block is parsed in a strict order matching the syntax above
 | `FTP_NegAmp_k_N` | `1` if the best fit at the peak had `θ₁ < 0` (flipped template — generally not a real signal for non-symmetric `M(φ)`); `0` otherwise. |
 | `FTP_Theta_k_N` | Best-fit phase shift `θ₂` in radians. |
 | `Mean_FTP_Power_N` / `RMS_FTP_Power_N` | Periodogram mean and RMS used for the SNR (one set per command unless `whiten` is set, in which case per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` are emitted instead). |
-| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)`. Only emitted when `bootstrap` is set; read from the empirical CDF, or from a log-log extrapolation to the most-extreme 10% of the bootstrap distribution when the peak is more extreme than any trial. |
+| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)`. Estimated from the GLS Beta distribution by default. When `bootstrap` is set: read from the empirical CDF, or from a log-log extrapolation to the most-extreme 10% of the bootstrap distribution when the peak is more extreme than any trial. |
 
-When `fixperiodSNR` is set, five additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N` (plus `FTP_NEG_LN_FAP_PeriodFix_N` when `bootstrap` is also set).
+When `fixperiodSNR` is set, five additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N`, `FTP_NEG_LN_FAP_PeriodFix_N`.
 
 **References**
 

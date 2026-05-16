@@ -469,9 +469,9 @@ Per peak `k` (1 to `npeaks`) and command index `N`:
 | `FTP_NegAmp_k_N` | `1` if the best fit had `θ₁ < 0` (a flipped template — generally suspect); `0` otherwise. |
 | `FTP_Theta_k_N` | Best-fit phase shift `θ₂` in radians. |
 | `Mean_FTP_Power_N` / `RMS_FTP_Power_N` | Periodogram mean / RMS used for the SNR (replaced by per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` when `whiten=True`). |
-| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)` from the bootstrap distribution. Only emitted when `bootstrap` is set. |
+| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)` either from the bootstrap distribution if `bootstrap` is set, or estimated from the GLS Beta analytic formula. |
 
-When `fixperiod_snr` is set, five additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N` (plus `FTP_NEG_LN_FAP_PeriodFix_N` when `bootstrap` is also set).
+When `fixperiod_snr` is set, six additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N`, `FTP_NEG_LN_FAP_PeriodFix_N`.
 
 When `save_periodogram` is enabled:
 
@@ -481,7 +481,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Hoffman, J., VanderPlas, J., Hartman, J. D., & Bakos, G. A. 2021, arXiv:2101.12348. Reference Python implementation: [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
+Hoffman, J., et al. 2021, arXiv:2101.12348. Reference Python implementation: [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
 
 **Examples**
 
