@@ -20,8 +20,6 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-alarm` | Alarm statistic (Kovacs, Bakos & Noyes 2005) | [CLI](cli/statistics.md#-alarm) | [Python](python/commands/statistics.md#alarm-alarm-statistic) |
 | `-aov` | Phase-binned Analysis of Variance period search | [CLI](cli/period-finding.md#-aov-phase-binned-analysis-of-variance) | [Python](python/commands/period-finding.md#aov-analysis-of-variance) |
 | `-aov_harm` | Multi-harmonic Analysis of Variance period search | [CLI](cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance) | [Python](python/commands/period-finding.md#aov_harm-multi-harmonic-aov) |
-| `-PDM` | Phase Dispersion Minimization period search (step / linterp / multicover / tophat / gauss variants) | [CLI](cli/period-finding.md#-pdm-phase-dispersion-minimization) | [Python](python/commands/period-finding.md#pdm-phase-dispersion-minimization) |
-| `-FTP` | Fast Template Periodogram (Hoffman et al. 2021) — fit a known-shape Fourier template at each trial period | [CLI](cli/period-finding.md#-ftp-fast-template-periodogram) | [Python](python/commands/period-finding.md#ftp-fast-template-periodogram) |
 | `-autocorrelation` | Discrete autocorrelation function | [CLI](cli/statistics.md#-autocorrelation) | [Python](python/commands/statistics.md#autocorrelation-autocorrelation-function) |
 | `-binlc` | Bin the light curve by time | [CLI](cli/manipulation.md#-binlc) | [Python](python/commands/manipulation.md#binlc-bin-in-time) |
 | `-BLS` | Box-fitting Least Squares transit search | [CLI](cli/period-finding.md#-bls-box-fitting-least-squares) | [Python](python/commands/period-finding.md#bls-box-least-squares-transit-search) |
@@ -45,6 +43,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-findblends` | Identify nearby variables that may blend into the target | [CLI](cli/misc.md#-findblends) | [Python](python/commands/misc.md#findblends-search-for-blended-transits) |
 | `-fluxtomag` | Convert flux to magnitude | [CLI](cli/manipulation.md#-fluxtomag) | [Python](python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions) |
 | `-fourierfilter` | Full-band Fourier high/low/band-pass filter with optional analytic filter and edge tapering | [CLI](cli/filtering.md#-fourierfilter) | [Python](python/commands/filtering.md#fourierfilter-full-band-fourier-domain-filter) |
+| `-FTP` | Fast Template Periodogram (Hoffman et al. 2021) — fit a known-shape Fourier template at each trial period | [CLI](cli/period-finding.md#-ftp-fast-template-periodogram) | [Python](python/commands/period-finding.md#ftp-fast-template-periodogram) |
 | `-ftuneven` | Complex Fourier transform of unevenly sampled data (USERLIB extension) | [CLI](cli/extensions.md#-ftuneven) | [Python](python/commands/extensions.md#ftuneven-complex-fourier-transform-of-unevenly-sampled-data) |
 | `-GetLSAmpThresh` | Minimum detectable amplitude at a given period (LS-based) | [CLI](cli/period-finding.md#-getlsampthresh-minimum-detectable-amplitude) | [Python](python/commands/period-finding.md#getlsampthresh-ls-amplitude-threshold) |
 | `-hatpiflag` | Combine HATPI quality flags into a single binary flag (USERLIB extension) | [CLI](cli/extensions.md#-hatpiflag) | [Python](python/commands/extensions.md#hatpiflag-hatpi-binary-flag-combiner) |
@@ -65,6 +64,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-microlens` | Point-source gravitational microlensing model | [CLI](cli/model-fitting.md#-microlens) | [Python](python/commands/model-fitting.md#microlens-microlensing-model) |
 | `-nonlinfit` | Levenberg-Marquardt / MCMC nonlinear-model fitting | [CLI](cli/model-fitting.md#-nonlinfit) | [Python](python/commands/model-fitting.md#nonlinfit-non-linear-least-squares-fitting) |
 | `-o` | Write the (possibly modified) light curve to a file | [CLI](cli/control-flow.md#-o) | [Python](python/commands/control-flow.md#o-output-light-curve) |
+| `-PDM` | Phase Dispersion Minimization period search (step / linterp / multicover / tophat / gauss variants) | [CLI](cli/period-finding.md#-pdm-phase-dispersion-minimization) | [Python](python/commands/period-finding.md#pdm-phase-dispersion-minimization) |
 | `-Phase` | Replace the time column with phase-folded coordinates | [CLI](cli/manipulation.md#-phase) | [Python](python/commands/manipulation.md#phase-phase-fold-the-light-curve) |
 | `-print` | Emit user-computed scalars as columns in the statistics table | [CLI](cli/control-flow.md#-print) | [Python](python/commands/control-flow.md#print-emit-user-computed-variables-to-the-output-table) |
 | `-python` | Run embedded Python code on each light curve | [CLI](cli/python-r.md#-python) | [Python](python/commands/python-r.md#python-run-python-code) |
