@@ -392,6 +392,128 @@ print(round(result.vars["PDM_Theta_PeriodFix_1"], 4))
 
 ---
 
+### `FTP` — Fast Template Periodogram
+
+**Syntax**
+
+```python
+cmd.FTP(template_source, minp, maxp, subsample, finetune, *,
+        template_file=None,
+        lc_path=None, lc_format=None, t_col=None, mag_col=None, err_col=None,
+        period=None, nharm=None,
+        cn=None, sn=None,
+        filelist_column=None,
+        npeaks=5, save_periodogram=False,
+        clip=None, clipiter=None,
+        noerr=False, posamponly=False, whiten=False,
+        fixperiod_snr=None, bootstrap=None, maskpoints=None,
+        method=None, sums=None)
+```
+
+**Description**
+
+Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram (Hoffman, VanderPlas, Hartman & Bakos 2021) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template; 1 = exact fit. FTP is most useful when the signal shape is known a priori (RR Lyrae, Cepheids, or any signal whose Fourier coefficients can be reliably pre-computed).
+
+The `template_source` argument selects how the template is sourced. Each mode requires its own set of mode-specific keyword arguments; mixing kwargs across modes is rejected at construction time.
+
+| `template_source` | Required kwargs | Description |
+|-------------------|-----------------|-------------|
+| `"file"` | `template_file` | Read `cₙ`, `sₙ` from a two-column text file. H is inferred from the row count. |
+| `"fitlc"` | `lc_path`, `lc_format`, `t_col`, `mag_col`, `err_col`, `nharm`, `period` | Build the template by fitting a Fourier series of total order `nharm + 1` to the LC at `lc_path` at fixed `period`. ASCII columns are 1-indexed ints; FITS columns are name strings. Use `err_col=0` (ASCII) or `err_col="none"` (FITS) for an unweighted fit. |
+| `"inline"` | `cn`, `sn` | Parallel lists of length `nharm + 1` (`nharm` is inferred from `len(cn)`). Each entry is a number or a bare-identifier / expression string (var/expr semantics, evaluated per LC). |
+| `"filelist"` | (`filelist_column` optional) | Read each LC's template path from a column of the `-l` input list. Without `filelist_column`, the next available column is used. Each LC's template is loaded lazily, so H can differ across the list. |
+
+Following the `-harmonicfilter` / `-Injectharm` convention, `nharm` counts harmonics **above** the fundamental — so `nharm=0` is a pure-fundamental (sinusoidal) template with H = 1, `nharm=1` adds a 2nd harmonic for H = 2, etc.
+
+The default `method="auto"` (or `None`) selects the polynomial fast path for `H ≤ 2` and the brute-force grid scan otherwise — the polynomial path is faster only at very low harmonic counts. The default `sums="auto"` selects NFFT-batched summation when vartools was built with `--with-nfft`.
+
+CLI equivalent: [`-FTP`](../../cli/period-finding.md#-ftp-fast-template-periodogram).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `template_source` | `str` | Required. One of `"file"`, `"fitlc"`, `"inline"`, `"filelist"`. |
+| `minp`, `maxp`, `subsample`, `finetune` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Period range and frequency-step factors (same forms as `LS`). |
+| `template_file` | `str` | `file` mode only: path to the two-column `cₙ sₙ` text file. |
+| `lc_path` | `str` | `fitlc` mode only: path to the LC from which the template is built. |
+| `lc_format` | `"ascii"` or `"fits"` | `fitlc` mode only: format of `lc_path`. |
+| `t_col`, `mag_col`, `err_col` | `int` or `str` | `fitlc` mode only: ASCII column numbers (1-indexed ints; `err_col=0` for unweighted) or FITS column names (`err_col="none"` for unweighted). |
+| `period` | `float` | `fitlc` mode only: fixed period at which the template Fourier series is fit. **Numeric only** — the vartools C parser uses `atof`, so `var` / `expr` are not accepted on this slot. |
+| `nharm` | `int` | `fitlc` / `inline` modes: harmonics above the fundamental (template order H = `nharm + 1`). In `inline` mode `nharm` is inferred from `len(cn)` and only needs to be passed if the caller wants the validation cross-check. |
+| `cn`, `sn` | `list` | `inline` mode only: length-`(nharm + 1)` lists of the c_n and s_n coefficients. Each entry is a number or a string (bare identifier → `var`, anything else → `expr`). |
+| `filelist_column` | `int` or `None` | `filelist` mode only: 1-indexed column of the `-l` input list holding each LC's template path. |
+| `npeaks` | `int` | Number of peaks to report. Default `5`. |
+| `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["ftp_periodogram_N"]`. With `whiten=True`, one column per cycle. See [Auxiliary output files](index.md#auxiliary-output-files). |
+| `clip`, `clipiter` | `float`, `int` | σ-clipping factor and iterate-flag for the SNR noise estimate. Default: iterative 5σ. |
+| `noerr` | `bool` | Use uniform point weights instead of `1/σ²`. |
+| `posamponly` | `bool` | Skip negative-amplitude solutions during the search (`FTP_NegAmp` candidates rejected; the periodogram value becomes the best positive-amplitude fit at each frequency). |
+| `whiten` | `bool` | After each peak, subtract `θ₁·M(ω t − θ₂) + θ₃` from the LC and recompute the periodogram for the next peak. |
+| `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the FTP statistic at a known period. Accepts numeric values; `"aov"` / `"ls"` / `"pdm"` / `"ftp"` / `"injectharm"` back-references; `"fixcolumn <name>"`; or `"list"` (with optional `"column N"`). Evaluation is against the **original** light curve even when `whiten=True`. |
+| `bootstrap` | `int` or `None` | If set, calibrate the FAP empirically from this many shuffled-LC trials. Adds `FTP_NEG_LN_FAP_k_N` to the output. |
+| `maskpoints` | `str` or `None` | Name of a mask vector; points where the variable is `≤ 0` are excluded. |
+| `method` | `"auto"`, `"brute"`, `"poly"`, `"verify"`, or `None` | Per-frequency optimisation strategy. `auto` (the default) picks `poly` for H ≤ 2, else `brute`. `verify` runs both and emits a stderr comparison summary. |
+| `sums` | `"auto"`, `"direct"`, `"nfft"`, or `None` | Per-LC summation strategy. `auto` (the default) picks `nfft` when vartools was built with `--with-nfft`. |
+
+Constructor-time validation rejects unknown `template_source`, missing mode-specific kwargs, mixing kwargs across modes, mismatched `nharm` vs `len(cn)`, unknown `method` / `sums` values, and `bootstrap < 1`; misuse fails at pipeline-build time rather than at vartools-invocation time.
+
+**Output**
+
+Per peak `k` (1 to `npeaks`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `FTP_Period_k_N` | Best period of peak `k` (days). |
+| `FTP_Power_k_N` | FTP power statistic ∈ [0, 1]; higher is better, 1 = exact template fit. |
+| `FTP_SNR_k_N` | `(P_peak − P_mean) / P_rms` from the clipped periodogram. |
+| `FTP_NegAmp_k_N` | `1` if the best fit had `θ₁ < 0` (a flipped template — generally suspect); `0` otherwise. |
+| `FTP_Theta_k_N` | Best-fit phase shift `θ₂` in radians. |
+| `Mean_FTP_Power_N` / `RMS_FTP_Power_N` | Periodogram mean / RMS used for the SNR (replaced by per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` when `whiten=True`). |
+| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)` from the bootstrap distribution. Only emitted when `bootstrap` is set. |
+
+When `fixperiod_snr` is set, five additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N` (plus `FTP_NEG_LN_FAP_PeriodFix_N` when `bootstrap` is also set).
+
+When `save_periodogram` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["ftp_periodogram_N"]` | DataFrame: period vs. FTP power. With `whiten=True`, one column per cycle. |
+
+**References**
+
+Hoffman, J., VanderPlas, J., Hartman, J. D., & Bakos, G. A. 2021, arXiv:2101.12348. Reference Python implementation: [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
+
+**Examples**
+
+```python
+lc_ftp = vt.LightCurve.from_file("EXAMPLES/2")
+
+# Inline H=1 template (pure cosine) -- the degenerate LS-equivalent case.
+result = lc_ftp.FTP("inline", 0.1, 10.0, 0.1, 0.01,
+                    cn=[1.0], sn=[0.0], npeaks=1)
+print(round(result.vars["FTP_Period_1_0"], 4))    # 1.2353 -- dominant signal
+print(round(result.vars["FTP_Power_1_0"], 3))     # ~0.997 (near-perfect fit)
+
+# fitlc mode: build a 6-harmonic template by fitting the LC itself at
+# the known period, then search the same LC with whitening between peaks.
+result = lc_ftp.FTP("fitlc", 0.1, 10.0, 0.1, 0.01,
+                    lc_path="EXAMPLES/2", lc_format="ascii",
+                    t_col=1, mag_col=2, err_col=3,
+                    nharm=5, period=1.235, npeaks=2, whiten=True)
+print(round(result.vars["FTP_Period_1_0"], 4))
+
+# fixperiod_snr -- back-reference a prior LS step to evaluate the
+# FTP statistic at LS's peak period.
+result = (vt.Pipeline()
+        .LS(0.1, 10.0, 0.1)
+        .FTP("inline", 0.1, 10.0, 0.1, 0.01,
+             cn=[1.0], sn=[0.0], npeaks=1,
+             fixperiod_snr="ls")).run(lc_ftp)
+print(round(result.vars["FTP_Power_PeriodFix_1"], 3))
+```
+
+---
+
 ### `BLS` — Box-fitting Least Squares
 
 **Syntax**

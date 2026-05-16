@@ -323,6 +323,140 @@ vartools -i EXAMPLES/2 -oneline -randseed 1 \
 
 ---
 
+### `-FTP` — Fast Template Periodogram
+
+**Syntax**
+```
+-FTP < "file" template_file
+     | "fitlc" lc_path
+            < "ascii" t_col mag_col err_col
+            | "fits"  t_colname mag_colname err_colname >
+            Nharm period
+     | "inline" Nharm
+            < "var" c1var | "expr" c1expr | c1 >
+            < "var" s1var | "expr" s1expr | s1 > ...
+            (2*(Nharm+1) coefficient specs)
+     | "filelist" ["column" colnum] >
+    < "var" minpvar | "expr" minpexpr | minp >
+    < "var" maxpvar | "expr" maxpexpr | maxp >
+    < "var" subsamplevar | "expr" subsampleexpr | subsample >
+    < "var" finetunevar | "expr" finetuneexpr | finetune >
+    Npeaks operiodogram [outdir]
+    ["clip" clip clipiter] ["noerr"] ["posamponly"] ["whiten"]
+    ["fixperiodSNR" < "aov" | "ls" | "pdm" | "ftp" | "injectharm" | "fix" period
+                    | "list" ["column" col]
+                    | "fixcolumn" <colname | colnum> >]
+    ["bootstrap" Nboot] ["maskpoints" maskvar]
+    ["method" < "auto" | "brute" | "poly" | "verify" >]
+    ["sums"   < "auto" | "direct" | "nfft" >]
+```
+
+**Description**
+
+Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram (Hoffman, VanderPlas, Hartman & Bakos 2021) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template at the trial period; 1 = exact fit. FTP is most useful when the signal shape is known a priori — RR Lyrae and Cepheid templates, or any signal whose Fourier coefficients can be reliably pre-computed.
+
+The first argument selects how the template is sourced:
+
+| Mode | Description |
+|------|-------------|
+| `file` | Read `cₙ`, `sₙ` directly from a two-column whitespace-separated text file. The file has H rows: column 1 is `cₙ`, column 2 is `sₙ`. H is inferred from the row count. Lines starting with `#` and blank lines are ignored. |
+| `fitlc` | Build the template by fitting a Fourier series of total order `Nharm + 1` to the light curve at `lc_path` at the fixed `period`. Format `ascii` takes 1-indexed column numbers (use `err_col = 0` for an unweighted fit); `fits` takes column-name strings (use `err_colname = "none"` for an unweighted fit). The resulting template is mean-subtracted and amplitude-normalised so the half peak-to-peak of `M(φ)` is 1. |
+| `inline` | Specify the `2*(Nharm + 1)` coefficients `c₁, s₁, c₂, s₂, …` directly. Each slot is a literal float, a `var` keyword followed by a variable name, or an `expr` keyword followed by a quoted expression — `var` / `expr` forms evaluate per light curve, allowing the template to vary across LCs. No mean-subtraction or normalisation is applied. |
+| `filelist` | Read each LC's template file path from a column of the `-l` input list. Without `column N` the next available column is used. Each LC's template is loaded just before its periodogram runs, so H can differ across the list. If an LC's template fails to load, that LC is skipped (sentinel-filled output) and the run continues. |
+
+Following the `-harmonicfilter` / `-Injectharm` convention, `Nharm` counts harmonics **above** the fundamental — so `Nharm = 0` is a pure-fundamental (sinusoidal) template with H = 1, `Nharm = 1` adds a 2nd harmonic for H = 2, and so on.
+
+The initial search uses a frequency step of `subsample/T`; the top peaks are refined to a resolution of `finetune/T`. The default `method = "auto"` selects the polynomial fast path for `H ≤ 2` and the brute-force grid scan otherwise — the polynomial path is faster only for very low harmonic counts (the per-frequency contraction cost scales as H⁴). The default `sums = "auto"` selects NFFT-batched summation when vartools was built with `--with-nfft` (roughly 4× faster than per-frequency direct loops at N = 10⁴), and falls back to `direct` otherwise.
+
+For non-sinusoidal templates an amplitude `θ₁ < 0` is **not** a phase shift — it corresponds to a flipped template, which generally does not match the input signal. By default the search reports the global maximum of the periodogram regardless of sign, with `FTP_NegAmp_k_N = 1` flagging suspect peaks; pass `"posamponly"` to skip negative-amplitude solutions during the search.
+
+No analytic FAP has been published for the FTP distribution, so no analytic FAP column is emitted. Use `"bootstrap" Nboot` to enable an empirical-CDF FAP calibrated from `Nboot` shuffled-light-curve trials (mirrors `-LS` / `-PDM` bootstrap; with `whiten` the distribution is calibrated once from the original LC). For peaks more extreme than any trial a log-log polynomial extrapolation to the most-extreme 10% of the bootstrap distribution is used.
+
+Python equivalent: [`FTP`](../python/commands/period-finding.md#ftp-fast-template-periodogram).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `template_source` | Required: `file`, `fitlc`, `inline`, or `filelist`; selects which of the mode-specific sub-syntaxes is in effect. |
+| `template_file` | `file` mode only: path to a two-column `cₙ sₙ` text file. |
+| `lc_path` | `fitlc` mode only: path to the light curve from which the template is built. |
+| `ascii t_col mag_col err_col` / `fits t_colname mag_colname err_colname` | `fitlc` mode only: format-specific column specifiers. `err_col = 0` (ASCII) or `err_colname = "none"`/`""` (FITS) requests an unweighted fit. |
+| `Nharm` | `fitlc` / `inline` modes: harmonics above the fundamental. Total template harmonic count is `Nharm + 1`. |
+| `period` | `fitlc` mode only: fixed period at which the template Fourier series is fit (literal float — `var` / `expr` are not accepted for this slot). |
+| `c1 s1 c2 s2 …` | `inline` mode: `2*(Nharm + 1)` coefficient specs in alternating c/s order. Each spec is a literal float, `"var" name`, or `"expr" text`. |
+| `column colnum` | `filelist` mode only: 1-indexed column of the `-l` input list holding each LC's template path. Optional; the next available column is used when omitted. |
+| `minp` / `maxp` | Period search range (days). Accepts `"var"`/`"expr"`. |
+| `subsample` | Coarse frequency step factor (`Δf = subsample / T`). |
+| `finetune` | Fine-tune frequency step factor near peak periods (`Δf_fine = finetune / T`). |
+| `Npeaks` | Number of peaks to report. |
+| `operiodogram` | `1` to write period vs. FTP power to `outdir/$basename.ftp`. With `whiten`, one column per whitening cycle. |
+| `"clip" clip clipiter` | σ-clipping factor and iterate-flag for the SNR noise estimate. Default 5σ iterative, matching `-aov` / `-PDM`. |
+| `"noerr"` | Use uniform point weights instead of `1/σ²`. |
+| `"posamponly"` | Skip negative-amplitude solutions during the search — the periodogram becomes the best positive-amplitude fit at each frequency. |
+| `"whiten"` | After each peak, subtract `θ₁ · M(ω t − θ₂) + θ₃` from the LC and recompute the periodogram for the next peak. Adds per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` columns (one pair per peak instead of the per-LC pair). |
+| `"fixperiodSNR" …` | Additionally report FTP power / SNR / θ₂ / NegAmp at a specified period. Sources: `aov` / `ls` / `pdm` / `ftp` (the most recent prior period-finder of that type), `injectharm`, `fix` *period*, `list` (with optional `column N`), or `fixcolumn` *name*. Evaluation is against the **original** light curve even when `whiten` is set. |
+| `"bootstrap" Nboot` | Enable empirical-CDF FAP via `Nboot` shuffled-LC trials. Adds `FTP_NEG_LN_FAP_k_N` to the output. |
+| `"maskpoints" maskvar` | Exclude points where `maskvar ≤ 0`. |
+| `"method" mode` | Per-frequency optimisation: `auto` (default; poly for H ≤ 2, brute otherwise), `brute` (720-sample θ₂ scan + golden refinement; correct to ~1e-12), `poly` (root-finding via the Hoffman et al. polynomial), or `verify` (run both methods and emit a per-LC stderr comparison summary; returns the brute result). |
+| `"sums" mode` | Per-LC summation strategy: `auto` (NFFT if built with `--with-nfft`, else `direct`), `direct`, or `nfft`. |
+
+The trailing keyword block is parsed in a strict order matching the syntax above; mis-ordering or duplicating these keywords produces a command-syntax error.
+
+**Output columns** (per peak `k`, command index `N`)
+
+| Column | Description |
+|--------|-------------|
+| `FTP_Period_k_N` | Best period of peak `k` (days). |
+| `FTP_Power_k_N` | FTP power statistic ∈ [0, 1]; higher is better, 1 = exact template fit. |
+| `FTP_SNR_k_N` | `(P_peak − P_mean) / P_rms` over the clipped periodogram. |
+| `FTP_NegAmp_k_N` | `1` if the best fit at the peak had `θ₁ < 0` (flipped template — generally not a real signal for non-symmetric `M(φ)`); `0` otherwise. |
+| `FTP_Theta_k_N` | Best-fit phase shift `θ₂` in radians. |
+| `Mean_FTP_Power_N` / `RMS_FTP_Power_N` | Periodogram mean and RMS used for the SNR (one set per command unless `whiten` is set, in which case per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` are emitted instead). |
+| `FTP_NEG_LN_FAP_k_N` | `−ln(FAP)`. Only emitted when `bootstrap` is set; read from the empirical CDF, or from a log-log extrapolation to the most-extreme 10% of the bootstrap distribution when the peak is more extreme than any trial. |
+
+When `fixperiodSNR` is set, five additional columns are appended: `FTP_PeriodFix_N`, `FTP_Power_PeriodFix_N`, `FTP_SNR_PeriodFix_N`, `FTP_NegAmp_PeriodFix_N`, `FTP_Theta_PeriodFix_N` (plus `FTP_NEG_LN_FAP_PeriodFix_N` when `bootstrap` is also set).
+
+**References**
+
+Cite Hoffman, J., VanderPlas, J., Hartman, J. D., & Bakos, G. A. 2021, arXiv:2101.12348. The reference Python implementation is at [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
+
+**Examples**
+
+**Example 1.** File-mode pure-cosine (H = 1) template — the degenerate Lomb-Scargle-like case, useful for showing the output column structure.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -FTP file EXAMPLES/2.ftptemplate 0.1 10. 0.1 0.01 3 1 EXAMPLES/OUTDIR1
+```
+
+**Example 2.** Build a 6-harmonic template by fitting a Fourier series to the light curve at its known period, then search the same LC with iterative whitening between peaks.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -FTP fitlc EXAMPLES/2 ascii 1 2 3 5 1.235 \
+         0.1 10. 0.1 0.01 3 0 \
+         clip 5. 1 whiten
+```
+
+**Example 3.** Inline-specified template plus bootstrap FAP and a fixed-period evaluation.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -randseed 1 \
+    -FTP inline 1 1.0 0.0 0.3 0.0 \
+         0.1 10. 0.1 0.01 2 0 \
+         fixperiodSNR fix 1.235 bootstrap 500
+```
+
+**Example 4.** Per-LC template paths read from a column of the input list (`-l`).
+
+```bash
+vartools -l EXAMPLES/lc_list_ftp -header \
+    -FTP filelist column 2 0.1 2.0 0.1 0.01 2 0
+```
+
+---
+
 ### `-BLS` — Box-fitting Least Squares
 
 **Syntax**

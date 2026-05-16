@@ -21,6 +21,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-aov` | Phase-binned Analysis of Variance period search | [CLI](cli/period-finding.md#-aov-phase-binned-analysis-of-variance) | [Python](python/commands/period-finding.md#aov-analysis-of-variance) |
 | `-aov_harm` | Multi-harmonic Analysis of Variance period search | [CLI](cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance) | [Python](python/commands/period-finding.md#aov_harm-multi-harmonic-aov) |
 | `-PDM` | Phase Dispersion Minimization period search (step / linterp / multicover / tophat / gauss variants) | [CLI](cli/period-finding.md#-pdm-phase-dispersion-minimization) | [Python](python/commands/period-finding.md#pdm-phase-dispersion-minimization) |
+| `-FTP` | Fast Template Periodogram (Hoffman et al. 2021) — fit a known-shape Fourier template at each trial period | [CLI](cli/period-finding.md#-ftp-fast-template-periodogram) | [Python](python/commands/period-finding.md#ftp-fast-template-periodogram) |
 | `-autocorrelation` | Discrete autocorrelation function | [CLI](cli/statistics.md#-autocorrelation) | [Python](python/commands/statistics.md#autocorrelation-autocorrelation-function) |
 | `-binlc` | Bin the light curve by time | [CLI](cli/manipulation.md#-binlc) | [Python](python/commands/manipulation.md#binlc-bin-in-time) |
 | `-BLS` | Box-fitting Least Squares transit search | [CLI](cli/period-finding.md#-bls-box-fitting-least-squares) | [Python](python/commands/period-finding.md#bls-box-least-squares-transit-search) |
