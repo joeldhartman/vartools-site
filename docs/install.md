@@ -36,10 +36,15 @@ Python package.
     ```bash
     sudo apt-get install -y \
         build-essential gfortran libtool csh wget \
-        libcfitsio-dev libgsl-dev \
+        libcfitsio-dev libgsl-dev libnfft3-dev \
         python3-dev python3-numpy python3-pip \
         r-base-dev
     ```
+
+    `libnfft3-dev` (which pulls in `libfftw3-dev`) is optional: it
+    enables NFFT-batched summations in the `-FTP` command (~4× faster
+    at N≥10⁴). Without it, `-FTP` falls back to per-frequency direct
+    sums and still works correctly.
 
     Fedora / RHEL / Rocky / AlmaLinux:
 
@@ -50,6 +55,11 @@ Python package.
         python3-devel python3-numpy python3-pip \
         R-core-devel
     ```
+
+    NFFT3 is not in the default RHEL/Rocky/Alma repositories. On Fedora,
+    `dnf install nfft-devel` is available; on RHEL-family distros you
+    can build NFFT3 from source (<https://www-user.tu-chemnitz.de/~potts/nfft/>)
+    or skip it — `-FTP` works without it.
 
     **2. Build CSPICE from source** (not packaged; used by the
     `-converttime` command):
@@ -128,9 +138,13 @@ Python package.
     brew install \
         gcc               `# brings gfortran` \
         libtool wget \
-        cfitsio gsl \
+        cfitsio gsl nfft \
         python@3 numpy r
     ```
+
+    The `nfft` formula pulls in `fftw` automatically and enables
+    NFFT-batched summations in the `-FTP` command. Omit it if you
+    don't use `-FTP`; the command still works without NFFT (slower).
 
     **3. Build CSPICE from source** (not available from Homebrew).
     Pick the matching distribution for your CPU:
@@ -251,11 +265,20 @@ Python package.
         mingw-w64-x86_64-libtool \
         mingw-w64-x86_64-cfitsio \
         mingw-w64-x86_64-gsl \
+        mingw-w64-x86_64-fftw \
         mingw-w64-x86_64-python \
         mingw-w64-x86_64-python-numpy \
         mingw-w64-x86_64-python-pip \
         tcsh wget
     ```
+
+    NFFT3 itself is not packaged in MSYS2 as of this writing. The `-FTP`
+    command works without it (using the per-frequency direct-sum path).
+    To enable the NFFT-batched fast path, build NFFT3 from source
+    against the `mingw-w64-x86_64-fftw` library
+    (<https://www-user.tu-chemnitz.de/~potts/nfft/>) and pass
+    `--with-nfft CPPFLAGS=-I/path/to/nfft/include
+    LDFLAGS=-L/path/to/nfft/lib` to `./configure`.
 
     **2. Build CSPICE** using NAIF's `PC_Cygwin_GCC_64bit` distribution
     (works under MSYS2 / MinGW-w64):
@@ -324,7 +347,8 @@ feature is silently disabled if the detection fails. Pass the listed
 | Library | Purpose | Configure flag |
 |---------|---------|----------------|
 | [cfitsio](https://heasarc.gsfc.nasa.gov/fitsio/) | FITS light-curve I/O | `--with-cfitsio=/path` |
-| [GSL](https://www.gnu.org/software/gsl/) | `-addnoise`, `-microlens`, `-resample`, `-FFT`, `-IFFT` commands | `--with-gsl` / `--with-gsl=no` |
+| [GSL](https://www.gnu.org/software/gsl/) | `-addnoise`, `-microlens`, `-resample`, `-FFT`, `-IFFT`, `-FTP` (polynomial fast path) | `--with-gsl` / `--with-gsl=no` |
+| [NFFT3](https://www-user.tu-chemnitz.de/~potts/nfft/) (+ [FFTW3](https://www.fftw.org/)) | NFFT-batched summations in `-FTP` (~4× speedup at N≥10⁴; `-FTP` falls back to direct sums if absent) | `--with-nfft` / `--with-nfft=no` |
 | pthread | Parallel processing (`-parallel N`) | *(autodetect only)* |
 | [CSPICE](https://naif.jpl.nasa.gov/naif/toolkit.html) | BJD/UTC conversion (`-converttime`) | `--with-cspice=/path` |
 | Python 3 + NumPy | Embedded `-python` command | `--with-pythonconfig=/path`, `--with-pythonhome=/path` |
