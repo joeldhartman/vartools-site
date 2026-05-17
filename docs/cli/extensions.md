@@ -32,7 +32,7 @@ single call.
 
 ## `-fastchi2`
 
-**Palmer's Fast χ² periodogram** (Palmer 2009, ApJ, 695, 496).
+**Palmer's Fast χ² periodogram** ([Palmer 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...695..496P/abstract), ApJ, 695, 496).
 
 **Syntax**
 ```
@@ -80,7 +80,7 @@ Python equivalent: [`fastchi2`](../python/commands/extensions.md#fastchi2-palmer
 
 **References**
 
-Cite Palmer 2009, ApJ, 695, 496.
+Cite [Palmer 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...695..496P/abstract), ApJ, 695, 496.
 
 **Examples**
 
@@ -96,7 +96,7 @@ vartools -i EXAMPLES/2 -oneline -ascii \
 
 ## `-ftuneven`
 
-**Complex Fourier transform of unevenly sampled data** (Scargle 1989, ApJ, 343, 874).
+**Complex Fourier transform of unevenly sampled data** ([Scargle 1989](https://ui.adsabs.harvard.edu/abs/1989ApJ...343..874S/abstract), ApJ, 343, 874).
 
 **Syntax**
 ```
@@ -146,7 +146,7 @@ Frequency source (choose one):
 
 **References**
 
-Cite Scargle 1989, ApJ, 343, 874.
+Cite [Scargle 1989](https://ui.adsabs.harvard.edu/abs/1989ApJ...343..874S/abstract), ApJ, 343, 874.
 
 **Examples**
 
@@ -270,7 +270,7 @@ Optional physical parameters: `gravdark1/2` (gravity darkening, default 1.0), `r
 
 **References**
 
-Cite Southworth et al. 2004, MNRAS, 351, 1277; Popper & Etzel 1981, AJ, 86, 102; Etzel 1981, *Photometric and Spectroscopic Binary Systems*, 111; Nelson & Davis 1972, ApJ, 174, 617.
+Cite [Southworth et al. 2004](https://ui.adsabs.harvard.edu/abs/2004MNRAS.351.1277S/abstract), MNRAS, 351, 1277; [Popper & Etzel 1981](https://ui.adsabs.harvard.edu/abs/1981AJ.....86..102P/abstract), AJ, 86, 102; [Etzel 1981](https://ui.adsabs.harvard.edu/abs/1981psbs.conf..111E/abstract), *Photometric and Spectroscopic Binary Systems*, 111; [Nelson & Davis 1972](https://ui.adsabs.harvard.edu/abs/1972ApJ...174..617N/abstract), ApJ, 174, 617.
 
 **Examples**
 
@@ -450,7 +450,7 @@ vartools -l EXAMPLES/lc_list_stitch combinelcs lcnumvar lcnum \
 
 ## `-macula`
 
-**Kipping's Macula analytic starspot model** (Kipping 2012, arXiv:1209.2985).
+**Kipping's Macula analytic starspot model** ([Kipping 2012](https://ui.adsabs.harvard.edu/abs/2012MNRAS.427.2487K/abstract), MNRAS, 427, 2487).
 
 **Syntax**
 ```
@@ -518,7 +518,7 @@ Output / control flags:
 
 **References**
 
-Cite Kipping 2012, arXiv:1209.2985.
+Cite [Kipping 2012](https://ui.adsabs.harvard.edu/abs/2012MNRAS.427.2487K/abstract), MNRAS, 427, 2487.
 
 **Examples**
 

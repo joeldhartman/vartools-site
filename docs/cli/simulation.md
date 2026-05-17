@@ -118,7 +118,7 @@ where `x = sqrt(2*nu) * |t_i-t_j| / rho`, `C(x,y) = (2^(1-x)/Gamma(x)) * y^x`, a
 
 #### `"wavelet"` — 1/f^γ red noise + white noise
 
-Generates noise as the sum of a red-noise component with power-spectral density proportional to `1/f^gamma` (γ must satisfy `-1 < gamma < 1`) with standard deviation `sig_red`, and an uncorrelated white-noise component with standard deviation `sig_white`. The red-noise is generated using the wavelet method of McCoy and Walden (1996).
+Generates noise as the sum of a red-noise component with power-spectral density proportional to `1/f^gamma` (γ must satisfy `-1 < gamma < 1`) with standard deviation `sig_red`, and an uncorrelated white-noise component with standard deviation `sig_white`. The red-noise is generated using the wavelet method of [McCoy and Walden (1996, JCGS, 5, 26)](https://doi.org/10.1080/10618600.1996.10474693).
 
 | Parameter | Description |
 |-----------|-------------|

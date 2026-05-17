@@ -289,7 +289,7 @@ cmd.MandelAgolTransit(P0, T00, r0=0.1, a0=10.0, inclination=90.0,
 
 **Description**
 
-Fit a Mandel & Agol (2002) transit model to the light curve. Initial values for the period and transit centre can be entered directly or seeded from a preceding `BLS` / `BLSFixPer` run (`P0="bls"` or `"blsfixper"`). Quadratic or non-linear (Claret) limb darkening is supported. Each model parameter has an explicit `fit*` flag (`0` = fixed, `1` = free). Optional simultaneous radial-velocity fitting is enabled by passing `rv_file`.
+Fit a [Mandel & Agol (2002)](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract) transit model to the light curve. Initial values for the period and transit centre can be entered directly or seeded from a preceding `BLS` / `BLSFixPer` run (`P0="bls"` or `"blsfixper"`). Quadratic or non-linear (Claret) limb darkening is supported. Each model parameter has an explicit `fit*` flag (`0` = fixed, `1` = free). Optional simultaneous radial-velocity fitting is enabled by passing `rv_file`.
 
 CLI equivalent: [`-MandelAgolTransit`](../../cli/model-fitting.md#-mandelagoltransit).
 
@@ -352,7 +352,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Mandel, K. & Agol, E. 2002, ApJ, 580, L171.
+[Mandel, K. & Agol, E. 2002](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract), ApJ, 580, L171.
 
 **Examples**
 
@@ -396,7 +396,7 @@ cmd.SoftenedTransit(init_params="bls", fitephem=1, fiteta=1,
 
 **Description**
 
-Fit a Protopapas, Jiménez & Alcock (2005) "softened" trapezoidal transit model. `init_params` can be `"bls"` or `"blsfixper"` to initialise from a prior BLS / BLSFixPer result, `"ls"` or `"aov"` to seed the period from the corresponding periodogram, or a tuple `(P0, T00, eta0, delta0, mconst0, cval0)` of explicit numeric initial values.
+Fit a [Protopapas, Jiménez & Alcock (2005)](https://ui.adsabs.harvard.edu/abs/2005MNRAS.362..460P/abstract) "softened" trapezoidal transit model. `init_params` can be `"bls"` or `"blsfixper"` to initialise from a prior BLS / BLSFixPer result, `"ls"` or `"aov"` to seed the period from the corresponding periodogram, or a tuple `(P0, T00, eta0, delta0, mconst0, cval0)` of explicit numeric initial values.
 
 CLI equivalent: [`-SoftenedTransit`](../../cli/model-fitting.md#-softenedtransit).
 
@@ -438,7 +438,7 @@ When `save_model` is set:
 
 **References**
 
-Protopapas, P., Jiménez, R. & Alcock, C. 2005, MNRAS, 362, 460.
+[Protopapas, P., Jiménez, R. & Alcock, C. 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.362..460P/abstract), MNRAS, 362, 460.
 
 **Examples**
 
@@ -476,7 +476,7 @@ cmd.Starspot(period="ls",
 
 **Description**
 
-Fit a Dorren (1987) single-spot model — a circular, uniform-temperature starspot — to a photometric light curve. Initial parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987 (spot fractional radius, latitude in radians, longitude in degrees, stellar inclination, spot contrast, phase offset). Set `mconst0` negative to estimate the unspotted magnitude automatically.
+Fit a [Dorren (1987)](https://ui.adsabs.harvard.edu/abs/1987ApJ...320..756D/abstract) single-spot model — a circular, uniform-temperature starspot — to a photometric light curve. Initial parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987 (spot fractional radius, latitude in radians, longitude in degrees, stellar inclination, spot contrast, phase offset). Set `mconst0` negative to estimate the unspotted magnitude automatically.
 
 CLI equivalent: [`-Starspot`](../../cli/model-fitting.md#-starspot).
 
@@ -524,7 +524,7 @@ When `save_model` is set:
 
 **References**
 
-Dorren 1987, ApJ, 320, 756.
+[Dorren 1987](https://ui.adsabs.harvard.edu/abs/1987ApJ...320..756D/abstract), ApJ, 320, 756.
 
 **Examples**
 
@@ -569,7 +569,7 @@ cmd.microlens(f0=None, f1=None, u0=None, t0=None, tmax=None,
 
 **Description**
 
-Fit a Wozniak (2001) point-source single-lens microlensing model to the light curve using a downhill-simplex optimiser. Each parameter (`f0`, `f1`, `u0`, `t0`, `tmax`) can be a float (free-fit initial value), `"auto"` (vartools auto-estimate), a string passthrough (e.g. `"fixcolumn colname"`, `"list column 3"`), or `None` (omit). Use `{name}_step` to set the initial step size and `{name}_novary=True` to hold a parameter fixed during fitting.
+Fit a [Wozniak et al. (2001)](https://ui.adsabs.harvard.edu/abs/2001AcA....51..175W/abstract) point-source single-lens microlensing model to the light curve using a downhill-simplex optimiser. Each parameter (`f0`, `f1`, `u0`, `t0`, `tmax`) can be a float (free-fit initial value), `"auto"` (vartools auto-estimate), a string passthrough (e.g. `"fixcolumn colname"`, `"list column 3"`), or `None` (omit). Use `{name}_step` to set the initial step size and `{name}_novary=True` to hold a parameter fixed during fitting.
 
 CLI equivalent: [`-microlens`](../../cli/model-fitting.md#-microlens).
 
@@ -607,7 +607,7 @@ When `save_model` is set:
 
 **References**
 
-Wozniak, P. R. et al. 2001, AcA, 51, 175.
+[Wozniak, P. R. et al. 2001](https://ui.adsabs.harvard.edu/abs/2001AcA....51..175W/abstract), AcA, 51, 175.
 
 **Examples**
 

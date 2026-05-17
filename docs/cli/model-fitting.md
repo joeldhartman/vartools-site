@@ -168,7 +168,7 @@ vartools -i EXAMPLES/3 \
     ["ojdcurve" curve_outdir jdstep]
 ```
 
-Fit a Mandel and Agol (2002) transit model to the light curve. Initial parameters can come from a preceding `-BLS` run or be entered directly.
+Fit a [Mandel and Agol (2002)](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract) transit model to the light curve. Initial parameters can come from a preceding `-BLS` run or be entered directly.
 
 Python equivalent: [`MandelAgolTransit`](../python/commands/model-fitting.md#mandelagoltransit-mandel-agol-transit-model).
 
@@ -206,7 +206,7 @@ Set `fitRV=1` to simultaneously fit an RV curve from `RVinputfile` (columns: JD,
 - `"ophcurve" curve_outdir phmin phmax phstep` — Output a model phase curve to `curve_outdir` with phases from `phmin` to `phmax` in steps of `phstep`. Suffix: `.mandelagoltransit.phcurve`.
 - `"ojdcurve" curve_outdir jdstep` — Output a model light curve evaluated at times spanning the observations with step size `jdstep`. Suffix: `.mandelagoltransit.jdcurve`.
 
-**Citation:** Mandel, K. & Agol, E. 2002, ApJ, 580, L171.
+**Citation:** [Mandel, K. & Agol, E. 2002](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract), ApJ, 580, L171.
 
 **Examples**
 
@@ -245,7 +245,7 @@ MandelAgolTransit_chi2_1    = 27.06054
         nharm nsubharm]
 ```
 
-Fit a Protopapas, Jimenez and Alcock (2005) "softened" transit model to the light curve. Initial parameters may come from a preceding `-BLS` or `-BLSFixPer` run, or be entered directly.
+Fit a [Protopapas, Jimenez and Alcock (2005)](https://ui.adsabs.harvard.edu/abs/2005MNRAS.362..460P/abstract) "softened" transit model to the light curve. Initial parameters may come from a preceding `-BLS` or `-BLSFixPer` run, or be entered directly.
 
 Python equivalent: [`SoftenedTransit`](../python/commands/model-fitting.md#softenedtransit-softened-trapezoidal-transit).
 
@@ -258,11 +258,11 @@ Python equivalent: [`SoftenedTransit`](../python/commands/model-fitting.md#softe
 - `omodel` — Set to `1` to output the model to `model_outdir`. Suffix: `.softenedtransit.model`.
 - `fit_harm` — Set to `1` to simultaneously fit a harmonic series; specify the period source and `nharm`, `nsubharm`.
 
-**Citation:** Protopapas, P., Jimenez, R. & Alcock, C. 2005, MNRAS, 362, 460.
+**Citation:** [Protopapas, P., Jimenez, R. & Alcock, C. 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.362..460P/abstract), MNRAS, 362, 460.
 
 **Examples**
 
-**Example 1.** Use `-BLS` to identify a transit signal in `EXAMPLES/3.transit`, then fit a Protopapas et al. 2005 softened transit model initialized from the BLS results. The ephemeris, eta, cval, delta, and mconst are varied; the model is not subtracted from the light curve.
+**Example 1.** Use `-BLS` to identify a transit signal in `EXAMPLES/3.transit`, then fit a [Protopapas et al. 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.362..460P/abstract) softened transit model initialized from the BLS results. The ephemeris, eta, cval, delta, and mconst are varied; the model is not subtracted from the light curve.
 
 ```bash
 vartools -i EXAMPLES/3.transit -oneline \
@@ -312,7 +312,7 @@ SoftenedTransit_chi2perdof_1 = 27.04335183
     ["correctlc"] ["omodel" outdir]
 ```
 
-Fit a simple (Wozniak 2001) microlensing model to the light curve using a downhill simplex optimizer.
+Fit a simple ([Wozniak et al. 2001](https://ui.adsabs.harvard.edu/abs/2001AcA....51..175W/abstract), AcA, 51, 175) microlensing model to the light curve using a downhill simplex optimizer.
 
 Python equivalent: [`microlens`](../python/commands/model-fitting.md#microlens-microlensing-model).
 
@@ -332,7 +332,7 @@ For each of the five model parameters (`f0`, `f1`, `u0`, `t0`, `tmax`), optional
 - `"correctlc"` — Subtract the best-fit model from the light curve.
 - `"omodel" outdir` — Output the model to `outdir`. Output suffix: `.microlens`.
 
-**Citation:** Wozniak, P.R. et al. 2001, AcA, 51, 175.
+**Citation:** [Wozniak, P.R. et al. 2001](https://ui.adsabs.harvard.edu/abs/2001AcA....51..175W/abstract), AcA, 51, 175.
 
 **Examples**
 
@@ -376,11 +376,11 @@ Microlens_chi2perdof_0 = 4.4674961258953
 !!! warning "Deprecated"
     This command is deprecated as of VARTOOLS 1.3. Use the `-macula` extension command instead.
 
-Fit a single, circular, uniform-temperature starspot model to the light curve using the Dorren (1987) model. Parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987. Set `mconst0` negative to estimate it automatically from the data. Fit flags (`fitP`, `fita`, etc.) are `1` to vary and `0` to fix the corresponding parameter.
+Fit a single, circular, uniform-temperature starspot model to the light curve using the [Dorren (1987)](https://ui.adsabs.harvard.edu/abs/1987ApJ...320..756D/abstract) model. Parameters `a0`, `b0`, `alpha0`, `i0`, `chi0`, `psi00` are as defined in Dorren 1987. Set `mconst0` negative to estimate it automatically from the data. Fit flags (`fitP`, `fita`, etc.) are `1` to vary and `0` to fix the corresponding parameter.
 
 Python equivalent: [`Starspot`](../python/commands/model-fitting.md#starspot-starspot-model).
 
-**Citation:** Dorren 1987, ApJ, 320, 756.
+**Citation:** [Dorren 1987](https://ui.adsabs.harvard.edu/abs/1987ApJ...320..756D/abstract), ApJ, 320, 756.
 
 **Examples**
 

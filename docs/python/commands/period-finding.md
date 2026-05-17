@@ -16,7 +16,7 @@ cmd.LS(minp, maxp, subsample, npeaks=5, save_periodogram=False,
 
 **Description**
 
-Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. The search runs over frequencies from `fmin = 1/maxp` to `fmax = 1/minp` with a uniform frequency step `Δf = subsample/T`, where `T` is the time baseline. The GLS implementation of Zechmeister & Kürster (2009) allows a floating mean and heteroscedastic errors, unlike the traditional LS periodogram.
+Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. The search runs over frequencies from `fmin = 1/maxp` to `fmax = 1/minp` with a uniform frequency step `Δf = subsample/T`, where `T` is the time baseline. The GLS implementation of [Zechmeister & Kürster (2009)](https://ui.adsabs.harvard.edu/abs/2009A%26A...496..577Z/abstract) allows a floating mean and heteroscedastic errors, unlike the traditional LS periodogram.
 
 The reported statistic is `LS = (χ0² − χ(f)²) / χ0²`, where `χ0²` is χ² about the weighted mean and `χ(f)²` is χ² about the best-fit sinusoid at frequency `f`. With `noGLS=True` the wrapper instead computes the standard un-normalized Lomb-Scargle power.
 
@@ -58,7 +58,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Zechmeister & Kürster 2009, A&A, 496, 577 and Press et al. 1992 (*Numerical Recipes*) for the GLS form. For the traditional LS periodogram, also cite Lomb 1976, ApSS, 39, 447; Scargle 1982, ApJ, 263, 835; Press & Rybicki 1989, ApJ, 338, 277.
+[Zechmeister & Kürster 2009](https://ui.adsabs.harvard.edu/abs/2009A%26A...496..577Z/abstract), A&A, 496, 577 and Press et al. 1992 (*Numerical Recipes*) for the GLS form. For the traditional LS periodogram, also cite [Lomb 1976](https://ui.adsabs.harvard.edu/abs/1976Ap%26SS..39..447L/abstract), ApSS, 39, 447; [Scargle 1982](https://ui.adsabs.harvard.edu/abs/1982ApJ...263..835S/abstract), ApJ, 263, 835; [Press & Rybicki 1989](https://ui.adsabs.harvard.edu/abs/1989ApJ...338..277P/abstract), ApJ, 338, 277.
 
 **Examples**
 
@@ -187,7 +187,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Schwarzenberg-Czerny 1989, MNRAS, 241, 153 and Devor 2005, ApJ, 628, 411.
+[Schwarzenberg-Czerny 1989](https://ui.adsabs.harvard.edu/abs/1989MNRAS.241..153S/abstract), MNRAS, 241, 153 and [Devor 2005](https://ui.adsabs.harvard.edu/abs/2005ApJ...628..411D/abstract), ApJ, 628, 411.
 
 **Examples**
 
@@ -266,7 +266,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Schwarzenberg-Czerny 1996, ApJ, 460, L107.
+[Schwarzenberg-Czerny 1996](https://ui.adsabs.harvard.edu/abs/1996ApJ...460L.107S/abstract), ApJ, 460, L107.
 
 **Examples**
 
@@ -306,7 +306,7 @@ Perform a Phase Dispersion Minimization period search. For each trial frequency 
 
 | `variant` | Model | Notes |
 |-----------|-------|-------|
-| `"step"` | Per-bin mean over `nbin` fixed phase bins (Stellingwerf 1978). | Classic PDM. |
+| `"step"` | Per-bin mean over `nbin` fixed phase bins ([Stellingwerf 1978](https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract)). | Classic PDM. |
 | `"linterp"` | Linear interpolation between adjacent bin means (cuvarbase default). | Smoother periodogram than `step` for the same `nbin`. |
 | `"multicover"` | Average of `nc` phase-shifted `nbin`-bin sets. | Reduces bin-edge sensitivity. Schwarzenberg-Czerny 1997 explicitly notes that no analytic FAP exists for `nc > 1`; the reported FAP uses the single-cover formula and should be treated as approximate. |
 | `"tophat"` | Per-point weighted mean of phase-neighbours inside `\|Δφ\| ≤ dphi`. | Binless. Costs O(N²) per trial period. |
@@ -359,7 +359,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Stellingwerf 1978, ApJ, 224, 953; Schwarzenberg-Czerny 1997, ApJ, 489, 941; Zalian, Chadid & Stellingwerf 2014, MNRAS, 440, 68. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
+[Stellingwerf 1978](https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract), ApJ, 224, 953; [Schwarzenberg-Czerny 1997](https://ui.adsabs.harvard.edu/abs/1997ApJ...489..941S/abstract), ApJ, 489, 941; [Zalian, Chadid & Stellingwerf 2014](https://ui.adsabs.harvard.edu/abs/2014MNRAS.440...68Z/abstract), MNRAS, 440, 68. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
 
 **Examples**
 
@@ -412,7 +412,7 @@ cmd.FTP(template_source, minp, maxp, subsample, finetune, *,
 
 **Description**
 
-Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram (Hoffman, VanderPlas, Hartman & Bakos 2021) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template; 1 = exact fit. FTP is most useful when the signal shape is known a priori (RR Lyrae, Cepheids, or any signal whose Fourier coefficients can be reliably pre-computed).
+Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram ([Hoffman, VanderPlas, Hartman & Bakos 2021](https://ui.adsabs.harvard.edu/abs/2021arXiv210112348H/abstract)) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template; 1 = exact fit. FTP is most useful when the signal shape is known a priori (RR Lyrae, Cepheids, or any signal whose Fourier coefficients can be reliably pre-computed).
 
 The `template_source` argument selects how the template is sourced. Each mode requires its own set of mode-specific keyword arguments; mixing kwargs across modes is rejected at construction time.
 
@@ -481,7 +481,7 @@ When `save_periodogram` is enabled:
 
 **References**
 
-Hoffman, J., et al. 2021, arXiv:2101.12348. Reference Python implementation: [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
+[Hoffman, J., et al. 2021](https://ui.adsabs.harvard.edu/abs/2021arXiv210112348H/abstract), arXiv:2101.12348. Reference Python implementation: [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
 
 **Examples**
 
@@ -536,7 +536,7 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
 
 **Description**
 
-Run the Box-Least Squares (BLS) transit search algorithm of Kovács, Zucker & Mazeh (2002). BLS searches for periodic box-shaped (or trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
+Run the Box-Least Squares (BLS) transit search algorithm of [Kovács, Zucker & Mazeh (2002)](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract). BLS searches for periodic box-shaped (or trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
 
 The transit-duration grid can be specified three ways:
 
@@ -558,7 +558,7 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `npeaks` | `int` | Number of transit candidates to report. |
 | `subsample` | `float` or `str` | Frequency oversampling factor. |
 | `nfreq` | `int`, `str`, or `None` | Fixed number of test frequencies (overrides `subsample`). |
-| `density_mode` | `bool` | Use stellar density to set transit-duration bounds. Required for the Ofir (2014) optimal grid. |
+| `density_mode` | `bool` | Use stellar density to set transit-duration bounds. Required for the [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) optimal grid. |
 | `stellar_density` | `float`, `str`, or `None` | Stellar density (g/cm³) for density mode. |
 | `min_exp_dur_frac`, `max_exp_dur_frac` | `float` or `str` | Expected-duration fractions for density mode (default `0.5` and `1.5`). |
 | `df` | `float`, `str`, or `None` | Fixed frequency step (alternative to `subsample`). |
@@ -618,7 +618,7 @@ When the corresponding `save_*` keyword is set:
 
 **References**
 
-Kovács, Zucker & Mazeh 2002, A&A, 391, 369. For the Ofir (2014) optimal frequency sampling (used in density mode), cite Ofir 2014, A&A, 561, A138.
+[Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369. For the [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) optimal frequency sampling (used in density mode), cite Ofir 2014, A&A, 561, A138.
 
 **Examples**
 
@@ -727,7 +727,7 @@ When `save_model` is enabled:
 
 **References**
 
-Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+[Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 **Examples**
 
@@ -830,7 +830,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+[Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 **Examples**
 
@@ -922,7 +922,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+[Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 **Examples**
 
@@ -958,7 +958,7 @@ cmd.dftclean(nbeam, maxfreq=None, save_dspec=False, save_wfunc=False,
 
 **Description**
 
-Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm of Kurtz (1985), and optionally deconvolve it with the CLEAN algorithm of Roberts, Lehar & Dreher (1987) to remove aliasing due to the window function.
+Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm of [Kurtz (1985)](https://ui.adsabs.harvard.edu/abs/1985MNRAS.213..773K/abstract), and optionally deconvolve it with the CLEAN algorithm of [Roberts, Lehar & Dreher (1987)](https://ui.adsabs.harvard.edu/abs/1987AJ.....93..968R/abstract) to remove aliasing due to the window function.
 
 The CLEAN iteration starts from the dirty spectrum, identifies the strongest peak, subtracts a scaled CLEAN beam centred on that peak, and repeats until the residual is below `SNlimit · noise`. The `gain` parameter (∈ [0.1, 1.0]) controls how aggressively each iteration removes the peak: smaller is slower but more thorough.
 
@@ -1006,7 +1006,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Kurtz 1985, MNRAS, 213, 773 for the FDFT algorithm. Roberts, Lehar & Dreher 1987, AJ, 93, 4 for the CLEAN algorithm.
+[Kurtz 1985](https://ui.adsabs.harvard.edu/abs/1985MNRAS.213..773K/abstract), MNRAS, 213, 773 for the FDFT algorithm. [Roberts, Lehar & Dreher 1987](https://ui.adsabs.harvard.edu/abs/1987AJ.....93..968R/abstract), AJ, 93, 968 for the CLEAN algorithm.
 
 **Examples**
 
@@ -1044,7 +1044,7 @@ cmd.wwz(maxfreq="auto", freqsamp=None, tau0="auto", tau1="auto",
 
 **Description**
 
-Compute the Weighted Wavelet Z-Transform (WWZ) as defined by Foster (1996), using an abbreviated Morlet wavelet:
+Compute the Weighted Wavelet Z-Transform (WWZ) as defined by [Foster (1996)](https://ui.adsabs.harvard.edu/abs/1996AJ....112.1709F/abstract), using an abbreviated Morlet wavelet:
 
 ```
 f(z) = exp(i·2π·f·(t − τ) − c·(2π·f)²·(t − τ)²)
@@ -1098,7 +1098,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Foster 1996, AJ, 112, 1709.
+[Foster 1996](https://ui.adsabs.harvard.edu/abs/1996AJ....112.1709F/abstract), AJ, 112, 1709.
 
 **Examples**
 
@@ -1164,7 +1164,7 @@ Suffix `N` is the pipeline command index:
 
 **References**
 
-Same references as `LS` (Zechmeister & Kürster 2009; Press et al. 1992; Lomb 1976; Scargle 1982; Press & Rybicki 1989).
+Same references as `LS` ([Zechmeister & Kürster 2009](https://ui.adsabs.harvard.edu/abs/2009A%26A...496..577Z/abstract); Press et al. 1992; [Lomb 1976](https://ui.adsabs.harvard.edu/abs/1976Ap%26SS..39..447L/abstract); [Scargle 1982](https://ui.adsabs.harvard.edu/abs/1982ApJ...263..835S/abstract); [Press & Rybicki 1989](https://ui.adsabs.harvard.edu/abs/1989ApJ...338..277P/abstract)).
 
 **Examples**
 

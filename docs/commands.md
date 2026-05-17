@@ -17,7 +17,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 |---|---|---|---|
 | `-addfitskeyword` | Add a custom keyword to the output-light-curve FITS header | [CLI](cli/control-flow.md#-addfitskeyword) | [Python](python/commands/control-flow.md#addfitskeyword-add-a-fits-keyword) |
 | `-addnoise` | Add simulated white / red / correlated noise to light curves | [CLI](cli/simulation.md#-addnoise) | [Python](python/commands/simulation.md#addnoise-add-synthetic-noise) |
-| `-alarm` | Alarm statistic (Tamuz, Mazeh & North 2006) | [CLI](cli/statistics.md#-alarm) | [Python](python/commands/statistics.md#alarm-alarm-statistic) |
+| `-alarm` | Alarm statistic ([Tamuz, Mazeh & North 2006](https://ui.adsabs.harvard.edu/abs/2006MNRAS.367.1521T/abstract)) | [CLI](cli/statistics.md#-alarm) | [Python](python/commands/statistics.md#alarm-alarm-statistic) |
 | `-aov` | Phase-binned Analysis of Variance period search | [CLI](cli/period-finding.md#-aov-phase-binned-analysis-of-variance) | [Python](python/commands/period-finding.md#aov-analysis-of-variance) |
 | `-aov_harm` | Multi-harmonic Analysis of Variance period search | [CLI](cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance) | [Python](python/commands/period-finding.md#aov_harm-multi-harmonic-aov) |
 | `-autocorrelation` | Discrete autocorrelation function | [CLI](cli/statistics.md#-autocorrelation) | [Python](python/commands/statistics.md#autocorrelation-autocorrelation-function) |
@@ -43,7 +43,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-findblends` | Identify nearby variables that may blend into the target | [CLI](cli/misc.md#-findblends) | [Python](python/commands/misc.md#findblends-search-for-blended-transits) |
 | `-fluxtomag` | Convert flux to magnitude | [CLI](cli/manipulation.md#-fluxtomag) | [Python](python/commands/manipulation.md#difffluxtomag-fluxtomag-flux-conversions) |
 | `-fourierfilter` | Full-band Fourier high/low/band-pass filter with optional analytic filter and edge tapering | [CLI](cli/filtering.md#-fourierfilter) | [Python](python/commands/filtering.md#fourierfilter-full-band-fourier-domain-filter) |
-| `-FTP` | Fast Template Periodogram (Hoffman et al. 2021) — fit a known-shape Fourier template at each trial period | [CLI](cli/period-finding.md#-ftp-fast-template-periodogram) | [Python](python/commands/period-finding.md#ftp-fast-template-periodogram) |
+| `-FTP` | Fast Template Periodogram ([Hoffman et al. 2021](https://ui.adsabs.harvard.edu/abs/2021arXiv210112348H/abstract)) — fit a known-shape Fourier template at each trial period | [CLI](cli/period-finding.md#-ftp-fast-template-periodogram) | [Python](python/commands/period-finding.md#ftp-fast-template-periodogram) |
 | `-ftuneven` | Complex Fourier transform of unevenly sampled data (USERLIB extension) | [CLI](cli/extensions.md#-ftuneven) | [Python](python/commands/extensions.md#ftuneven-complex-fourier-transform-of-unevenly-sampled-data) |
 | `-GetLSAmpThresh` | Minimum detectable amplitude at a given period (LS-based) | [CLI](cli/period-finding.md#-getlsampthresh-minimum-detectable-amplitude) | [Python](python/commands/period-finding.md#getlsampthresh-ls-amplitude-threshold) |
 | `-hatpiflag` | Combine HATPI quality flags into a single binary flag (USERLIB extension) | [CLI](cli/extensions.md#-hatpiflag) | [Python](python/commands/extensions.md#hatpiflag-hatpi-binary-flag-combiner) |
@@ -83,11 +83,11 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-Starspot` | Star-spot rotational modulation model | [CLI](cli/model-fitting.md#-starspot) | [Python](python/commands/model-fitting.md#starspot-starspot-model) |
 | `-stats` | Compute arbitrary summary statistics on any variable | [CLI](cli/statistics.md#-stats) | [Python](python/commands/statistics.md#stats-generic-statistics) |
 | `-stitch` | Stitch multi-segment light curves at offsets (USERLIB extension) | [CLI](cli/extensions.md#-stitch) | [Python](python/commands/extensions.md#stitch-stitch-multi-segment-light-curves-at-offsets) |
-| `-SYSREM` | Systematic-error removal (Tamuz, Mazeh & Zucker 2005) | [CLI](cli/filtering.md#-sysrem) | [Python](python/commands/filtering.md#sysrem-systematic-noise-removal) |
-| `-TFA` | Trend Filtering Algorithm (Kovacs, Bakos & Noyes 2005) | [CLI](cli/filtering.md#-tfa) | [Python](python/commands/filtering.md#tfa-trend-filtering-algorithm) |
+| `-SYSREM` | Systematic-error removal ([Tamuz, Mazeh & Zucker 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract)) | [CLI](cli/filtering.md#-sysrem) | [Python](python/commands/filtering.md#sysrem-systematic-noise-removal) |
+| `-TFA` | Trend Filtering Algorithm ([Kovács, Bakos & Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract)) | [CLI](cli/filtering.md#-tfa) | [Python](python/commands/filtering.md#tfa-trend-filtering-algorithm) |
 | `-TFA_SR` | TFA with signal-reconstruction | [CLI](cli/filtering.md#-tfa_sr) | [Python](python/commands/filtering.md#tfa_sr-tfa-with-signal-reconstruction) |
-| `-vonNeumann` | von Neumann (1941) ratio η = δ²/s² — variability indicator for sparse / unevenly sampled time series | [CLI](cli/statistics.md#-vonneumann) | [Python](python/commands/statistics.md#vonneumann-von-neumann-ratio) |
-| `-wwz` | Weighted Wavelet Z-transform (Foster 1996) | [CLI](cli/period-finding.md#-wwz-weighted-wavelet-z-transform) | [Python](python/commands/period-finding.md#wwz-weighted-wavelet-z-transform) |
+| `-vonNeumann` | [von Neumann (1941)](https://www.jstor.org/stable/2235951) ratio η = δ²/s² — variability indicator for sparse / unevenly sampled time series | [CLI](cli/statistics.md#-vonneumann) | [Python](python/commands/statistics.md#vonneumann-von-neumann-ratio) |
+| `-wwz` | Weighted Wavelet Z-transform ([Foster 1996](https://ui.adsabs.harvard.edu/abs/1996AJ....112.1709F/abstract)) | [CLI](cli/period-finding.md#-wwz-weighted-wavelet-z-transform) | [Python](python/commands/period-finding.md#wwz-weighted-wavelet-z-transform) |
 
 ## Python helper classes
 

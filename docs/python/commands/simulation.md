@@ -23,7 +23,7 @@ Add time-correlated Gaussian noise to the light curve, drawn from a specified co
 | `"squareexp"` | `rho`, `sig_red`, `sig_white`, *opt.* `bintime` | `sig_red²·exp(−(Δt)²/(2ρ²))` plus white. |
 | `"exp"` | `rho`, `sig_red`, `sig_white`, *opt.* `bintime` | `sig_red²·exp(−|Δt|/ρ)` plus white. |
 | `"matern"` | `nu`, `rho`, `sig_red`, `sig_white` | Matérn covariance with smoothness `nu`. |
-| `"wavelet"` | `gamma`, `sig_red`, `sig_white` | `1/f^γ` red noise (McCoy & Walden 1996) plus white. |
+| `"wavelet"` | `gamma`, `sig_red`, `sig_white` | `1/f^γ` red noise ([McCoy & Walden 1996, JCGS, 5, 26](https://doi.org/10.1080/10618600.1996.10474693)) plus white. |
 
 All amplitude and timescale parameters accept either a numeric value or a vartools variable-name string (the wrapper inserts the appropriate `fix` / `var` / `expr` keyword).
 

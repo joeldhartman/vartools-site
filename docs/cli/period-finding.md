@@ -22,7 +22,7 @@ This page documents the VARTOOLS commands for detecting and characterizing perio
 
 **Description**
 
-Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. The search runs over frequencies from `fmin = 1/maxp` to `fmax = 1/minp` with a uniform frequency step `Δf = subsample/T`, where `T` is the time baseline. The GLS implementation of Zechmeister and Kürster (2009) allows a floating mean and heteroscedastic errors, unlike the traditional LS periodogram.
+Perform a Generalized Lomb-Scargle (GLS) period search for sinusoidal signals. The search runs over frequencies from `fmin = 1/maxp` to `fmax = 1/minp` with a uniform frequency step `Δf = subsample/T`, where `T` is the time baseline. The GLS implementation of [Zechmeister and Kürster (2009)](https://ui.adsabs.harvard.edu/abs/2009A%26A...496..577Z/abstract) allows a floating mean and heteroscedastic errors, unlike the traditional LS periodogram.
 
 For each of the three search parameters (`minp`, `maxp`, `subsample`) you may either give a fixed value on the command line, use the `"var"` keyword followed by a variable name, or use the `"expr"` keyword to evaluate an analytic expression for each light curve.
 
@@ -63,7 +63,7 @@ where `chi0^2` is χ² about the weighted mean and `chi(f)^2` is χ² about the 
 
 **References**
 
-Cite Zechmeister & Kürster 2009, A&A, 496, 577 and Press et al. 1992 (Numerical Recipes) for the GLS periodogram. For the traditional LS periodogram also cite Lomb 1976, Scargle 1982, and Press & Rybicki 1989.
+Cite [Zechmeister & Kürster 2009](https://ui.adsabs.harvard.edu/abs/2009A%26A...496..577Z/abstract), A&A, 496, 577 and Press et al. 1992 (*Numerical Recipes*) for the GLS periodogram. For the traditional LS periodogram also cite [Lomb 1976](https://ui.adsabs.harvard.edu/abs/1976Ap%26SS..39..447L/abstract), [Scargle 1982](https://ui.adsabs.harvard.edu/abs/1982ApJ...263..835S/abstract), and [Press & Rybicki 1989](https://ui.adsabs.harvard.edu/abs/1989ApJ...338..277P/abstract).
 
 **Examples**
 
@@ -144,7 +144,7 @@ Python equivalent: [`aov`](../python/commands/period-finding.md#aov-phase-binned
 
 **References**
 
-Cite Schwarzenberg-Czerny 1989, MNRAS, 241, 153 and Devor 2005, ApJ, 628, 411.
+Cite [Schwarzenberg-Czerny 1989](https://ui.adsabs.harvard.edu/abs/1989MNRAS.241..153S/abstract), MNRAS, 241, 153 and [Devor 2005](https://ui.adsabs.harvard.edu/abs/2005ApJ...628..411D/abstract), ApJ, 628, 411.
 
 **Examples**
 
@@ -198,7 +198,7 @@ Same structure as `-aov` with prefix `AOV_HARM`.
 
 **References**
 
-Cite Schwarzenberg-Czerny 1996, ApJ, 460, L107.
+Cite [Schwarzenberg-Czerny 1996](https://ui.adsabs.harvard.edu/abs/1996ApJ...460L.107S/abstract), ApJ, 460, L107.
 
 **Examples**
 
@@ -241,7 +241,7 @@ Perform a Phase Dispersion Minimization (PDM) period search. For each trial freq
 
 | Variant | Model | Notes |
 |---------|-------|-------|
-| `step` | Per-bin mean over `Nbin` fixed phase bins (Stellingwerf 1978). | Classic PDM. |
+| `step` | Per-bin mean over `Nbin` fixed phase bins ([Stellingwerf 1978](https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract)). | Classic PDM. |
 | `linterp` | Linear interpolation between adjacent bin means (cuvarbase default). | Smoother periodogram than `step`; less bin-edge sensitivity for the same `Nbin`. |
 | `multicover` | Average of `Nc` phase-shifted `Nb`-bin sets (each shifted by `1/(Nb·Nc)`). | Reduces bin-edge sensitivity at the cost of more computation. Schwarzenberg-Czerny 1997 explicitly notes that no analytic FAP exists for `Nc > 1`; the reported `PDM_NEG_LN_FAP` uses the single-cover Beta formula and should be treated as approximate. |
 | `tophat` | Per-point weighted mean of phase-neighbours inside `\|Δφ\| ≤ dphi`. | Binless — no phase grid. Useful for sparse light curves where bin occupancy is irregular. Costs O(N²) per trial period. |
@@ -287,7 +287,7 @@ When `fixperiodSNR` is set, four additional columns are appended: `PDM_PeriodFix
 
 **References**
 
-Cite Stellingwerf 1978, ApJ, 224, 953 and Schwarzenberg-Czerny 1997, ApJ, 489, 941. See also Zalian, Chadid & Stellingwerf 2014, MNRAS, 440, 68 for a modern restatement. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
+Cite [Stellingwerf 1978](https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract), ApJ, 224, 953 and [Schwarzenberg-Czerny 1997](https://ui.adsabs.harvard.edu/abs/1997ApJ...489..941S/abstract), ApJ, 489, 941. See also [Zalian, Chadid & Stellingwerf 2014](https://ui.adsabs.harvard.edu/abs/2014MNRAS.440...68Z/abstract), MNRAS, 440, 68 for a modern restatement. The `linterp` variant follows the implementation in [cuvarbase](https://github.com/johnh2o2/cuvarbase) (package developed by John Hoffman; the linterp PDM contribution was written by Attila Bodi).
 
 **Examples**
 
@@ -353,7 +353,7 @@ vartools -i EXAMPLES/2 -oneline -randseed 1 \
 
 **Description**
 
-Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram (Hoffman, VanderPlas, Hartman & Bakos 2021) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template at the trial period; 1 = exact fit. FTP is most useful when the signal shape is known a priori — RR Lyrae and Cepheid templates, or any signal whose Fourier coefficients can be reliably pre-computed.
+Perform a Fast Template Periodogram (FTP) search. FTP is a non-linear extension of the generalised Lomb-Scargle periodogram ([Hoffman, VanderPlas, Hartman & Bakos 2021](https://ui.adsabs.harvard.edu/abs/2021arXiv210112348H/abstract)) that fits a known periodic template shape `M(φ) = Σₙ₌₁..ₕ [cₙ cos(n φ) + sₙ sin(n φ)]` at each trial period instead of a single sinusoid. The reported `FTP_Power_k_N ∈ [0, 1]` is the fraction of the centred chi-square variance explained by the best-fit template at the trial period; 1 = exact fit. FTP is most useful when the signal shape is known a priori — RR Lyrae and Cepheid templates, or any signal whose Fourier coefficients can be reliably pre-computed.
 
 The first argument selects how the template is sourced:
 
@@ -419,7 +419,7 @@ When `fixperiodSNR` is set, five additional columns are appended: `FTP_PeriodFix
 
 **References**
 
-Cite Hoffman, J., VanderPlas, J., Hartman, J. D., & Bakos, G. A. 2021, arXiv:2101.12348. The reference Python implementation is at [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
+Cite [Hoffman, J., VanderPlas, J., Hartman, J. D., & Bakos, G. A. 2021](https://ui.adsabs.harvard.edu/abs/2021arXiv210112348H/abstract), arXiv:2101.12348. The reference Python implementation is at [PrincetonUniversity/FastTemplatePeriodogram](https://github.com/PrincetonUniversity/FastTemplatePeriodogram) (package developed by John Hoffman).
 
 **Examples**
 
@@ -486,7 +486,7 @@ vartools -l EXAMPLES/lc_list_ftp -header \
 
 **Description**
 
-Run the Box-Least Squares (BLS) transit search algorithm (Kovács, Zucker & Mazeh 2002). BLS searches for periodic box-shaped (trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
+Run the Box-Least Squares (BLS) transit search algorithm ([Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract)). BLS searches for periodic box-shaped (trapezoidal) dips consistent with a transiting companion. The search is performed over a grid of trial periods and phase bins.
 
 Python equivalent: [`BLS`](../python/commands/period-finding.md#bls-box-fitting-least-squares).
 
@@ -503,7 +503,7 @@ Three ways to specify the allowed range of transit durations:
 | `minper` / `maxper` | Period search range in days. |
 | `"nf" nfreq` | Total number of trial frequencies. Rule of thumb: `nfreq ≈ T · (fmax - fmin) / (0.25·qmin)`. |
 | `"df" dfreq` | Explicit frequency step size. |
-| `"optimal" subsample` | Use Ofir (2014) optimal frequency spacing (requires `"density"` mode). |
+| `"optimal" subsample` | Use [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) optimal frequency spacing (requires `"density"` mode). |
 | `nbins` | Number of phase bins (≥ `2/qmin`). |
 | `timezone` | Hours to add to UTC to obtain local time; used to compute the fraction of Δχ² from a single night. |
 | `Npeak` | Number of peaks to find and report. |
@@ -544,7 +544,7 @@ When `"fittrap"` is given, `BLS_Qingress_k_i` and `BLS_OOTmag_k_i` are also incl
 
 **References**
 
-Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369. For the optimal frequency sampling cite Ofir 2014, A&A, 561, A138.
+Cite [Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369. For the optimal frequency sampling cite [Ofir 2014](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract), A&A, 561, A138.
 
 **Examples**
 
@@ -627,7 +627,7 @@ Python equivalent: [`BLSFixPer`](../python/commands/period-finding.md#blsfixper-
 
 **References**
 
-Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+Cite [Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 **Examples**
 
@@ -733,7 +733,7 @@ vartools -i EXAMPLES/3.transit -oneline \
 
 **References**
 
-Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+Cite [Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 ---
 
@@ -785,7 +785,7 @@ vartools -i EXAMPLES/3.transit -oneline \
 
 **References**
 
-Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
+Cite [Kovács, Zucker & Mazeh 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...391..369K/abstract), A&A, 391, 369.
 
 ---
 
@@ -810,7 +810,7 @@ Cite Kovács, Zucker & Mazeh 2002, A&A, 391, 369.
 
 **Description**
 
-Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm (Kurtz 1985) and optionally deconvolve it with the CLEAN algorithm (Roberts, Lehar & Dreher 1987) to remove aliasing due to the window function.
+Compute the Discrete Fourier Transform (DFT) power spectrum of the light curve using the FDFT algorithm ([Kurtz 1985](https://ui.adsabs.harvard.edu/abs/1985MNRAS.213..773K/abstract)) and optionally deconvolve it with the CLEAN algorithm ([Roberts, Lehar & Dreher 1987](https://ui.adsabs.harvard.edu/abs/1987AJ.....93..968R/abstract)) to remove aliasing due to the window function.
 
 Python equivalent: [`dftclean`](../python/commands/period-finding.md#dftclean-dft-power-spectrum-clean).
 
@@ -834,7 +834,7 @@ Python equivalent: [`dftclean`](../python/commands/period-finding.md#dftclean-df
 
 **References**
 
-Cite Kurtz 1985, MNRAS, 213, 773 for the FDFT algorithm. Cite Roberts, Lehar & Dreher 1987, AJ, 93, 4 for the CLEAN algorithm.
+Cite [Kurtz 1985](https://ui.adsabs.harvard.edu/abs/1985MNRAS.213..773K/abstract), MNRAS, 213, 773 for the FDFT algorithm. Cite [Roberts, Lehar & Dreher 1987](https://ui.adsabs.harvard.edu/abs/1987AJ.....93..968R/abstract), AJ, 93, 968 for the CLEAN algorithm.
 
 **Examples**
 
@@ -898,7 +898,7 @@ The dirty spectrum, the spectrum after CLEAN deconvolution, the CLEAN beam, and 
 
 **Description**
 
-Compute the Weighted Wavelet Z-Transform (WWZ) as defined by Foster (1996) using an abbreviated Morlet wavelet:
+Compute the Weighted Wavelet Z-Transform (WWZ) as defined by [Foster (1996)](https://ui.adsabs.harvard.edu/abs/1996AJ....112.1709F/abstract) using an abbreviated Morlet wavelet:
 
 ```
 f(z) = exp(i·2π·f·(t-τ) - c·(2π·f)²·(t-τ)²)
@@ -941,7 +941,7 @@ Python equivalent: [`wwz`](../python/commands/period-finding.md#wwz-weighted-wav
 
 **References**
 
-Cite Foster 1996, AJ, 112, 1709.
+Cite [Foster 1996](https://ui.adsabs.harvard.edu/abs/1996AJ....112.1709F/abstract), AJ, 112, 1709.
 
 **Examples**
 

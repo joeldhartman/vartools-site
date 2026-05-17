@@ -255,7 +255,7 @@ cmd.autocorrelation(start, stop, step, save_result=True, maskpoints=None)
 
 **Description**
 
-Compute the discrete autocorrelation function (DACF) of the magnitude series following Edelson and Krolik (1988). The DACF is sampled at lags from `start` to `stop` in steps of `step` (all in days). Unlike the original Edelson and Krolik formulation, the formal measurement uncertainties are used in the denominator rather than the variance, which avoids imaginary values when errors are over-estimated; precede with `-changeerror` (in the same Pipeline) to recover the variance-based form.
+Compute the discrete autocorrelation function (DACF) of the magnitude series following [Edelson and Krolik (1988)](https://ui.adsabs.harvard.edu/abs/1988ApJ...333..646E/abstract). The DACF is sampled at lags from `start` to `stop` in steps of `step` (all in days). Unlike the original Edelson and Krolik formulation, the formal measurement uncertainties are used in the denominator rather than the variance, which avoids imaginary values when errors are over-estimated; precede with `-changeerror` (in the same Pipeline) to recover the variance-based form.
 
 The autocorrelation output file is **always** written to disk; `save_result=False` only suppresses Python capture. The file in that case is written to a temporary directory and discarded after the run.
 
@@ -282,7 +282,7 @@ The command emits no per-LC scalar columns; the autocorrelation function is deli
 
 **References**
 
-Edelson, R.A. & Krolik, J.H. 1988, ApJ, 333, 646.
+[Edelson, R.A. & Krolik, J.H. 1988](https://ui.adsabs.harvard.edu/abs/1988ApJ...333..646E/abstract), ApJ, 333, 646.
 
 **Examples**
 
@@ -348,7 +348,7 @@ Suffix `N` is the 0-indexed pipeline command position:
 
 **References**
 
-Stetson, P.B. 1996, PASP, 108, 851.
+[Stetson, P.B. 1996](https://ui.adsabs.harvard.edu/abs/1996PASP..108..851S/abstract), PASP, 108, 851.
 
 **Examples**
 
@@ -370,7 +370,7 @@ cmd.alarm(maskpoints=None)
 
 **Description**
 
-Compute the alarm variability statistic of Tamuz, Mazeh and North (2006). The alarm is a detection statistic for coherent signals: long runs of consecutive positive or negative residuals from the mean are penalised more heavily than randomly distributed deviations of the same RMS, making it sensitive to time-correlated structure that low-order moments may miss.
+Compute the alarm variability statistic of [Tamuz, Mazeh and North (2006)](https://ui.adsabs.harvard.edu/abs/2006MNRAS.367.1521T/abstract). The alarm is a detection statistic for coherent signals: long runs of consecutive positive or negative residuals from the mean are penalised more heavily than randomly distributed deviations of the same RMS, making it sensitive to time-correlated structure that low-order moments may miss.
 
 CLI equivalent: [`-alarm`](../../cli/statistics.md#-alarm).
 
@@ -390,7 +390,7 @@ Suffix `N` is the 0-indexed pipeline command position:
 
 **References**
 
-Tamuz, O., Mazeh, T. and North, P. 2006, MNRAS, 367, 1521.
+[Tamuz, O., Mazeh, T. and North, P. 2006](https://ui.adsabs.harvard.edu/abs/2006MNRAS.367.1521T/abstract), MNRAS, 367, 1521.
 
 **Examples**
 
@@ -435,7 +435,7 @@ Suffix `N` is the 0-indexed pipeline command position:
 
 **References**
 
-von Neumann, J. 1941, Annals of Mathematical Statistics, 12, 367. For astronomical applications see Sokolovsky, K. V., et al. 2017, MNRAS, 464, 274.
+[von Neumann, J. 1941](https://www.jstor.org/stable/2235951), Annals of Mathematical Statistics, 12, 367. For astronomical applications see [Sokolovsky, K. V., et al. 2017](https://ui.adsabs.harvard.edu/abs/2017MNRAS.464..274S/abstract), MNRAS, 464, 274.
 
 **Examples**
 

@@ -462,7 +462,7 @@ cmd.TFA(trendlist, dates_file, pixelsep, correct_lc=True,
 
 **Description**
 
-Run the Trend Filtering Algorithm (Kovács, Bakos & Noyes 2005) on the light curves. TFA fits each LC as a linear combination of a set of template (basis) light curves and subtracts the fit, yielding a detrended LC. A light-curve list (`run_filelist`) is required, and the `x`/`y` pixel positions of each LC must be available as columns in the list. Trend stars within `pixelsep` of the source are excluded to avoid self-filtering.
+Run the Trend Filtering Algorithm ([Kovács, Bakos & Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract)) on the light curves. TFA fits each LC as a linear combination of a set of template (basis) light curves and subtracts the fit, yielding a detrended LC. A light-curve list (`run_filelist`) is required, and the `x`/`y` pixel positions of each LC must be available as columns in the list. Trend stars within `pixelsep` of the source are excluded to avoid self-filtering.
 
 CLI equivalent: [`-TFA`](../../cli/filtering.md#-tfa).
 
@@ -504,7 +504,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Kovács, Bakos & Noyes 2005, MNRAS, 356, 557.
+[Kovács, Bakos & Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract), MNRAS, 356, 557.
 
 **Examples**
 
@@ -564,7 +564,7 @@ When `save_*` keywords are set, file keys mirror those of `TFA` (`result.files["
 
 **References**
 
-Kovács, Bakos & Noyes 2005, MNRAS, 356, 557.
+[Kovács, Bakos & Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract), MNRAS, 356, 557.
 
 !!! warning "Known issue"
     The current wrapper emits the `xycol` block *before* the positional `pixelsep` value, which the CLI rejects. Until that is fixed in pyvartools, examples that need `xycol` should drop down to `subprocess.run`.
@@ -611,7 +611,7 @@ cmd.SYSREM(ninput_color, ninput_airmass, initial_airmass_file,
 
 **Description**
 
-Run the SYSREM PCA-like algorithm of Tamuz, Mazeh & Zucker (2005) to identify and remove ensemble trends from a set of light curves. SYSREM iteratively fits a small number of "color"-like (per-star) and "airmass"-like (per-image) terms to the residuals and subtracts them. This command requires a light-curve list (`run_filelist`) and automatically sets the `-readall` option.
+Run the SYSREM PCA-like algorithm of [Tamuz, Mazeh & Zucker (2005)](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract) to identify and remove ensemble trends from a set of light curves. SYSREM iteratively fits a small number of "color"-like (per-star) and "airmass"-like (per-image) terms to the residuals and subtracts them. This command requires a light-curve list (`run_filelist`) and automatically sets the `-readall` option.
 
 CLI equivalent: [`-SYSREM`](../../cli/filtering.md#-sysrem).
 
@@ -650,7 +650,7 @@ When `save_*` keywords are set:
 
 **References**
 
-Tamuz, Mazeh & Zucker 2005, MNRAS, 356, 1466.
+[Tamuz, Mazeh & Zucker 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract), MNRAS, 356, 1466.
 
 **Examples**
 

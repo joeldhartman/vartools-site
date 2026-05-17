@@ -646,7 +646,7 @@ Python equivalent: [`SYSREM`](../python/commands/filtering.md#sysrem-systematic-
 
 **References**
 
-Cite Tamuz, Mazeh & Zucker 2005, MNRAS, 356, 1466.
+Cite [Tamuz, Mazeh & Zucker 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract), MNRAS, 356, 1466.
 
 **Examples**
 
@@ -705,7 +705,7 @@ Python equivalent: [`TFA`](../python/commands/filtering.md#tfa-trend-filtering-a
 
 **References**
 
-Cite Kovacs, Bakos and Noyes 2005, MNRAS, 356, 557.
+Cite [Kovács, Bakos and Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract), MNRAS, 356, 557.
 
 **Examples**
 
@@ -760,7 +760,7 @@ Python equivalent: [`TFA_SR`](../python/commands/filtering.md#tfa_sr-tfa-with-si
 
 **References**
 
-Cite Kovacs, Bakos and Noyes 2005, MNRAS, 356, 557.
+Cite [Kovács, Bakos and Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356..557K/abstract), MNRAS, 356, 557.
 
 **Examples**
 

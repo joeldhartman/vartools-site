@@ -215,7 +215,7 @@ Python equivalent: [`alarm`](../python/commands/statistics.md#alarm-alarm-statis
 
 **References**
 
-Cite Tamuz, Mazeh, and North 2006, MNRAS, 367, 1521.
+Cite [Tamuz, Mazeh, and North 2006](https://ui.adsabs.harvard.edu/abs/2006MNRAS.367.1521T/abstract), MNRAS, 367, 1521.
 
 **Examples**
 
@@ -244,7 +244,7 @@ Python equivalent: [`Jstet`](../python/commands/statistics.md#jstet-stetson-j-st
 - `dates` — File containing JDs for all possible observations in the first column. This is used to compute the maximum possible weight. Note: the J statistic here includes an extra factor of `(sum(weights)/weight_max)` compared to Stetson's original definition.
 - `"maskpoints" maskvar` — Optional. Only points with `maskvar > 0` are included.
 
-**Citation:** Stetson, P.B. 1996, PASP, 108, 851.
+**Citation:** [Stetson, P.B. 1996](https://ui.adsabs.harvard.edu/abs/1996PASP..108..851S/abstract), PASP, 108, 851.
 
 **Examples**
 
@@ -279,7 +279,7 @@ EXAMPLES/10   0.25784   0.92806   0.23929
     start stop step outdir ["maskpoints" maskvar]
 ```
 
-Calculate the discrete auto-correlation function (Edelson and Krolik 1988, ApJ, 333, 646) for each light curve. The results are written to files in `outdir` with the suffix `.autocorr` (i.e., `outdir/$basename.autocorr`).
+Calculate the discrete auto-correlation function ([Edelson and Krolik 1988](https://ui.adsabs.harvard.edu/abs/1988ApJ...333..646E/abstract), ApJ, 333, 646) for each light curve. The results are written to files in `outdir` with the suffix `.autocorr` (i.e., `outdir/$basename.autocorr`).
 
 Python equivalent: [`autocorrelation`](../python/commands/statistics.md#autocorrelation-autocorrelation-function).
 
@@ -300,7 +300,7 @@ Rather than using the variance in the denominator (as in the Edelson and Krolik 
 
 Due to binning, when the variance is used in the denominator the autocorrelation function may be smaller than 1 unless the time step is less than the minimum time difference between consecutive measurements.
 
-**Citation:** Edelson, R.A. & Krolik, J.H. 1988, ApJ, 333, 646.
+**Citation:** [Edelson, R.A. & Krolik, J.H. 1988](https://ui.adsabs.harvard.edu/abs/1988ApJ...333..646E/abstract), ApJ, 333, 646.
 
 **Examples**
 
@@ -351,7 +351,7 @@ The trailing keyword block is parsed in strict order (`weighted` before `maskpoi
 
 **References**
 
-Cite von Neumann, J. 1941, Annals of Mathematical Statistics, 12, 367; for astronomical applications see Sokolovsky, K. V., et al. 2017, MNRAS, 464, 274.
+Cite [von Neumann, J. 1941](https://www.jstor.org/stable/2235951), Annals of Mathematical Statistics, 12, 367; for astronomical applications see [Sokolovsky, K. V., et al. 2017](https://ui.adsabs.harvard.edu/abs/2017MNRAS.464..274S/abstract), MNRAS, 464, 274.
 
 **Examples**
 

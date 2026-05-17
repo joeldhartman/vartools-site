@@ -1,6 +1,6 @@
 # VARTOOLS CLI Overview
 
-VARTOOLS is a command-line utility for processing and analyzing astronomical time-series data, especially light curves. It is designed primarily for batch processing large collections of light curves. A detailed scientific reference is provided in [Hartman and Bakos, 2016, Astronomy and Computing, 17, 1](http://adsabs.harvard.edu/abs/2016arXiv160506811H).
+VARTOOLS is a command-line utility for processing and analyzing astronomical time-series data, especially light curves. It is designed primarily for batch processing large collections of light curves. A detailed scientific reference is provided in [Hartman and Bakos, 2016, Astronomy and Computing, 17, 1](https://ui.adsabs.harvard.edu/abs/2016A%26C....17....1H/abstract).
 
 ---
 
