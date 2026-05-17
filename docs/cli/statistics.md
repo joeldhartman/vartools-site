@@ -318,3 +318,59 @@ EXAMPLES/2
 ```
 
 ![Discrete autocorrelation function for EXAMPLES/2](../assets/examples/autocorrelation_ex1.png)
+
+---
+
+## `-vonNeumann`
+
+**Syntax**
+```
+-vonNeumann
+    ["weighted"]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+Calculate the von Neumann (1941) ratio `η = δ² / s²` for each light curve, where `δ² = (1/(N−1)) · Σᵢ (yᵢ₊₁ − yᵢ)²` is the mean-square successive difference and `s² = (1/N) · Σᵢ (yᵢ − ȳ)²` is the variance. For uncorrelated Gaussian noise `E[η] = 2` (variance ≈ 4/N); smoothly varying (positively correlated) signals drive η well below 2, and anti-correlated (alternating) signals push η above 2. Widely used as a variability indicator for sparse and unevenly sampled photometric time series.
+
+The statistic is order-dependent — the light curve is time-sorted automatically before the calculation (the parser sets `require_sort = 1`).
+
+Python equivalent: [`vonNeumann`](../python/commands/statistics.md#vonneumann-von-neumann-ratio).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"weighted"` | Optional. Switch to the inverse-variance-weighted form: per-point weights `wᵢ = 1/σᵢ²` enter the variance and pairwise weights `w_pair_i = 1/(σᵢ² + σᵢ₊₁²)` enter the mean-square successive difference. The weighted ratio is computed as `η_w = (2N/(N−1)) · Σᵢ w_pair_i (yᵢ₊₁ − yᵢ)² / Σᵢ wᵢ (yᵢ − ȳ_w)²`; the `2N/(N−1)` prefactor restores `E[η_w] = 2` for white noise regardless of the σ distribution (a raw ratio-of-weighted-averages instead converges to `⟨w⟩/⟨w_pair⟩`, which equals 2 only for homoscedastic errors). For homoscedastic σ the weighted form reduces exactly to the unweighted form. Points with NaN magnitude (or NaN / non-positive uncertainty when weighted) are dropped. |
+| `"maskpoints" maskvar` | Optional. Only points with `maskvar > 0` are included. |
+
+The trailing keyword block is parsed in strict order (`weighted` before `maskpoints`); mis-ordering or duplicating keywords produces a command-syntax error.
+
+**Output columns**: `VonNeumann_Ratio_N`.
+
+**References**
+
+Cite von Neumann, J. 1941, Annals of Mathematical Statistics, 12, 367; for astronomical applications see Sokolovsky, K. V., et al. 2017, MNRAS, 464, 274.
+
+**Examples**
+
+**Example 1.** Unweighted η for a strongly periodic light curve (η ≪ 2 indicates strong sample-to-sample correlation).
+
+```bash
+vartools -i EXAMPLES/2 -oneline -vonNeumann
+```
+
+**Example 2.** Inverse-variance-weighted form.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -vonNeumann weighted
+```
+
+**Example 3.** Weighted η with a mask restricting the calculation to the first 30 days of the LC.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -expr 'mask=((t-t[0])<30)' \
+    -vonNeumann weighted maskpoints mask
+```

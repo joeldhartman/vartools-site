@@ -401,3 +401,53 @@ print(result.vars["Alarm_0"])
 ```
 
 ---
+
+### `vonNeumann` — von Neumann ratio
+
+**Syntax**
+
+```python
+cmd.vonNeumann(weighted=False, maskpoints=None)
+```
+
+**Description**
+
+Compute the von Neumann (1941) ratio `η = δ² / s²`, where `δ² = (1/(N−1)) · Σᵢ (yᵢ₊₁ − yᵢ)²` is the mean-square successive difference and `s² = (1/N) · Σᵢ (yᵢ − ȳ)²` is the variance. For uncorrelated Gaussian noise `E[η] = 2` (variance ≈ 4/N); smoothly varying (positively correlated) signals drive η well below 2; anti-correlated (alternating) signals push η above 2. Useful as a variability indicator for sparse and unevenly sampled photometric time series.
+
+The light curve is time-sorted automatically before the calculation.
+
+CLI equivalent: [`-vonNeumann`](../../cli/statistics.md#-vonneumann).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `weighted` | `bool` | If `True`, use inverse-variance weighting: per-point weights `wᵢ = 1/σᵢ²` enter the variance and pairwise weights `w_pair_i = 1/(σᵢ² + σᵢ₊₁²)` enter the mean-square successive difference. The weighted ratio is `η_w = (2N/(N−1)) · Σ w_pair_i (yᵢ₊₁ − yᵢ)² / Σ wᵢ (yᵢ − ȳ_w)²`; the `2N/(N−1)` prefactor restores `E[η_w] = 2` for white noise regardless of the σ distribution. For homoscedastic σ the weighted form reduces exactly to the unweighted form. Points with NaN / non-positive uncertainty are dropped. |
+| `maskpoints` | `str` or `None` | Name of a mask variable; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position:
+
+| Column | Description |
+|--------|-------------|
+| `VonNeumann_Ratio_N` | The von Neumann ratio η. |
+
+**References**
+
+von Neumann, J. 1941, Annals of Mathematical Statistics, 12, 367. For astronomical applications see Sokolovsky, K. V., et al. 2017, MNRAS, 464, 274.
+
+**Examples**
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+# Unweighted: eta near 0.026 (much less than 2) reflects strong correlation.
+result = lc.vonNeumann()
+print(round(result.vars["VonNeumann_Ratio_0"], 5))
+
+# Weighted variant.
+result = lc.vonNeumann(weighted=True)
+print(round(result.vars["VonNeumann_Ratio_0"], 5))
+```
+
+---

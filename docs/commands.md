@@ -86,6 +86,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-SYSREM` | Systematic-error removal (Tamuz, Mazeh & Zucker 2005) | [CLI](cli/filtering.md#-sysrem) | [Python](python/commands/filtering.md#sysrem-systematic-noise-removal) |
 | `-TFA` | Trend Filtering Algorithm (Kovacs, Bakos & Noyes 2005) | [CLI](cli/filtering.md#-tfa) | [Python](python/commands/filtering.md#tfa-trend-filtering-algorithm) |
 | `-TFA_SR` | TFA with signal-reconstruction | [CLI](cli/filtering.md#-tfa_sr) | [Python](python/commands/filtering.md#tfa_sr-tfa-with-signal-reconstruction) |
+| `-vonNeumann` | von Neumann (1941) ratio η = δ²/s² — variability indicator for sparse / unevenly sampled time series | [CLI](cli/statistics.md#-vonneumann) | [Python](python/commands/statistics.md#vonneumann-von-neumann-ratio) |
 | `-wwz` | Weighted Wavelet Z-transform (Foster 1996) | [CLI](cli/period-finding.md#-wwz-weighted-wavelet-z-transform) | [Python](python/commands/period-finding.md#wwz-weighted-wavelet-z-transform) |
 
 ## Python helper classes
