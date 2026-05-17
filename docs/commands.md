@@ -17,7 +17,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 |---|---|---|---|
 | `-addfitskeyword` | Add a custom keyword to the output-light-curve FITS header | [CLI](cli/control-flow.md#-addfitskeyword) | [Python](python/commands/control-flow.md#addfitskeyword-add-a-fits-keyword) |
 | `-addnoise` | Add simulated white / red / correlated noise to light curves | [CLI](cli/simulation.md#-addnoise) | [Python](python/commands/simulation.md#addnoise-add-synthetic-noise) |
-| `-alarm` | Alarm statistic (Kovacs, Bakos & Noyes 2005) | [CLI](cli/statistics.md#-alarm) | [Python](python/commands/statistics.md#alarm-alarm-statistic) |
+| `-alarm` | Alarm statistic (Tamuz, Mazeh & North 2006) | [CLI](cli/statistics.md#-alarm) | [Python](python/commands/statistics.md#alarm-alarm-statistic) |
 | `-aov` | Phase-binned Analysis of Variance period search | [CLI](cli/period-finding.md#-aov-phase-binned-analysis-of-variance) | [Python](python/commands/period-finding.md#aov-analysis-of-variance) |
 | `-aov_harm` | Multi-harmonic Analysis of Variance period search | [CLI](cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance) | [Python](python/commands/period-finding.md#aov_harm-multi-harmonic-aov) |
 | `-autocorrelation` | Discrete autocorrelation function | [CLI](cli/statistics.md#-autocorrelation) | [Python](python/commands/statistics.md#autocorrelation-autocorrelation-function) |
