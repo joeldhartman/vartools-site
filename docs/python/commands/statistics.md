@@ -319,12 +319,17 @@ acfs = batch.files["autocorrelation_result_0"]   # list of DataFrames, one per L
 **Syntax**
 
 ```python
-cmd.Jstet(timescale, dates, maskpoints=None)
+cmd.Jstet(timescale, dates=None, skipnormalize=False, maskpoints=None)
 ```
+
+Exactly one of `dates=` or `skipnormalize=True` must be given.
 
 **Description**
 
-Compute Stetson's J variability index, the L statistic, and the kurtosis of the residuals. J measures time-correlated variability by pairing observations that fall within `timescale` minutes of each other; pairs with consistent sign are counted positively and pairs of opposite sign negatively. A `dates` file listing the JDs of all possible observations is required to compute the maximum possible weight, and the J reported here includes an extra factor `(sum(weights) / weight_max)` relative to Stetson's original definition.
+Compute Stetson's J variability index, the L statistic, and the kurtosis of the residuals. J measures time-correlated variability by pairing observations that fall within `timescale` of each other (in the same time units as the light curve's time column); pairs with consistent sign of the residual contribute positively, opposite-sign pairs negatively. The second argument selects how the reported J / L are normalised:
+
+- `dates="path/to/dates_file"` (legacy / survey-wide mode) — the file lists JDs of *every possible observation* in the survey; vartools computes `weight_max` once from that schedule and the reported J equals `J_stetson * (sum_w / weight_max)`. This multiplier downweights LCs missing observations relative to the full schedule. Useful for cross-LC comparison within a single survey; misleading when LCs come from different surveys / cadences.
+- `skipnormalize=True` — skip the `(sum_w / weight_max)` rescaling entirely and report Stetson's original J and L. Use this when comparing across surveys, or when you want the textbook definition.
 
 CLI equivalent: [`-Jstet`](../../cli/statistics.md#-jstet).
 
@@ -332,8 +337,9 @@ CLI equivalent: [`-Jstet`](../../cli/statistics.md#-jstet).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `timescale` | `float` | Time in **minutes** that distinguishes "near" (correlated) from "far" (uncorrelated) observation pairs. |
-| `dates` | `str` | Path to a file listing the JDs of all possible observations in the first column. Required to compute the maximum possible weight. |
+| `timescale` | `float` | Time in the LC's time units that distinguishes "near" (correlated) from "far" (uncorrelated) observation pairs. |
+| `dates` | `str` or `None` | Path to a survey-wide dates file (see Description). Mutually exclusive with `skipnormalize`. |
+| `skipnormalize` | `bool` | If `True`, skip the survey-completeness rescaling and report Stetson's original J / L. Mutually exclusive with `dates`. |
 | `maskpoints` | `str` or `None` | Name of a mask variable; only points with `maskvar > 0` are included. |
 
 **Output**
@@ -342,9 +348,9 @@ Suffix `N` is the 0-indexed pipeline command position:
 
 | Column | Description |
 |--------|-------------|
-| `Jstet_N` | Stetson's J variability index (with the additional weight factor). |
+| `Jstet_N` | Stetson's J variability index (rescaled when `dates` is used; original Stetson J when `skipnormalize=True`). |
 | `Kurtosis_N` | Kurtosis of the residuals from the mean. |
-| `Lstet_N` | Stetson's L statistic = `J × Kurtosis`. |
+| `Lstet_N` | Stetson's L statistic = `J × Kurtosis` (rescaled or original, matching J). |
 
 **References**
 
@@ -353,9 +359,14 @@ Suffix `N` is the 0-indexed pipeline command position:
 **Examples**
 
 ```python
+# Survey-wide mode -- uses a dates file to compute the cross-LC weight_max.
 lcs = [vt.LightCurve.from_file(f"EXAMPLES/{i}") for i in range(1, 11)]
-batch = vt.Pipeline().Jstet(0.5, "EXAMPLES/dates_tfa").run_batch(lcs)
+batch = vt.Pipeline().Jstet(0.5, dates="EXAMPLES/dates_tfa").run_batch(lcs)
 print(batch.vars[["Name", "Jstet_0", "Kurtosis_0", "Lstet_0"]])
+
+# Textbook mode -- Stetson's original J / L, no dates file needed.
+batch2 = vt.Pipeline().Jstet(0.5, skipnormalize=True).run_batch(lcs)
+print(batch2.vars[["Name", "Jstet_0", "Kurtosis_0", "Lstet_0"]])
 ```
 
 ---

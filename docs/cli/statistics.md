@@ -231,7 +231,7 @@ vartools -i EXAMPLES/2 -header -alarm
 
 ```
 -Jstet
-    timescale dates ["maskpoints" maskvar]
+    timescale <"skipnormalize" | dates> ["maskpoints" maskvar]
 ```
 
 Calculate Stetson's J statistic, L statistic, and the kurtosis for each light curve. The J statistic measures time-correlated variability by comparing pairs of observations that are close in time.
@@ -241,7 +241,9 @@ Python equivalent: [`Jstet`](../python/commands/statistics.md#jstet-stetson-j-st
 **Parameters**
 
 - `timescale` — Time in minutes that distinguishes between "near" (correlated) and "far" (uncorrelated) observation pairs.
-- `dates` — File containing JDs for all possible observations in the first column. This is used to compute the maximum possible weight. Note: the J statistic here includes an extra factor of `(sum(weights)/weight_max)` compared to Stetson's original definition.
+- The second positional argument selects the normalisation. It is **either**
+  - `dates` — file containing JDs for *every possible observation* in the survey, in the first column. `weight_max` is computed once from that schedule, and the reported J is `J_stetson * (sum_w_actual / weight_max)` — a multiplier that downweights LCs missing observations relative to the full schedule. Useful within a single survey; misleading across surveys with different cadences. (This is the vartools historical default and differs from Stetson's original definition.)
+  - **or** the literal keyword `"skipnormalize"` — skip the rescaling and report Stetson's original `J` and `L = J * Kurtosis`. Use this when comparing across surveys, or when you want the textbook definition.
 - `"maskpoints" maskvar` — Optional. Only points with `maskvar > 0` are included.
 
 **Citation:** [Stetson, P.B. 1996](https://ui.adsabs.harvard.edu/abs/1996PASP..108..851S/abstract), PASP, 108, 851.
@@ -269,6 +271,15 @@ EXAMPLES/8   0.46381   0.96124   0.44583
 EXAMPLES/9   0.22075   0.80997   0.17880
 EXAMPLES/10   0.25784   0.92806   0.23929
 ```
+
+**Example 2.** Same calculation, but report Stetson's original `J` / `L` (no `sum_w / weight_max` rescaling).
+
+```bash
+vartools -l EXAMPLES/lc_list -header \
+    -Jstet 0.5 skipnormalize
+```
+
+The values are larger than in Example 1 because they aren't downscaled by the `sum_w / weight_max < 1` survey-completeness factor.
 
 ---
 
