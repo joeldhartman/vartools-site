@@ -573,6 +573,59 @@ vartools -i EXAMPLES/kplr000757076-2009166043257_llc.fits \
 
 ---
 
+### `-magtoflux`
+
+**Syntax**
+```
+-magtoflux < "normalize" | <"var" mcvar | "expr" mcexpr | mag_constant> >
+```
+
+**Description**
+
+Convert light curve magnitudes to fluxes. This is the inverse of `-fluxtomag`. The conversion is:
+
+```
+flux     = 10^((mag_constant - mag) / 2.5)
+sig_flux = flux * sig_mag / 1.0857
+```
+
+`mag_constant` is the magnitude of a source with a flux of 1 ADU. NaN and Inf inputs propagate to the output.
+
+Alternatively, give the keyword `normalize` in place of `mag_constant`. In normalize mode, the fluxes are computed with an arbitrary internal zero-point and then both the flux array and the flux uncertainty array are divided by the median flux (NaNs rejected), so the output light curve has a median flux of 1. The output is then independent of the choice of zero-point. Useful when the absolute zero-point is unknown or unimportant — e.g. when subsequent commands only care about relative variability.
+
+This command produces no output to stdout.
+
+Python equivalent: [`magtoflux`](../python/commands/manipulation.md#magtoflux-magnitude-to-flux-conversion).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `mag_constant` | Magnitude of a source with a flux of 1 ADU. |
+| `normalize` (keyword) | If given in place of `mag_constant`, normalize fluxes to median 1. |
+
+**Examples**
+
+**Example 1.** Round-trip with `-fluxtomag` on `EXAMPLES/2` — RMS is preserved before and after.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -rms \
+    -fluxtomag 25.0 0 \
+    -magtoflux 25.0 \
+    -rms
+```
+
+**Example 2.** Normalize `EXAMPLES/2` to a median flux of 1 and report basic statistics.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -magtoflux normalize \
+    -stats mag median,min,max
+```
+
+---
+
 ### `-match`
 
 **Syntax**

@@ -58,6 +58,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-LS` | Generalized Lomb-Scargle periodogram | [CLI](cli/period-finding.md#-ls-generalized-lomb-scargle) | [Python](python/commands/period-finding.md#ls-generalized-lomb-scargle) |
 | `-macula` | Macula rotation + spot light-curve model (USERLIB extension) | [CLI](cli/extensions.md#-macula) | [Python](python/commands/extensions.md#macula-kipping-2012-spot-model) |
 | `-magadd` | Add a constant offset to the magnitudes (USERLIB extension) | [CLI](cli/extensions.md#-magadd) | [Python](python/commands/extensions.md#magadd-add-a-constant-to-magnitudes) |
+| `-magtoflux` | Convert magnitude to flux (inverse of `-fluxtomag`) | [CLI](cli/manipulation.md#-magtoflux) | [Python](python/commands/manipulation.md#magtoflux-magnitude-to-flux-conversion) |
 | `-MandelAgolTransit` | Mandel & Agol analytic transit model | [CLI](cli/model-fitting.md#-mandelagoltransit) | [Python](python/commands/model-fitting.md#mandelagoltransit-mandel-agol-transit-model) |
 | `-match` | Match observations across light curves by time or string ID | [CLI](cli/manipulation.md#-match) | [Python](python/commands/manipulation.md#match-match-against-a-catalog) |
 | `-matchedfilter` | Inverse-variance matched-filter transient search — flares, transits, eclipses with 9 template-source modes | [CLI](cli/period-finding.md#-matchedfilter-inverse-variance-matched-filter) | [Python](python/commands/period-finding.md#matchedfilter-template-matched-filter-transient-search) |

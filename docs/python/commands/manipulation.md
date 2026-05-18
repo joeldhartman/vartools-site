@@ -414,6 +414,66 @@ print(result.lc.mag[:3])   # back to approximately the original values
 
 ---
 
+### `magtoflux` — Magnitude to flux conversion
+
+**Syntax**
+
+```python
+cmd.magtoflux(mag_constant=None, normalize=False)
+```
+
+**Description**
+
+Convert magnitudes to fluxes.  This is the inverse of [`fluxtomag`](#difffluxtomag-fluxtomag-flux-conversions):
+
+```
+flux     = 10**((mag_constant - mag) / 2.5)
+sig_flux = flux * sig_mag / 1.0857
+```
+
+NaN and Inf inputs propagate through to the output.
+
+When `normalize=True`, the fluxes are computed with an arbitrary internal zero-point and then both the flux and flux-uncertainty arrays are divided by the median flux (NaNs rejected), so the output light curve has a median flux of 1.  `mag_constant` and `normalize=True` are mutually exclusive.
+
+CLI equivalent: [`-magtoflux`](../../cli/manipulation.md#-magtoflux).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mag_constant` | `float` or `str` | Magnitude corresponding to a flux of 1 ADU (zero-point). Required unless `normalize=True`. Accepts a number, variable name, or expression string. |
+| `normalize` | `bool` | If `True`, divide the output flux array (and uncertainties) by the median flux so the result has median 1.  Cannot be combined with `mag_constant`. |
+
+**Output**
+
+Modifies the LC in-place: replaces `mag` with the converted flux values, `err` with the propagated flux uncertainties; no output statistics.
+
+**Examples**
+
+Round-trip: convert `EXAMPLES/2` to flux and back, recovering the original magnitudes to floating-point precision.
+
+```python
+import numpy as np
+
+lc_orig = vt.LightCurve.from_file("EXAMPLES/2")
+mag_in = lc_orig.mag.copy()
+
+result = lc_orig.fluxtomag(25.0, offset=0.0).magtoflux(25.0)
+mag_back = result.lc.mag
+print(np.max(np.abs(mag_back - mag_in)))   # roughly 1e-14
+```
+
+Normalize: convert to flux and divide by the median flux so the output has median 1.
+
+```python
+result = vt.LightCurve.from_file("EXAMPLES/2").magtoflux(normalize=True)
+flux = result.lc.mag
+print(np.median(flux))   # 1.0
+print(flux.min(), flux.max())
+```
+
+---
+
 ### `changeerror` — Rescale measurement uncertainties
 
 **Syntax**
