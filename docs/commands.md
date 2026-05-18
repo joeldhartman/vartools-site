@@ -60,6 +60,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-magadd` | Add a constant offset to the magnitudes (USERLIB extension) | [CLI](cli/extensions.md#-magadd) | [Python](python/commands/extensions.md#magadd-add-a-constant-to-magnitudes) |
 | `-MandelAgolTransit` | Mandel & Agol analytic transit model | [CLI](cli/model-fitting.md#-mandelagoltransit) | [Python](python/commands/model-fitting.md#mandelagoltransit-mandel-agol-transit-model) |
 | `-match` | Match observations across light curves by time or string ID | [CLI](cli/manipulation.md#-match) | [Python](python/commands/manipulation.md#match-match-against-a-catalog) |
+| `-matchedfilter` | Inverse-variance matched-filter transient search — flares, transits, eclipses with 9 template-source modes | [CLI](cli/period-finding.md#-matchedfilter-inverse-variance-matched-filter) | [Python](python/commands/period-finding.md#matchedfilter-template-matched-filter-transient-search) |
 | `-medianfilter` | Running-median high-pass or low-pass filter | [CLI](cli/filtering.md#-medianfilter) | [Python](python/commands/filtering.md#medianfilter-median-filtering) |
 | `-microlens` | Point-source gravitational microlensing model | [CLI](cli/model-fitting.md#-microlens) | [Python](python/commands/model-fitting.md#microlens-microlensing-model) |
 | `-nonlinfit` | Levenberg-Marquardt / MCMC nonlinear-model fitting | [CLI](cli/model-fitting.md#-nonlinfit) | [Python](python/commands/model-fitting.md#nonlinfit-non-linear-least-squares-fitting) |

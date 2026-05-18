@@ -1,6 +1,6 @@
-# Period Finding
+# Period Finding / Signal Detection
 
-Periodogram-based algorithms for discovering or refining periodicities: Lomb-Scargle, Analysis of Variance, Box-Least-Squares, DFT CLEAN, and the Weighted Wavelet Z-transform.
+Periodogram-based algorithms for discovering or refining periodic signals (Lomb-Scargle, Analysis of Variance, PDM, FTP, Box-Least-Squares, DFT CLEAN, Weighted Wavelet Z-transform) plus the matched-filter transient-detection command (`MatchedFilter`).
 
 ---
 
@@ -510,6 +510,135 @@ result = (vt.Pipeline()
              cn=[1.0], sn=[0.0], npeaks=1,
              fixperiod_snr="ls")).run(lc_ftp)
 print(round(result.vars["FTP_Power_PeriodFix_1"], 3))
+```
+
+---
+
+### `MatchedFilter` — Template matched-filter transient search
+
+**Syntax**
+
+```python
+cmd.MatchedFilter(template, support_halfwidth, mode, signs,
+                  npeaks=3, save_matchfile=False, *,
+                  tau=None,
+                  tau_rise=None, tau_decay=None,
+                  tfwhm=None,
+                  sigma=None,
+                  width=None,
+                  rise=None, flat=None, fall=None,
+                  template_file=None,
+                  expression=None, expr_varname=None,
+                  min_separation=None,
+                  whiten=False,
+                  maskpoints=None)
+```
+
+**Description**
+
+Run an inverse-variance matched filter to detect template-shaped transients or features (flares, transits, eclipses, bumps). Unlike the periodogram commands above, the matched filter does not search a period grid — it scans the LC for single-shot occurrences of a template-shaped feature. At each trial centre `τ` (chosen from the LC's own time array) the algorithm fits
+
+$$y_i \sim a \cdot g(t_i - \tau) + c + \text{noise}_i, \quad w_i = 1/\sigma_i^2$$
+
+with the constant offset `c` absorbed as a local nuisance baseline within the support window, so the LC's absolute magnitude does not have to be pre-subtracted. The best-fit amplitude `â(τ)` is the perturbation in light-curve units at the peak, and the signed SNR is positive for matches sharing the template orientation, negative for inverted matches.
+
+The `template` argument selects how the template is sourced:
+
+| `template` | Required kwargs | Description |
+|------------|-----------------|-------------|
+| `"exp"` | `tau` | Single exponential decay starting at `s = 0`. |
+| `"doubleexp"` | `tau_rise`, `tau_decay` | Rise-then-decay profile, peak-normalised. |
+| `"flare"` | `tfwhm` | Davenport+2014 empirical M-dwarf flare template. |
+| `"gauss"` | `sigma` | Gaussian template. |
+| `"box"` | `width` | Box template, total width `width`. |
+| `"triangle"` | `width` | Symmetric V at `s = 0`, total width `width`. |
+| `"trap"` | `rise`, `flat`, `fall` | Trapezoid: linear rise + flat top + linear fall. |
+| `"file"` | `template_file` | 2-column `(t, amplitude)` ASCII file; linear interpolation between rows. |
+| `"expr"` | `expression` (`expr_varname="s"` by default) | Analytic vartools expression in a template-relative time variable. |
+
+In all cases `support_halfwidth` is an outer truncation window: `g(s) = 0` for `|s| > support_halfwidth`, regardless of the template's intrinsic shape.
+
+The `mode` keyword selects the algorithm: `"window"` is exact for any time sampling and supports heteroscedastic `σ`; `"nfft"` is an NFFT-batched evaluation (requires `--with-nfft`) that assumes homoscedastic `σ` (median) and develops a few-percent leakage near support boundaries for sharp-edged templates. Prefer `"window"` when sharp shapes or per-point `σ` matter.
+
+The `signs` keyword sets the polarity filter applied to peak ranking and the per-LC noise estimate: `"positive"` for bumps, `"negative"` for inverted matches, `"both"` to rank by `|SNR|`.
+
+CLI equivalent: [`-matchedfilter`](../../cli/period-finding.md#-matchedfilter-inverse-variance-matched-filter).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `template` | `str` | Required. One of `"exp"`, `"doubleexp"`, `"flare"`, `"gauss"`, `"box"`, `"triangle"`, `"trap"`, `"file"`, `"expr"`. |
+| `support_halfwidth` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Outer truncation half-width. Accepts var/expr forms. |
+| `mode` | `"window"` or `"nfft"` | Required. |
+| `signs` | `"both"`, `"positive"`, or `"negative"` | Required. |
+| `npeaks` | `int` | Number of peaks to report. Default `3`. |
+| `save_matchfile` | `bool`, `str`, or `Output` | Auxiliary `(t, SNR, amplitude)` surface output. `True` captures as `result.files["matchfile_N"]`. |
+| `tau`, `tau_rise`, `tau_decay`, `tfwhm`, `sigma`, `width`, `rise`, `flat`, `fall` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Template-specific scalar parameter(s). Each accepts the var/expr forms. |
+| `template_file` | `str` | `"file"` mode only: path to the 2-column ASCII template file. |
+| `expression` | `str` | `"expr"` mode only: vartools-syntax analytic expression for `g(s)`. Must not reference LC-vector variables. |
+| `expr_varname` | `str` | `"expr"` mode only: name of the template-relative time variable in `expression`. Default `"s"`. |
+| `min_separation` | `float`, `str`, … | Optional mask half-width around each peak. Default = `support_halfwidth`. |
+| `whiten` | `bool` | Iteratively subtract `â · g(t − τ_k)` from a working copy of the LC between peaks. The original LC is restored on return. |
+| `maskpoints` | `str` or `None` | Name of a mask vector; points where the variable is `≤ 1e-7` are excluded. |
+
+Constructor-time validation rejects unknown `template` / `mode` / `signs`, missing mode-specific kwargs, mixing kwargs across template kinds, and `npeaks ≤ 0`.
+
+**Output**
+
+Per peak `k` (1 to `npeaks`) and command index `N`:
+
+| Column | Description |
+|--------|-------------|
+| `MatchedFilter_Time_k_N` | Trial centre `τ` of the `k`-th peak (one of the LC's data times). |
+| `MatchedFilter_SNR_k_N` | Signed SNR at the peak. |
+| `MatchedFilter_Amplitude_k_N` | Best-fit amplitude `â` at the peak, in light-curve units. |
+| `MatchedFilter_Mean_SNR_N` / `MatchedFilter_RMS_SNR_N` | Mean and RMS of `SNR(τ)` over the sign-filtered trial grid. |
+
+When `save_matchfile` is enabled:
+
+| File key | Description |
+|----------|-------------|
+| `result.files["matchfile_N"]` | DataFrame: trial `t`, `SNR(t)`, `amplitude(t)`. |
+
+**References**
+
+Cite [Davenport, J. R. A. et al. 2014, ApJ, 797, 122](https://ui.adsabs.harvard.edu/abs/2014ApJ...797..122D/abstract) when using the `"flare"` named-template kind. The matched-filter formulation itself is standard; [Turin, G. L. 1960, IRE Transactions on Information Theory, IT-6, 311](https://ieeexplore.ieee.org/document/1057571) is the canonical reference.
+
+**Examples**
+
+```python
+import numpy as np
+
+# Build a clean white-noise LC with an injected Gaussian feature.
+rng = np.random.default_rng(0)
+t = np.linspace(0.0, 30.0, 500)
+t0 = float(t[100])           # nail the injection to a data time
+sigma_g = 0.3
+depth   = -0.05
+mag = depth * np.exp(-0.5 * ((t - t0) / sigma_g) ** 2) + rng.normal(0, 0.01, 500)
+err = np.full_like(t, 0.01)
+lc_mf = vt.LightCurve.from_arrays(t, mag, err, name="injected")
+
+# Named Gaussian template, signs="negative" (looking for dips).
+result = lc_mf.MatchedFilter("gauss", 3.0, "window", "negative",
+                              sigma=sigma_g, npeaks=1)
+print(round(float(result.vars["MatchedFilter_SNR_1_0"]), 1))
+print(round(float(result.vars["MatchedFilter_Amplitude_1_0"]), 4))
+print(round(float(result.vars["MatchedFilter_Time_1_0"]) - t0, 4))
+
+# Same recovery via the expression-template mode -- byte-identical
+# to the named-gauss result above on this data.
+result = lc_mf.MatchedFilter("expr", 3.0, "window", "negative",
+                              expression=f"exp(-s*s/{2.0 * sigma_g**2})",
+                              npeaks=1)
+print(round(float(result.vars["MatchedFilter_Amplitude_1_0"]), 4))
+
+# Trapezoidal template, with min_separation and whitening between peaks.
+result = lc_mf.MatchedFilter("trap", 1.0, "window", "negative",
+                              rise=0.1, flat=0.3, fall=0.1,
+                              npeaks=2, min_separation=2.0, whiten=True)
+print(round(float(result.vars["MatchedFilter_SNR_1_0"]), 1))
 ```
 
 ---

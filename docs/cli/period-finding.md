@@ -1,6 +1,6 @@
-# Period Finding
+# Period Finding / Signal Detection
 
-This page documents the VARTOOLS commands for detecting and characterizing periodic signals in light curves. Commands output period, significance, and signal-to-noise statistics to the output table; periodograms are optionally written to on-disk files.
+This page documents the VARTOOLS commands for detecting and characterizing signals in light curves, both periodic (Lomb-Scargle, AoV, PDM, BLS, FTP, wavelets) and template-shaped transients (matched filter). Commands output peak periods or trial-centre times, significance, and signal-to-noise statistics to the output table; periodograms / matched-filter surfaces are optionally written to on-disk files.
 
 ---
 
@@ -453,6 +453,132 @@ vartools -i EXAMPLES/2 -oneline -randseed 1 \
 ```bash
 vartools -l EXAMPLES/lc_list_ftp -header \
     -FTP filelist column 2 0.1 2.0 0.1 0.01 2 0
+```
+
+---
+
+### `-matchedfilter` — Inverse-Variance Matched Filter
+
+**Syntax**
+```
+-matchedfilter "template"
+    < "exp"       < "var" v | "expr" e | tau >
+    | "doubleexp" < "var" v | "expr" e | tau_rise >
+                  < "var" v | "expr" e | tau_decay >
+    | "flare"     < "var" v | "expr" e | tfwhm >
+    | "gauss"     < "var" v | "expr" e | sigma >
+    | "box"       < "var" v | "expr" e | width >
+    | "triangle"  < "var" v | "expr" e | width >
+    | "trap"      < "var" v | "expr" e | rise >
+                  < "var" v | "expr" e | flat >
+                  < "var" v | "expr" e | fall >
+    | "file"      template_file
+    | "expr"      ["varname" name] "<expression>" >
+    < "var" v | "expr" e | support_halfwidth >
+    "mode" < "window" | "nfft" >
+    "signs" < "both" | "positive" | "negative" >
+    Npeaks omatchfile [outdir]
+    ["min_separation" < "var" v | "expr" e | sep >]
+    ["whiten"]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+Run an inverse-variance matched filter over the light curve to detect template-shaped transients or features (flares, transits, eclipses, bumps). Unlike the periodogram commands above, the matched filter does **not** assume periodicity; it scans the LC for single-shot occurrences of a template-shaped feature. At each trial centre `τ` (one of the LC's own time points) the algorithm fits a scaled, time-shifted template `g(t − τ)` plus a local constant offset `c` to the data within the support window:
+
+$$y_i \sim a \cdot g(t_i - \tau) + c + \text{noise}_i, \quad w_i = 1/\sigma_i^2$$
+
+The offset `c` is a nuisance parameter that absorbs the LC's local baseline, so the absolute magnitude of the LC does not have to be pre-subtracted; the reported amplitude `â` is the perturbation amplitude in light-curve units at the peak. The best-fit amplitude and signed SNR are
+
+$$\hat{a}(\tau) = \frac{\text{Cov}_w(y, g)}{\text{Var}_w(g)}, \quad \text{SNR}(\tau) = \hat{a}(\tau) \cdot \sqrt{\sum_i w_i (g_i - \langle g \rangle_w)^2}$$
+
+taken over points with `|t_i − τ| ≤ support_halfwidth`. The SNR is signed: positive for matches that share the template's orientation, negative for inverted matches (e.g. detecting a transit with a positive box template gives a strongly-negative SNR). The matched filter is scale-invariant in `g`, so the named templates are normalised to peak amplitude 1.
+
+The first argument selects how the template is sourced:
+
+| Mode | Description |
+|------|-------------|
+| `exp` | Single-decay exponential: `g(s) = exp(−s/tau)` for `s ≥ 0`, else 0. Parameter `tau` is the decay timescale. |
+| `doubleexp` | Rise-then-decay profile `(1 − exp(−s/tau_rise))·exp(−s/tau_decay)` for `s ≥ 0`, normalised so the peak amplitude is 1. |
+| `flare` | Davenport+2014 empirical M-dwarf flare template. Parameter `tfwhm` is the rise full-width-at-half-maximum. |
+| `gauss` | Gaussian: `g(s) = exp(−s²/(2 sigma²))`. |
+| `box` | Box: `g(s) = 1` for `|s| ≤ width/2`, else 0. |
+| `triangle` | Symmetric V at `s = 0`: `g(s) = 1 − 2|s|/width` for `|s| ≤ width/2`, else 0. |
+| `trap` | Trapezoid: linear rise of duration `rise`, flat top of duration `flat`, linear fall of duration `fall`. Centred in `s ∈ ±(rise + flat + fall)/2`. |
+| `file` | Read the template from a 2-column whitespace-separated ASCII file (column 1 = template-relative time `s`, column 2 = amplitude `g(s)`). Lines starting with `#` are skipped. Rows are sorted by `t` and exact-duplicate `t` values are dropped at load time. Linear interpolation between rows. |
+| `expr` | Define the template analytically. The expression is evaluated per data point with a stump variable bound to the template-relative time `s = t_i − τ` within the support window. The stump variable is named `"s"` by default; pass `"varname" NAME` before the expression to use a different name. The expression may reference the stump variable, per-star scalars, and constants; light-curve-vector references are rejected at parse time. |
+
+In all cases the `support_halfwidth` argument is an **outer truncation window**: `g(s)` is zero for `|s| > support_halfwidth` regardless of the template's intrinsic shape.
+
+The required `mode` keyword selects the algorithm:
+
+| Mode | Description |
+|------|-------------|
+| `window` | Exact for any time sampling, supports heteroscedastic `σ`. Trial centres are the LC's own (sorted) time points; two cursors sweep forward through the data to find each support window. Cost: `O(N · n_window)` where `n_window` is the average number of data points falling within `±support_halfwidth` of each trial. |
+| `nfft` | NFFT-batched evaluation (requires vartools built `--with-nfft`). Two adjoint NFFTs over the data nodes plus five forward NFFTs against three pre-FFT'd kernels (the support indicator, the template, and the template squared). Cost: `O(N_nfft · log(N_nfft) + N)`. Assumes **homoscedastic** `σ` (median); sharp-edged templates (`box`, `triangle`, `trap`) develop a few-percent spectral-leakage artefact near the support boundary. Prefer `mode window` for the cleanest semantics when sharp edges or per-point `σ` matter. |
+
+The required `signs` keyword sets the polarity filter applied to peak ranking and the per-LC noise estimate: `positive` for bumps that match the template orientation, `negative` for inverted matches, `both` to rank by `|SNR|`.
+
+`Npeaks` distinct peaks are found by iteratively picking the most significant remaining trial and masking a `±min_separation` window around its `τ`. Default `min_separation` equals `support_halfwidth`. When `whiten` is set, the search additionally subtracts `â · g(t − τ_k)` from a working copy of the LC between peaks; the original LC is restored on return.
+
+Python equivalent: [`MatchedFilter`](../python/commands/period-finding.md#matchedfilter-template-matched-filter-transient-search).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `template` | One of `exp`, `doubleexp`, `flare`, `gauss`, `box`, `triangle`, `trap`, `file`, `expr`. Selects the template-source mode. |
+| `tau` / `tau_rise` / `tau_decay` / `tfwhm` / `sigma` / `width` / `rise` / `flat` / `fall` | Template-specific scalar parameter(s). Each accepts the standard `<"var" v \| "expr" e \| val>` per-LC pattern. |
+| `template_file` | `file` mode only: path to a 2-column ASCII file. |
+| `varname NAME` | `expr` mode only: name of the time-relative variable in the expression. Default `s`. |
+| `<expression>` | `expr` mode only: vartools-syntax analytic expression for `g(s)`. |
+| `support_halfwidth` | Outer truncation half-width. Accepts `var` / `expr`. |
+| `mode` | `window` (exact, heteroscedastic) or `nfft` (NFFT-batched, homoscedastic). |
+| `signs` | `both`, `positive`, or `negative`. |
+| `Npeaks` | Number of peaks to report. |
+| `omatchfile` | `1` to write the `(t, SNR, amplitude)` surface to `outdir/$basename.mf`; `0` to suppress. |
+| `"min_separation" sep` | Mask half-width around each peak. Default = `support_halfwidth`. |
+| `"whiten"` | Iteratively subtract `â · g(t − τ_k)` from a working copy of the LC between peaks. |
+| `"maskpoints" maskvar` | Optional. Exclude points where `maskvar ≤ 1e-7`. |
+
+The trailing keyword block is parsed in a strict order matching the syntax above.
+
+**Output columns** (per peak `k`, command index `N`)
+
+| Column | Description |
+|--------|-------------|
+| `MatchedFilter_Time_k_N` | Trial centre `τ` of the `k`-th peak. |
+| `MatchedFilter_SNR_k_N` | Signed SNR at the peak. |
+| `MatchedFilter_Amplitude_k_N` | Best-fit amplitude `â` at the peak, in light-curve units. |
+| `MatchedFilter_Mean_SNR_N` / `MatchedFilter_RMS_SNR_N` | Mean and RMS of `SNR(τ)` over the sign-filtered trial grid. |
+
+**References**
+
+Cite [Davenport, J. R. A., Hawley, S. L., Hebb, L. et al. 2014, ApJ, 797, 122](https://ui.adsabs.harvard.edu/abs/2014ApJ...797..122D/abstract) when using the `flare` named-template kind. The matched-filter formulation itself is standard; [Turin, G. L. 1960, IRE Transactions on Information Theory, IT-6, 311](https://ieeexplore.ieee.org/document/1057571) ("An introduction to matched filters") is the canonical reference.
+
+**Examples**
+
+**Example 1.** Gaussian template, smooth-feature search.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -matchedfilter template gauss 0.5 2.0 mode window signs both 3 0
+```
+
+**Example 2.** Box template recovering an injected transit. `signs negative` keeps only inverted (dip) matches.
+
+```bash
+vartools -i EXAMPLES/3.transit -oneline \
+    -matchedfilter template box 0.083 0.5 mode window signs negative 1 0
+```
+
+**Example 3.** Analytic exponential-decay template for flare-shaped events, with `min_separation` and pre-whitening between peaks.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -matchedfilter template expr "exp(-s/0.005) * (s>0)" 0.02 \
+        mode window signs negative 5 0 min_separation 0.05 whiten
 ```
 
 ---

@@ -77,7 +77,7 @@ nav:
   - CLI Reference:
     - Overview: cli/index.md
     - Light Curve Manipulation: cli/manipulation.md
-    - Period Finding: cli/period-finding.md
+    - Period Finding / Signal Detection: cli/period-finding.md
     - Statistics: cli/statistics.md
     - Model Fitting: cli/model-fitting.md
     - Filtering & Detrending: cli/filtering.md
@@ -97,7 +97,7 @@ nav:
     - Commands:
       - Overview: python/commands/index.md
       - Light Curve Manipulation: python/commands/manipulation.md
-      - Period Finding: python/commands/period-finding.md
+      - Period Finding / Signal Detection: python/commands/period-finding.md
       - Statistics: python/commands/statistics.md
       - Model Fitting: python/commands/model-fitting.md
       - Filtering & Detrending: python/commands/filtering.md
