@@ -21,6 +21,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-aov` | Phase-binned Analysis of Variance period search | [CLI](cli/period-finding.md#-aov-phase-binned-analysis-of-variance) | [Python](python/commands/period-finding.md#aov-analysis-of-variance) |
 | `-aov_harm` | Multi-harmonic Analysis of Variance period search | [CLI](cli/period-finding.md#-aov_harm-multi-harmonic-analysis-of-variance) | [Python](python/commands/period-finding.md#aov_harm-multi-harmonic-aov) |
 | `-autocorrelation` | Discrete autocorrelation function | [CLI](cli/statistics.md#-autocorrelation) | [Python](python/commands/statistics.md#autocorrelation-autocorrelation-function) |
+| `-beyondNsigma` | Fraction of magnitudes more than N*sigma above / below the median, with optional MAD-based robust scale | [CLI](cli/statistics.md#-beyondnsigma) | [Python](python/commands/statistics.md#beyondnsigma-fraction-beyond-n-sigma) |
 | `-binlc` | Bin the light curve by time | [CLI](cli/manipulation.md#-binlc) | [Python](python/commands/manipulation.md#binlc-bin-in-time) |
 | `-BLS` | Box-fitting Least Squares transit search | [CLI](cli/period-finding.md#-bls-box-fitting-least-squares) | [Python](python/commands/period-finding.md#bls-box-least-squares-transit-search) |
 | `-BLSFixDurTc` | BLS with fixed transit duration and epoch | [CLI](cli/period-finding.md#-blsfixdurtc-bls-with-fixed-transit-duration-and-epoch) | [Python](python/commands/period-finding.md#blsfixdurtc-bls-with-fixed-duration-and-epoch-searching-for-period) |

@@ -525,3 +525,78 @@ print(round(result.vars["PERCENTILERATIOS_amp_PCT5.00_PCT95.00_0"], 4))
 ```
 
 ---
+
+### `beyondNsigma` — Fraction beyond N sigma
+
+**Syntax**
+
+```python
+cmd.beyondNsigma(Nvalues=None, useMAD=False)
+```
+
+**Description**
+
+For each light curve and each `N` in `Nvalues`, emit two fractions:
+
+```
+frac_above_N = #{ x : x > median + N*sigma } / N_rej
+frac_below_N = #{ x : x < median - N*sigma } / N_rej
+```
+
+where `N_rej` is the number of finite magnitudes after NaN rejection. Comparisons are strict (`>` and `<`).
+
+By default `sigma` is the sample standard deviation. When `useMAD=True`, `sigma` is taken to be `1.483 * median(|x - median(x)|)` instead — the Gaussian-consistent calibration of the MAD. The MAD-based scale is robust to heavy tails or outliers: outliers inflate the stddev and widen the threshold, masking themselves; using MAD recovers a tighter threshold that correctly flags the outliers.
+
+The `N=1` instance corresponds to the `Beyond1Std` feature of [Nun et al. 2015](https://arxiv.org/abs/1506.00010) (the FATS package), generalized here to an arbitrary list of `N` values and to a choice of stddev or MAD scale.
+
+NaN magnitudes are dropped; LCs with fewer than two finite magnitudes produce NaN outputs. When `sigma == 0`, the fractions are reported as zero.
+
+CLI equivalent: [`-beyondNsigma`](../../cli/statistics.md#-beyondnsigma).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Nvalues` | sequence of `float`, or `None` | `N` values to evaluate. Defaults to `[1.0, 3.0, 5.0]` when `None`. Each value must be strictly positive; duplicates are rejected at construction time. Floating-point values are accepted. |
+| `useMAD` | `bool` | If `True`, use `1.483 * MAD` instead of stddev. Default `False`. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position; `X.XX` is the N value with two decimal places (e.g. `N1.00`, `N2.50`):
+
+| Column | Description |
+|--------|-------------|
+| `BEYONDNSIGMA_frac_above_NX.XX_N` | Fraction of magnitudes with `x > median + N*sigma`. |
+| `BEYONDNSIGMA_frac_below_NX.XX_N` | Fraction of magnitudes with `x < median - N*sigma`. |
+
+**Examples**
+
+```python
+import numpy as np
+
+# Defaults (N = 1, 3, 5) on a real light curve.
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = lc.beyondNsigma()
+print(round(result.vars["BEYONDNSIGMA_frac_above_N1.00_0"], 4))
+print(round(result.vars["BEYONDNSIGMA_frac_below_N1.00_0"], 4))
+
+# Custom float N values with the MAD-based robust scale.
+result = lc.beyondNsigma(Nvalues=[0.5, 1.0, 1.5], useMAD=True)
+print(round(result.vars["BEYONDNSIGMA_frac_above_N0.50_0"], 4))
+print(round(result.vars["BEYONDNSIGMA_frac_above_N1.00_0"], 4))
+
+# Synthetic Gaussian noise -> frac_above_N1 should be near 0.1587.
+rng = np.random.default_rng(0)
+n = 5000
+gauss = vt.LightCurve.from_arrays(
+    np.linspace(0, 30, n),
+    rng.normal(0.0, 1.0, n),
+    np.full(n, 1.0),
+    name="gauss",
+)
+result = gauss.beyondNsigma()
+above_1 = result.vars["BEYONDNSIGMA_frac_above_N1.00_0"]
+print(f"frac_above_N1 = {above_1:.4f}  (Gaussian expectation: 0.1587)")
+```
+
+---

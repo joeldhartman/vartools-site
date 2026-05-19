@@ -454,3 +454,73 @@ vartools -i EXAMPLES/2 -oneline \
     -expr 'mag=gauss()' \
     -percentileratios
 ```
+
+
+## `-beyondNsigma`
+
+**Syntax**
+```
+-beyondNsigma
+    ["Nvalues" N1,N2,...,Nk]
+    ["useMAD"]
+```
+
+**Description**
+
+For each light curve, compute the fraction of magnitudes that lie more than `N*sigma` above the median and the fraction that lie more than `N*sigma` below the median, for a user-supplied list of `N` values:
+
+```
+frac_above_N = #{ x : x > median + N*sigma } / N_rej
+frac_below_N = #{ x : x < median - N*sigma } / N_rej
+```
+
+where `N_rej` is the number of finite magnitudes after NaN rejection. Comparisons are strict (`>` and `<`).
+
+By default `sigma` is the sample standard deviation. When the `useMAD` keyword is given, `sigma` is taken to be `1.483 * median(|x - median(x)|)` instead — the Gaussian-consistent calibration of the MAD. The MAD-based scale is robust to heavy tails or outliers: outliers inflate the stddev and widen the `N*sigma` threshold, masking themselves, while the MAD reflects the bulk's scale and the same thresholds correctly flag the outliers.
+
+The `N=1` instance of this statistic corresponds to the `Beyond1Std` feature of [Nun et al. 2015](https://arxiv.org/abs/1506.00010) (the FATS package for variable-star feature engineering), generalized here to an arbitrary list of `N` values and to a choice of stddev or MAD scale.
+
+NaN magnitudes are dropped before any statistic is computed; light curves with fewer than two finite magnitudes produce NaN outputs. When `sigma == 0` (degenerate distribution in which every magnitude equals the median) the fractions are reported as zero, since no point strictly exceeds a zero threshold.
+
+Python equivalent: [`beyondNsigma`](../python/commands/statistics.md#beyondnsigma-fraction-beyond-n-sigma).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"Nvalues" N1,N2,...,Nk` | Optional. Comma-separated list of `N` values to evaluate, replacing the defaults `1,3,5`. Each value must satisfy `N > 0`; duplicates are rejected at parse time. Floating-point values are accepted (e.g. `Nvalues 1.5,2.5,4.0`). |
+| `"useMAD"` | Optional. If given, use `1.483 * MAD` as the scale instead of the sample standard deviation. |
+
+The trailing keywords are parsed in strict order: `Nvalues` must come before `useMAD`.
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `BEYONDNSIGMA_frac_above_NX.XX_M` | Fraction of magnitudes with `x > median + N*sigma`. |
+| `BEYONDNSIGMA_frac_below_NX.XX_M` | Fraction of magnitudes with `x < median - N*sigma`. |
+
+`X.XX` is the `N` value formatted with two decimal places (e.g. `N1.00`, `N2.50`) and `M` is the 0-indexed command position in the pipeline. When referencing these columns as variables in `-expr`, replace `.` with `_` (e.g. `BEYONDNSIGMA_frac_above_N1_00_M`); this substitution is handled by vartools' identifier parser.
+
+**Examples**
+
+**Example 1.** Defaults (`N = 1, 3, 5`) on EXAMPLES/2.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -beyondNsigma
+```
+
+**Example 2.** Custom floating-point N values with the MAD-based scale, more robust to heavy tails or outliers than the stddev-based default.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -beyondNsigma Nvalues 0.5,1.0,1.5 useMAD
+```
+
+**Example 3.** A synthetic Gaussian LC. For independent Gaussian noise, `frac_above_N1.00 ≈ frac_below_N1.00 ≈ 0.1587` (one-tailed `1 - Phi(1)`) and `frac_above_N3.00 ≈ frac_below_N3.00 ≈ 0.00135`.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -expr 'mag=gauss()' \
+    -beyondNsigma
+```
