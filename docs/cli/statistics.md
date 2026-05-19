@@ -393,6 +393,7 @@ vartools -i EXAMPLES/2 -oneline \
 ```
 -percentileratios
     ["percentilepairs" p1:q1,p2:q2,...,pN:qN]
+    ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -414,6 +415,8 @@ For any symmetric distribution the `asym` statistics tend to `1.0`; positively-s
 
 Percentile interpolation matches the [`-stats`](#stats) command (the same `percentile()` helper in `statistics.c`), so values are directly comparable to the corresponding `pct(p)` columns from `-stats`. NaN magnitudes are dropped before any statistic is computed; light curves with fewer than two finite magnitudes, and ratios with a zero denominator (e.g. `median == pct(p)`, or `stddev == 0`), produce NaN outputs.
 
+When the `maskpoints` keyword is given, the median, the stddev, the MAD, and all percentile statistics are computed only over points with `maskvar > 0`. The mask filter is applied alongside NaN rejection, before any statistic is computed.
+
 Python equivalent: [`percentileratios`](../python/commands/statistics.md#percentileratios-robust-scatter-ratios).
 
 **Parameters**
@@ -421,6 +424,7 @@ Python equivalent: [`percentileratios`](../python/commands/statistics.md#percent
 | Parameter | Description |
 |-----------|-------------|
 | `"percentilepairs" p1:q1,p2:q2,...` | Optional. Comma-separated list of percentile pairs to use in place of the defaults `5:95,1:99`. Each pair must satisfy `0 < p, q < 100` and `p != q`; pairs given with `p > q` are silently canonicalized to `p < q`; duplicate pairs (after canonicalization) are rejected at parse time. Floating-point percentiles are accepted (e.g. `2.5:97.5`). |
+| `"maskpoints" maskvar` | Optional. Name of a light-curve vector; only points with `maskvar > 0` are included in the calculation. The trailing keywords are parsed in strict order: `percentilepairs` must come before `maskpoints`. |
 
 **Output columns**
 
@@ -463,6 +467,7 @@ vartools -i EXAMPLES/2 -oneline \
 -beyondNsigma
     ["Nvalues" N1,N2,...,Nk]
     ["useMAD"]
+    ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -482,6 +487,8 @@ The `N=1` instance of this statistic corresponds to the `Beyond1Std` feature of 
 
 NaN magnitudes are dropped before any statistic is computed; light curves with fewer than two finite magnitudes produce NaN outputs. When `sigma == 0` (degenerate distribution in which every magnitude equals the median) the fractions are reported as zero, since no point strictly exceeds a zero threshold.
 
+When the `maskpoints` keyword is given, the median, sigma, threshold counts, and the `N_rej` denominator are all computed only over points with `maskvar > 0`. The mask filter is applied alongside NaN rejection, before any statistic is computed.
+
 Python equivalent: [`beyondNsigma`](../python/commands/statistics.md#beyondnsigma-fraction-beyond-n-sigma).
 
 **Parameters**
@@ -490,8 +497,9 @@ Python equivalent: [`beyondNsigma`](../python/commands/statistics.md#beyondnsigm
 |-----------|-------------|
 | `"Nvalues" N1,N2,...,Nk` | Optional. Comma-separated list of `N` values to evaluate, replacing the defaults `1,3,5`. Each value must satisfy `N > 0`; duplicates are rejected at parse time. Floating-point values are accepted (e.g. `Nvalues 1.5,2.5,4.0`). |
 | `"useMAD"` | Optional. If given, use `1.483 * MAD` as the scale instead of the sample standard deviation. |
+| `"maskpoints" maskvar` | Optional. Name of a light-curve vector; only points with `maskvar > 0` are included in the calculation. |
 
-The trailing keywords are parsed in strict order: `Nvalues` must come before `useMAD`.
+The trailing keywords are parsed in strict order: `Nvalues`, then `useMAD`, then `maskpoints`.
 
 **Output columns**
 

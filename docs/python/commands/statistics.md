@@ -468,7 +468,7 @@ print(round(result.vars["VonNeumann_Ratio_0"], 5))
 **Syntax**
 
 ```python
-cmd.percentileratios(percentilepairs=None)
+cmd.percentileratios(percentilepairs=None, maskpoints=None)
 ```
 
 **Description**
@@ -497,6 +497,7 @@ CLI equivalent: [`-percentileratios`](../../cli/statistics.md#-percentileratios)
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `percentilepairs` | sequence of `(p, q)` pairs, or `None` | Percentile pairs to use. Defaults to `[(5, 95), (1, 99)]` when `None`. Each pair must satisfy `0 < p, q < 100` and `p != q`; pairs with `p > q` are silently canonicalized to `p < q`; duplicate pairs (after canonicalization) are rejected. Floating-point percentiles are accepted (e.g. `(2.5, 97.5)`). |
+| `maskpoints` | `str` or `None` | Name of a light-curve vector; only points with `maskvar > 0` are included. The median, stddev, MAD, and all percentile statistics are computed only over the masked-in subset. |
 
 **Output**
 
@@ -531,7 +532,7 @@ print(round(result.vars["PERCENTILERATIOS_amp_PCT5.00_PCT95.00_0"], 4))
 **Syntax**
 
 ```python
-cmd.beyondNsigma(Nvalues=None, useMAD=False)
+cmd.beyondNsigma(Nvalues=None, useMAD=False, maskpoints=None)
 ```
 
 **Description**
@@ -559,6 +560,7 @@ CLI equivalent: [`-beyondNsigma`](../../cli/statistics.md#-beyondnsigma).
 |-----------|------|-------------|
 | `Nvalues` | sequence of `float`, or `None` | `N` values to evaluate. Defaults to `[1.0, 3.0, 5.0]` when `None`. Each value must be strictly positive; duplicates are rejected at construction time. Floating-point values are accepted. |
 | `useMAD` | `bool` | If `True`, use `1.483 * MAD` instead of stddev. Default `False`. |
+| `maskpoints` | `str` or `None` | Name of a light-curve vector; only points with `maskvar > 0` are included. The median, sigma, threshold counts, and the `N_rej` denominator are all computed over the masked-in subset. |
 
 **Output**
 
