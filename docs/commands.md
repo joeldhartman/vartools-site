@@ -67,6 +67,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-nonlinfit` | Levenberg-Marquardt / MCMC nonlinear-model fitting | [CLI](cli/model-fitting.md#-nonlinfit) | [Python](python/commands/model-fitting.md#nonlinfit-non-linear-least-squares-fitting) |
 | `-o` | Write the (possibly modified) light curve to a file | [CLI](cli/control-flow.md#-o) | [Python](python/commands/control-flow.md#o-output-light-curve) |
 | `-PDM` | Phase Dispersion Minimization period search (step / linterp / multicover / tophat / gauss variants) | [CLI](cli/period-finding.md#-pdm-phase-dispersion-minimization) | [Python](python/commands/period-finding.md#pdm-phase-dispersion-minimization) |
+| `-percentileratios` | Robust scatter ratios (amp_p_q, asym_p_q, medmeddev/stddev) from the magnitude distribution | [CLI](cli/statistics.md#-percentileratios) | [Python](python/commands/statistics.md#percentileratios-robust-scatter-ratios) |
 | `-Phase` | Replace the time column with phase-folded coordinates | [CLI](cli/manipulation.md#-phase) | [Python](python/commands/manipulation.md#phase-phase-fold-the-light-curve) |
 | `-print` | Emit user-computed scalars as columns in the statistics table | [CLI](cli/control-flow.md#-print) | [Python](python/commands/control-flow.md#print-emit-user-computed-variables-to-the-output-table) |
 | `-python` | Run embedded Python code on each light curve | [CLI](cli/python-r.md#-python) | [Python](python/commands/python-r.md#python-run-python-code) |

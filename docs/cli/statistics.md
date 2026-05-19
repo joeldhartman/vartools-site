@@ -385,3 +385,72 @@ vartools -i EXAMPLES/2 -oneline \
     -expr 'mask=((t-t[0])<30)' \
     -vonNeumann weighted maskpoints mask
 ```
+
+
+## `-percentileratios`
+
+**Syntax**
+```
+-percentileratios
+    ["percentilepairs" p1:q1,p2:q2,...,pN:qN]
+```
+
+**Description**
+
+Compute robust scatter statistics from the magnitude distribution. For each pair of percentiles `(p, q)` with `0 < p < q < 100`, two statistics are emitted per light curve:
+
+```
+amp_p_q  = pct(q) - pct(p)
+asym_p_q = (pct(q) - median) / (median - pct(p))
+```
+
+plus one additional statistic that does not depend on the pair list:
+
+```
+medmeddev_over_stddev = median(|x - median(x)|) / stddev(x)
+```
+
+For any symmetric distribution the `asym` statistics tend to `1.0`; positively-skewed distributions (heavy upper tail) produce `asym > 1` and negatively-skewed distributions produce `asym < 1`. For independent Gaussian noise `medmeddev/stddev` tends to `0.6745` in the large-N limit, with smaller values indicating heavier tails and larger values indicating lighter tails or significant outliers.
+
+Percentile interpolation matches the [`-stats`](#stats) command (the same `percentile()` helper in `statistics.c`), so values are directly comparable to the corresponding `pct(p)` columns from `-stats`. NaN magnitudes are dropped before any statistic is computed; light curves with fewer than two finite magnitudes, and ratios with a zero denominator (e.g. `median == pct(p)`, or `stddev == 0`), produce NaN outputs.
+
+Python equivalent: [`percentileratios`](../python/commands/statistics.md#percentileratios-robust-scatter-ratios).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"percentilepairs" p1:q1,p2:q2,...` | Optional. Comma-separated list of percentile pairs to use in place of the defaults `5:95,1:99`. Each pair must satisfy `0 < p, q < 100` and `p != q`; pairs given with `p > q` are silently canonicalized to `p < q`; duplicate pairs (after canonicalization) are rejected at parse time. Floating-point percentiles are accepted (e.g. `2.5:97.5`). |
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `PERCENTILERATIOS_amp_PCTp_PCTq_N` | `pct(q) - pct(p)` for pair `(p, q)`. |
+| `PERCENTILERATIOS_asym_PCTp_PCTq_N` | `(pct(q) - median) / (median - pct(p))` for pair `(p, q)`. |
+| `PERCENTILERATIOS_medmeddev_over_stddev_N` | `median(|x - median(x)|) / stddev(x)`. |
+
+The `p` and `q` values are formatted with two decimal places in the column names (e.g. `PCT5.00`, `PCT97.50`), following the `-stats` convention. When referencing these columns as variables in `-expr`, replace `.` with `_` (e.g. `PERCENTILERATIOS_amp_PCT5_00_PCT95_00_N`); this substitution is handled by vartools' identifier parser.
+
+**Examples**
+
+**Example 1.** Defaults (`5:95` and `1:99` pairs) on EXAMPLES/2.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -percentileratios
+```
+
+**Example 2.** Custom pairs with a mix of integer and floating-point percentiles. The `95:5` entry is canonicalized to `5:95` before column names are emitted.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -percentileratios percentilepairs 10:90,20:80,2.5:97.5,95:5
+```
+
+**Example 3.** A synthetic Gaussian LC: `asym_p_q ≈ 1` for any symmetric distribution and `medmeddev_over_stddev ≈ 0.6745` for independent Gaussian noise.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -expr 'mag=gauss()' \
+    -percentileratios
+```

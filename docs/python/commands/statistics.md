@@ -462,3 +462,66 @@ print(round(result.vars["VonNeumann_Ratio_0"], 5))
 ```
 
 ---
+
+### `percentileratios` — Robust scatter ratios
+
+**Syntax**
+
+```python
+cmd.percentileratios(percentilepairs=None)
+```
+
+**Description**
+
+Compute robust scatter statistics from the magnitude distribution. For each pair of percentiles `(p, q)` with `0 < p < q < 100`, the command emits two statistics per light curve:
+
+```
+amp_p_q  = pct(q) - pct(p)
+asym_p_q = (pct(q) - median) / (median - pct(p))
+```
+
+plus one additional statistic that does not depend on the pair list:
+
+```
+medmeddev_over_stddev = median(|x - median(x)|) / stddev(x)
+```
+
+For any symmetric distribution `asym → 1.0`; positively-skewed distributions (heavy upper tail) produce `asym > 1` and negatively-skewed distributions produce `asym < 1`. For independent Gaussian noise `medmeddev/stddev → 0.6745` in the large-N limit.
+
+Percentile interpolation matches the [`stats`](#stats-generic-statistics) command, so values are directly comparable to the corresponding `pct(p)` columns from `stats`. NaN magnitudes are dropped before any statistic is computed; light curves with fewer than two finite magnitudes, and ratios with a zero denominator, produce NaN outputs.
+
+CLI equivalent: [`-percentileratios`](../../cli/statistics.md#-percentileratios).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `percentilepairs` | sequence of `(p, q)` pairs, or `None` | Percentile pairs to use. Defaults to `[(5, 95), (1, 99)]` when `None`. Each pair must satisfy `0 < p, q < 100` and `p != q`; pairs with `p > q` are silently canonicalized to `p < q`; duplicate pairs (after canonicalization) are rejected. Floating-point percentiles are accepted (e.g. `(2.5, 97.5)`). |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position. The `p` and `q` values are formatted with two decimal places in the column names (e.g. `PCT5.00`, `PCT97.50`):
+
+| Column | Description |
+|--------|-------------|
+| `PERCENTILERATIOS_amp_PCTp_PCTq_N` | `pct(q) - pct(p)` for pair `(p, q)`. |
+| `PERCENTILERATIOS_asym_PCTp_PCTq_N` | `(pct(q) - median) / (median - pct(p))` for pair `(p, q)`. |
+| `PERCENTILERATIOS_medmeddev_over_stddev_N` | `median(|x - median(x)|) / stddev(x)`. |
+
+**Examples**
+
+```python
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+
+# Defaults (5:95 and 1:99 pairs).
+result = lc.percentileratios()
+print(round(result.vars["PERCENTILERATIOS_asym_PCT5.00_PCT95.00_0"], 4))
+
+# Custom pairs incl. floating-point percentile; 95:5 auto-swaps to 5:95.
+result = lc.percentileratios(percentilepairs=[(10, 90), (2.5, 97.5), (95, 5)])
+print(round(result.vars["PERCENTILERATIOS_amp_PCT10.00_PCT90.00_0"], 4))
+print(round(result.vars["PERCENTILERATIOS_amp_PCT2.50_PCT97.50_0"], 4))
+print(round(result.vars["PERCENTILERATIOS_amp_PCT5.00_PCT95.00_0"], 4))
+```
+
+---
