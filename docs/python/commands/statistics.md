@@ -602,3 +602,109 @@ print(f"frac_above_N1 = {above_1:.4f}  (Gaussian expectation: 0.1587)")
 ```
 
 ---
+
+### `slopestats` — Per-pair slope statistics
+
+**Syntax**
+
+```python
+cmd.slopestats(bintime=None, binshift=None, threshold=None,
+               maxgap=None, useMAD=False, maskpoints=None)
+```
+
+**Description**
+
+For each light curve, compute per-pair slope statistics over consecutive points after time-sorting (and optionally after binning). For pairs `(t_i, m_i)`, `(t_{i+1}, m_{i+1})`, form the slope `s_i = (m_{i+1} - m_i) / (t_{i+1} - t_i)` and report five statistics per (LC, binsize) combination:
+
+```
+median_abs_dmdt = median(|s_i|)
+max_abs_dmdt    = max(|s_i|)
+mad_dmdt        = 1.483 * median(|s_i - median(s_i)|)
+frac_above_T    = #{ s_i : s_i - <s> >  T*sigma } / N_pairs
+frac_below_T    = #{ s_i : s_i - <s> < -T*sigma } / N_pairs
+```
+
+`<s>` is the mean of the slopes; deviations are mean-centered regardless of the choice of sigma flavor. Comparisons against `T*sigma` are strict (`>` and `<`).
+
+By default `sigma` is the sample standard deviation of the slopes (normalized by `N_pairs - 1`). When `useMAD=True`, `sigma` is `1.483 * median(|s_i - median(s_i)|)` instead (= `mad_dmdt`), which is more robust to heavy tails or outliers.
+
+The `bintime` parameter takes a list of bin sizes in **minutes** (assuming the light curve time axis is in days; the kernel divides each bintime by 1440 before binning). Each binsize produces its own column set, tagged in the column name as `_BTX.XX`. Within each bin, an unweighted average of `(t, m)` is taken, and consecutive-bin slopes are formed from those averages. The `binshift` parameter (only valid in combination with `bintime`) shifts the first bin by a fraction of the binwidth: `t0_bin = t[0] - binshift * binsize`. Canonical use is `0 <= binshift < 1`.
+
+The `maxgap` parameter (in days) drops any consecutive pair whose time separation exceeds it, suppressing spurious large slopes that span long observational gaps.
+
+The `max_abs_dmdt` statistic corresponds to the `MaxSlope` feature of [Richards et al. 2011](https://ui.adsabs.harvard.edu/abs/2011ApJ...733...10R/abstract). The `frac_above_T*sigma` / `frac_below_T*sigma` statistics are slope-domain generalizations of the magnitude-domain `Beyond1Std` feature of the same paper, extended to a user-supplied list of `T` values and split into signed above/below counts.
+
+NaN magnitudes are dropped; LCs with fewer than one surviving pair report NaN for all five stats. When `sigma == 0` (all slopes equal), the threshold fractions are reported as zero while the median/max/MAD remain well-defined.
+
+**Expected values for Gaussian white noise.** For magnitudes `m_i ~ N(0, σ²)` iid with uniform spacing `dt`, the slopes `s_i` are Gaussian with stddev `σ_s = sqrt(2) · σ / dt`. Adjacent slopes have correlation `−1/2` because they share a magnitude, but the median/MAD/max statistics are leading-order insensitive to that correlation. The large-N expectations are:
+
+| Statistic | Expectation |
+|-----------|-------------|
+| `median_abs_dmdt` | `0.6745 · σ_s = 0.9540 · σ/dt` |
+| `mad_dmdt` | `σ_s = sqrt(2) · σ/dt ≈ 1.4142 · σ/dt` |
+| `max_abs_dmdt` | `σ_s · sqrt(2 · ln N_pairs)` (leading order; with an Euler–Mascheroni correction `−(ln ln N_pairs + ln 4π) / (2·sqrt(2 ln N_pairs))` for higher accuracy) |
+| `frac_above_T = frac_below_T` | `1 − Φ(T)` (e.g. `0.1587` at `T=1`, `0.00135` at `T=3`, `2.87×10⁻⁷` at `T=5`) |
+
+The `mad_dmdt` formula is exact-in-the-limit by construction — the `1.483` factor is calibrated so that `1.483 · medmeddev(Gaussian) → σ`.
+
+CLI equivalent: [`-slopestats`](../../cli/statistics.md#-slopestats).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `bintime` | sequence of `float`, or `None` | List of bin sizes in minutes. Each value must be strictly positive; duplicates are rejected at construction time. If `None`, no binning is performed. |
+| `binshift` | `float`, or `None` | Fraction of the binwidth by which to shift the first bin. Canonical use is `0 <= binshift < 1`. Only valid when `bintime` is given. |
+| `threshold` | sequence of `float`, or `None` | `T` values for the threshold-fraction statistics. Defaults to `[3.0]` when `None`. Each value must be strictly positive; duplicates are rejected. |
+| `maxgap` | `float`, or `None` | Drop consecutive pairs whose time separation exceeds `maxgap` (days). Must be strictly positive. |
+| `useMAD` | `bool` | If `True`, use `1.483 * MAD` of the slopes as `sigma`. Default `False`. |
+| `maskpoints` | `str` or `None` | Name of a light-curve vector; only points with `maskvar > 0` are included in the calculation. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position. `Y.YY` is the threshold value with two decimal places (e.g. `T3.00`); `X.XX` is the bin size in **minutes** with two decimal places (e.g. `BT5.00`, `BT60.00`). The `_BTX.XX` segment is omitted when no `bintime` is given.
+
+| Column | Description |
+|--------|-------------|
+| `SLOPESTATS_median_abs_dmdt[_BTX.XX]_N` | Median of `|s_i|`. |
+| `SLOPESTATS_max_abs_dmdt[_BTX.XX]_N` | Maximum of `|s_i|`. |
+| `SLOPESTATS_mad_dmdt[_BTX.XX]_N` | `1.483 * median(|s_i - median(s_i)|)`. |
+| `SLOPESTATS_frac_above_TY.YY[_BTX.XX]_N` | Fraction of slopes with `s_i - <s> > T*sigma`. |
+| `SLOPESTATS_frac_below_TY.YY[_BTX.XX]_N` | Fraction of slopes with `s_i - <s> < -T*sigma`. |
+
+**References**
+
+Cite [Richards et al. 2011](https://ui.adsabs.harvard.edu/abs/2011ApJ...733...10R/abstract), ApJ, 733, 10.
+
+**Examples**
+
+```python
+import numpy as np
+
+# Defaults (threshold T = 3, no binning) on a real light curve.
+lc = vt.LightCurve.from_file("EXAMPLES/2")
+result = lc.slopestats()
+print(round(result.vars["SLOPESTATS_median_abs_dmdt_0"], 4))
+print(round(result.vars["SLOPESTATS_max_abs_dmdt_0"], 4))
+
+# Binning at 10 and 30 minutes with multiple thresholds and a gap filter.
+result = lc.slopestats(bintime=[10, 30], threshold=[1, 3], maxgap=0.5)
+print(round(result.vars["SLOPESTATS_median_abs_dmdt_BT10.00_0"], 4))
+print(round(result.vars["SLOPESTATS_median_abs_dmdt_BT30.00_0"], 4))
+
+# Synthetic white-noise slopes -> frac_above_T1 should be near 0.1587
+# (Gaussian one-tailed expectation).
+rng = np.random.default_rng(0)
+n = 20000
+gauss = vt.LightCurve.from_arrays(
+    np.arange(n, dtype=float),
+    rng.normal(0.0, 1.0, n),
+    np.full(n, 1.0),
+    name="gauss",
+)
+result = gauss.slopestats(threshold=[1.0, 3.0])
+above_1 = result.vars["SLOPESTATS_frac_above_T1.00_0"]
+print(f"frac_above_T1 = {above_1:.4f}  (Gaussian expectation: 0.1587)")
+```
+
+---

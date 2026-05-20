@@ -532,3 +532,107 @@ vartools -i EXAMPLES/2 -oneline \
     -expr 'mag=gauss()' \
     -beyondNsigma
 ```
+
+
+## `-slopestats`
+
+**Syntax**
+```
+-slopestats
+    ["bintime" B1,B2,...,Bk]
+    ["binshift" binshift]
+    ["threshold" T1,T2,...,Tj]
+    ["maxgap" maxgap]
+    ["useMAD"]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, compute per-pair slope statistics over consecutive points after time-sorting (and optionally after binning). For pairs of consecutive points `(t_i, m_i)`, `(t_{i+1}, m_{i+1})` the slope `s_i = (m_{i+1} - m_i) / (t_{i+1} - t_i)` is formed, and five statistics are reported per (LC, binsize) combination:
+
+```
+median_abs_dmdt = median(|s_i|)
+max_abs_dmdt    = max(|s_i|)
+mad_dmdt        = 1.483 * median(|s_i - median(s_i)|)
+frac_above_T    = #{ s_i : s_i - <s> >  T*sigma } / N_pairs
+frac_below_T    = #{ s_i : s_i - <s> < -T*sigma } / N_pairs
+```
+
+`<s>` is the mean of the slopes; deviations are mean-centered regardless of the choice of sigma flavor. Comparisons against `T*sigma` are strict (`>` and `<`). The 1.483 factor on `mad_dmdt` calibrates the median absolute deviation to the Gaussian standard deviation in the large-N limit.
+
+By default `sigma` is the sample standard deviation of the slopes (normalized by `N_pairs - 1`, matching vartools' `stddev()`). When the `useMAD` keyword is given, `sigma` is `1.483 * median(|s_i - median(s_i)|)` instead (= `mad_dmdt`), which is more robust to heavy tails or outliers.
+
+The `bintime` keyword takes a comma-separated list of bin sizes in **minutes** (assuming the light curve time axis is in days; the kernel divides each bintime by 1440 before binning). Each binsize produces its own column set, tagged in the column name as `_BTX.XX`. Within each bin, an unweighted average of `(t, m)` is taken, and consecutive-bin slopes are formed from those averages. Empty bins are skipped; singleton bins are kept. The `binshift` keyword (only valid in combination with `bintime`) shifts the first bin by a fraction of the binwidth: `t0_bin = t[0] - binshift * binsize`. Canonical use is `0 <= binshift < 1`.
+
+The `maxgap` keyword (in the same time units as the LC, i.e. days) drops any consecutive pair whose time separation exceeds `maxgap`, suppressing spurious large slopes that span long observational gaps. When binning is in effect `maxgap` is applied to the binned light curve.
+
+The `max_abs_dmdt` statistic corresponds to the `MaxSlope` feature of [Richards et al. 2011](https://ui.adsabs.harvard.edu/abs/2011ApJ...733...10R/abstract). The `frac_above_T*sigma` and `frac_below_T*sigma` statistics are slope-domain generalizations of the magnitude-domain `Beyond1Std` feature of the same paper, extended to a user-supplied list of `T` values and split into signed above/below counts. The `mad_dmdt` statistic is the slope-domain analog of the magnitude-domain median absolute deviation (here with the Gaussian-calibrated 1.483 factor).
+
+NaN magnitudes are dropped before any binning or pair-formation step. If fewer than one pair survives the filter for a given binsize, the five stats are all reported as NaN for that binsize. When `sigma == 0` (e.g. all slopes equal), the threshold fractions are reported as zero while the median/max/MAD remain well-defined.
+
+When the `maskpoints` keyword is given, the mask filter is applied alongside NaN rejection on the magnitudes, before any binning or pair-formation step.
+
+**Expected values for Gaussian white noise.** For magnitudes `m_i ~ N(0, σ²)` iid with uniform spacing `dt`, the slopes `s_i` are Gaussian with stddev `σ_s = sqrt(2) · σ / dt` (adjacent slopes have correlation `−1/2` because they share a magnitude, but the median/MAD/max statistics are leading-order insensitive to that correlation). The large-N expectations are:
+
+| Statistic | Expectation |
+|-----------|-------------|
+| `median_abs_dmdt` | `0.6745 · σ_s = 0.9540 · σ/dt` |
+| `mad_dmdt` | `σ_s = sqrt(2) · σ/dt ≈ 1.4142 · σ/dt` |
+| `max_abs_dmdt` | `σ_s · sqrt(2 · ln N_pairs)` (leading order) |
+| `frac_above_T = frac_below_T` | `1 − Φ(T)` (e.g. `0.1587` at `T=1`, `0.00135` at `T=3`, `2.87×10⁻⁷` at `T=5`) |
+
+The `mad_dmdt` formula is exact-in-the-limit by construction — the `1.483` factor is calibrated so that `1.483 · medmeddev(Gaussian) → σ`. The leading-order `max_abs_dmdt` formula has an Euler–Mascheroni correction; a more accurate expression is `σ_s · ( sqrt(2 ln N_pairs) − (ln ln N_pairs + ln 4π) / (2·sqrt(2 ln N_pairs)) )`.
+
+Python equivalent: [`slopestats`](../python/commands/statistics.md#slopestats-per-pair-slope-statistics).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"bintime" B1,B2,...,Bk` | Optional. Comma-separated list of bin sizes in **minutes**. Each value must satisfy `B > 0`; duplicates are rejected at parse time. If omitted, no binning is performed. |
+| `"binshift" binshift` | Optional. Fraction of the binwidth by which to shift the first bin. Canonical use is `0 <= binshift < 1`. Only valid in combination with `bintime`. |
+| `"threshold" T1,T2,...,Tj` | Optional. Comma-separated list of `T` values for the threshold-fraction statistics. Defaults to `T = 3`. Each value must satisfy `T > 0`; duplicates are rejected at parse time. |
+| `"maxgap" maxgap` | Optional. Drop consecutive pairs whose time separation exceeds `maxgap`, in the same units as the LC time axis (days). Must satisfy `maxgap > 0`. |
+| `"useMAD"` | Optional. If given, use `1.483 * MAD` of the slopes as `sigma` instead of the sample standard deviation. |
+| `"maskpoints" maskvar` | Optional. Name of a light-curve vector; only points with `maskvar > 0` are included in the calculation. |
+
+The trailing keywords are parsed in strict order: `bintime`, `binshift`, `threshold`, `maxgap`, `useMAD`, `maskpoints`.
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `SLOPESTATS_median_abs_dmdt[_BTX.XX]_M` | Median of `|s_i|`. |
+| `SLOPESTATS_max_abs_dmdt[_BTX.XX]_M` | Maximum of `|s_i|`. |
+| `SLOPESTATS_mad_dmdt[_BTX.XX]_M` | `1.483 * median(|s_i - median(s_i)|)`. |
+| `SLOPESTATS_frac_above_TY.YY[_BTX.XX]_M` | Fraction of slopes with `s_i - <s> > T*sigma`. |
+| `SLOPESTATS_frac_below_TY.YY[_BTX.XX]_M` | Fraction of slopes with `s_i - <s> < -T*sigma`. |
+
+`Y.YY` is the threshold value formatted with two decimal places (e.g. `T3.00`, `T1.50`); `X.XX` is the bin size in minutes formatted with two decimal places (e.g. `BT5.00`, `BT60.00`). The `_BTX.XX` segment is omitted entirely when no `bintime` is given. `M` is the 0-indexed command position in the pipeline. When both threshold and bin appear, threshold is named first and bin second; all columns for a given binsize are emitted together (bin is the outer loop in the column registration).
+
+**References**
+
+Cite [Richards et al. 2011](https://ui.adsabs.harvard.edu/abs/2011ApJ...733...10R/abstract), ApJ, 733, 10.
+
+**Examples**
+
+**Example 1.** Defaults (threshold `T = 3`, no binning) on EXAMPLES/2.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -slopestats
+```
+
+**Example 2.** Binning at 10 and 30 minutes, multiple thresholds, and a maximum-gap filter to suppress slopes that span long observational gaps.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -slopestats bintime 10,30 threshold 1,3 maxgap 0.5
+```
+
+**Example 3.** Half-bin alignment shift via `binshift` and the robust MAD-based scale via `useMAD`.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -slopestats bintime 10 binshift 0.5 useMAD
+```

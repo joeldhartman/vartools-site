@@ -81,6 +81,7 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-rms` | Mean magnitude, RMS, and expected RMS | [CLI](cli/statistics.md#-rms) | [Python](python/commands/statistics.md#rms-root-mean-square) |
 | `-rmsbin` | Binned RMS for several bin sizes | [CLI](cli/statistics.md#-rmsbin) | [Python](python/commands/statistics.md#rmsbin-binned-rms) |
 | `-savelc` | Checkpoint the in-memory light curve for later -restorelc | [CLI](cli/control-flow.md#-savelc-restorelc) | [Python](python/commands/control-flow.md#savelc-restorelc-light-curve-state-snapshots) |
+| `-slopestats` | Per-pair slope (dm/dt) statistics over consecutive points, with optional binning and threshold fractions | [CLI](cli/statistics.md#-slopestats) | [Python](python/commands/statistics.md#slopestats-per-pair-slope-statistics) |
 | `-SoftenedTransit` | Protopapas softened-transit empirical model | [CLI](cli/model-fitting.md#-softenedtransit) | [Python](python/commands/model-fitting.md#softenedtransit-softened-trapezoidal-transit) |
 | `-sortlc` | Sort the light curve by time (or another variable) | [CLI](cli/manipulation.md#-sortlc) | [Python](python/commands/manipulation.md#sortlc-sort-observations) |
 | `-splinedetrend` | Spline-based detrending (USERLIB extension) | [CLI](cli/extensions.md#-splinedetrend) | [Python](python/commands/extensions.md#splinedetrend-basis-spline-poly-harmonic-detrending) |
