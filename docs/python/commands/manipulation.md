@@ -52,7 +52,7 @@ lc = vt.LightCurve.from_file("EXAMPLES/2")
 ```python
 cmd.binlc(method="average", binsize=None, nbins=None,
           time_output="tcenter", bincolumns=None,
-          bincolumnsonly=False, T0=None, firstbinshift=None,
+          bincolumnsonly=False, T0=None, binshift=None,
           maskpoints=None)
 ```
 
@@ -73,7 +73,7 @@ CLI equivalent: [`-binlc`](../../cli/manipulation.md#-binlc).
 | `bincolumns` | `str` or `None` | Override the binning statistic for specific named columns, e.g. `"col1,col2:median"`. |
 | `bincolumnsonly` | `bool` | With `time_output="tnoshrink"`, restrict replacement to columns listed in `bincolumns`. |
 | `T0` | `float`, `str`, or `None` | Reference time for bin-edge alignment. A float emits `"fix T0"`; a string is split and forwarded verbatim (e.g. `"list"` or `"fixcolumn colname"`). |
-| `firstbinshift` | `float`, `str`, or `None` | Shift the first bin edge by this amount. Accepts variable/expression forms. |
+| `binshift` | `float`, `str`, or `None` | Shift the first bin edge by `binshift * binsize`. `binshift` is dimensionless (canonical use `0 <= binshift < 1`; `binshift=0.5` produces a half-bin shift). Accepts variable/expression forms. |
 | `maskpoints` | `str` or `None` | Mask variable; only points with `maskvar > 0` contribute. Masked-out points still receive the binned value when `tnoshrink` is active. |
 
 **Output**

@@ -16,7 +16,7 @@ This page documents the VARTOOLS commands that transform, filter, reformat, or i
         <"fix" T0val | "var" varname | "list" ["column" col] | "fixcolumn"
         <colname | colnum> |
          "expr" expression>]
-    ["firstbinshift" <"var" fbvar | "expr" fbexpr | firstbinshift>]
+    ["binshift" <"var" bsvar | "expr" bsexpr | binshift>]
     <"tcenter" | "taverage" | "tmedian" | "tnoshrink" ["bincolumnsonly"]>
     ["maskpoints" maskvar]
 ```
@@ -36,7 +36,7 @@ Python equivalent: [`binlc`](../python/commands/manipulation.md#binlc-bin-in-tim
 | `"nbins" nbins` | Number of equal-width bins to divide the time span into. |
 | `"bincolumns" var1[:stats1],...` | Override the binning statistic for specific named columns. Statistic names follow `-stats` conventions. |
 | `"T0" ...` | Start time of the first bin. Sources: `"fix"` (command-line value), `"list"` (input list column), `"fixcolumn"` (prior output column), or `"expr"` (analytic expression). |
-| `"firstbinshift" firstbinshift` | Shift the first bin start by `t0 - firstbinshift/binsize`. |
+| `"binshift" binshift` | Shift the first bin start by `t0 - binshift*binsize`, where `binshift` is a dimensionless fraction of the binwidth (canonical use `0 <= binshift < 1`; `binshift=0.5` produces a half-bin shift). |
 | `"tcenter"` | Output time for each bin is the bin center. |
 | `"taverage"` | Output time is the average of times in the bin. |
 | `"tmedian"` | Output time is the median of times in the bin. |
