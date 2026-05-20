@@ -510,6 +510,10 @@ The trailing keywords are parsed in strict order: `Nvalues`, then `useMAD`, then
 
 `X.XX` is the `N` value formatted with two decimal places (e.g. `N1.00`, `N2.50`) and `M` is the 0-indexed command position in the pipeline. When referencing these columns as variables in `-expr`, replace `.` with `_` (e.g. `BEYONDNSIGMA_frac_above_N1_00_M`); this substitution is handled by vartools' identifier parser.
 
+**References**
+
+Cite [Nun et al. 2015](https://arxiv.org/abs/1506.00010), arXiv:1506.00010 (the FATS package for variable-star feature engineering).
+
 **Examples**
 
 **Example 1.** Defaults (`N = 1, 3, 5`) on EXAMPLES/2.

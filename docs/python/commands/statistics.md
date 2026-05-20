@@ -571,6 +571,10 @@ Suffix `N` is the 0-indexed pipeline command position; `X.XX` is the N value wit
 | `BEYONDNSIGMA_frac_above_NX.XX_N` | Fraction of magnitudes with `x > median + N*sigma`. |
 | `BEYONDNSIGMA_frac_below_NX.XX_N` | Fraction of magnitudes with `x < median - N*sigma`. |
 
+**References**
+
+Cite [Nun et al. 2015](https://arxiv.org/abs/1506.00010), arXiv:1506.00010 (the FATS package for variable-star feature engineering).
+
 **Examples**
 
 ```python
