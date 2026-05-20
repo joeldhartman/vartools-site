@@ -640,16 +640,18 @@ The `max_abs_dmdt` statistic corresponds to the `MaxSlope` feature of [Richards 
 
 NaN magnitudes are dropped; LCs with fewer than one surviving pair report NaN for all five stats. When `sigma == 0` (all slopes equal), the threshold fractions are reported as zero while the median/max/MAD remain well-defined.
 
-**Expected values for Gaussian white noise.** For magnitudes `m_i ~ N(0, σ²)` iid with uniform spacing `dt`, the slopes `s_i` are Gaussian with stddev `σ_s = sqrt(2) · σ / dt`. Adjacent slopes have correlation `−1/2` because they share a magnitude, but the median/MAD/max statistics are leading-order insensitive to that correlation. The large-N expectations are:
+**Expected values for Gaussian white noise.** For magnitudes `m_i ~ N(0, σ²)` iid with uniform spacing `dt`, the slopes `s_i = (m_{i+1} − m_i)/dt` are Gaussian with stddev `σ_s = sqrt(2)·σ/dt`. Adjacent slopes have correlation `−1/2` because they share a magnitude, but the median/MAD/max statistics are leading-order insensitive to that correlation. The large-N expectations are:
 
 | Statistic | Expectation |
 |-----------|-------------|
-| `median_abs_dmdt` | `0.6745 · σ_s = 0.9540 · σ/dt` |
-| `mad_dmdt` | `σ_s = sqrt(2) · σ/dt ≈ 1.4142 · σ/dt` |
-| `max_abs_dmdt` | `σ_s · sqrt(2 · ln N_pairs)` (leading order; with an Euler–Mascheroni correction `−(ln ln N_pairs + ln 4π) / (2·sqrt(2 ln N_pairs))` for higher accuracy) |
+| `median_abs_dmdt` | `0.6745 · σ_s ≈ 0.9540 · σ/dt` |
+| `mad_dmdt`        | `σ_s = sqrt(2) · σ/dt ≈ 1.4142 · σ/dt` |
+| `max_abs_dmdt`    | `σ_s · sqrt(2·ln N_pairs) ≈ 2·sqrt(ln N_pairs) · σ/dt` (leading order) |
 | `frac_above_T = frac_below_T` | `1 − Φ(T)` (e.g. `0.1587` at `T=1`, `0.00135` at `T=3`, `2.87×10⁻⁷` at `T=5`) |
 
-The `mad_dmdt` formula is exact-in-the-limit by construction — the `1.483` factor is calibrated so that `1.483 · medmeddev(Gaussian) → σ`.
+The `mad_dmdt` formula is exact-in-the-limit by construction — the `1.483` factor is calibrated so that `1.483 · medmeddev(Gaussian) → σ`. The `max_abs_dmdt` expression is the leading order of the Gumbel limit law for the maximum of N independent Gaussians (Cramér 1946, *Mathematical Methods of Statistics*, eq. 28.6.13); a more accurate next-order asymptotic is `σ_s · ( sqrt(2·ln N_pairs) − (ln ln N_pairs + ln 4π) / (2·sqrt(2·ln N_pairs)) + γ / sqrt(2·ln N_pairs) )` with `γ ≈ 0.5772` the Euler–Mascheroni constant.
+
+These expectations assume uniform sampling. For non-uniform `dt_i` the slope distribution is heteroskedastic with `stddev s_i = sqrt(2)·σ/dt_i`; `max_abs_dmdt` is then dominated by the smallest `dt_i` rather than the typical spacing, while `median_abs_dmdt` and `mad_dmdt` remain robust and reflect a typical `dt`.
 
 CLI equivalent: [`-slopestats`](../../cli/statistics.md#-slopestats).
 
