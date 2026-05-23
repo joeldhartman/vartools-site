@@ -653,7 +653,7 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
         qmin=None, qmax=None,
         density_mode=False, stellar_density=None,
         min_exp_dur_frac=0.5, max_exp_dur_frac=1.5,
-        df=None, extraparams=False, nobinnedrms=False,
+        df=None, extraparams=False, nobinnedrms=True,
         freq_grid=None, adjust_qmin=False, reduce_nbins=False,
         reportharmonics=False,
         save_periodogram=False, save_model=False,
@@ -692,7 +692,7 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `min_exp_dur_frac`, `max_exp_dur_frac` | `float` or `str` | Expected-duration fractions for density mode (default `0.5` and `1.5`). |
 | `df` | `float`, `str`, or `None` | Fixed frequency step (alternative to `subsample`). |
 | `extraparams` | `bool` | Include additional false-positive diagnostic columns in the output. |
-| `nobinnedrms` | `bool` | Compute `BLS_SN` without binned RMS (faster, but SN is suppressed for high-significance peaks). |
+| `nobinnedrms` | `bool` | Adjust the way in which the `BLS_SN` statistic is calculated.  The default mode of `True` yields a faster and more robust process.  Set to `False` to recover the historical VARTOOLS behavior. |
 | `freq_grid` | `str` or `None` | `"stepP"` for uniform period sampling, `"steplogP"` for log-uniform. |
 | `adjust_qmin` | `bool` | Adaptively increase `qmin` at each frequency to `max(qmin, mindt·f)`. |
 | `reduce_nbins` | `bool` | (With `adjust_qmin=True`) adaptively reduce `nbins` at each frequency. |
