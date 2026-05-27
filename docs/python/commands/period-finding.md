@@ -673,6 +673,14 @@ The transit-duration grid can be specified three ways:
 - **`q` mode**: pass `qmin`/`qmax` directly as the fractional transit duration (ingress-to-egress fraction).
 - **density mode**: set `density_mode=True` and supply `stellar_density` (g/cm³) plus `min_exp_dur_frac` / `max_exp_dur_frac` to bracket the expected circular-orbit duration.
 
+The trial-frequency grid can also be specified three ways, and these are mutually exclusive — pass exactly one of `subsample`, `nfreq`, or `df`:
+
+- **`optimal` mode**: use the [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) frequency sampling optimal for transit search, controlled by `subsample` (oversampling factor; default `1.0`). Available only with `density_mode=True`, since the spacing depends on the expected transit duration.
+- **`nfreq` mode**: pass `nfreq=N` to use a fixed number of trial frequencies on a uniform grid.
+- **`df` mode**: pass `df=Δf` to set a fixed frequency step on a uniform grid.
+
+When `density_mode=True`, `optimal` mode is the default unless `nfreq` or `df` is also set; in `r`/`q` duration mode, `nfreq` or `df` is required (the wrapper raises a `ValueError` at construction time if both are omitted).
+
 CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squares).
 
 **Parameters**
@@ -685,12 +693,12 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `nbins` | `int` or `str` | Number of phase bins (≥ `2/qmin`). Accepts var/expr/PerLC forms. |
 | `timezone` | `float` | Time-zone offset (0 for HJD/BJD); affects the single-night Δχ² fraction. |
 | `npeaks` | `int` | Number of transit candidates to report. |
-| `subsample` | `float` or `str` | Frequency oversampling factor. |
-| `nfreq` | `int`, `str`, or `None` | Fixed number of test frequencies (overrides `subsample`). |
+| `subsample` | `float` or `str` | Oversampling factor for the [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) optimal frequency-sampling method. Used only when `density_mode=True` and neither `nfreq` nor `df` is set. Mutually exclusive with `nfreq` and `df`. |
+| `nfreq` | `int`, `str`, or `None` | Fixed number of trial frequencies (uniform grid). Mutually exclusive with `subsample` and `df`. |
 | `density_mode` | `bool` | Use stellar density to set transit-duration bounds. Required for the [Ofir (2014)](https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O/abstract) optimal grid. |
 | `stellar_density` | `float`, `str`, or `None` | Stellar density (g/cm³) for density mode. |
 | `min_exp_dur_frac`, `max_exp_dur_frac` | `float` or `str` | Expected-duration fractions for density mode (default `0.5` and `1.5`). |
-| `df` | `float`, `str`, or `None` | Fixed frequency step (alternative to `subsample`). |
+| `df` | `float`, `str`, or `None` | Fixed frequency step (uniform grid). Mutually exclusive with `subsample` and `nfreq`. |
 | `extraparams` | `bool` | Include additional false-positive diagnostic columns in the output. |
 | `nobinnedrms` | `bool` | Adjust the way in which the `BLS_SN` statistic is calculated.  The default mode of `True` yields a faster and more robust process.  Set to `False` to recover the historical VARTOOLS behavior. |
 | `freq_grid` | `str` or `None` | `"stepP"` for uniform period sampling, `"steplogP"` for log-uniform. |
