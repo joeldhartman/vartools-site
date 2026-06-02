@@ -642,3 +642,172 @@ vartools -i EXAMPLES/2 -oneline \
 vartools -i EXAMPLES/2 -oneline \
     -slopestats bintime 10 binshift 0.5 useMAD
 ```
+
+---
+
+## `-CodyM`
+
+**Syntax**
+```
+-CodyM "trendwindow" <"var" varname | "expr" exprstring | trendwindow>
+    ["outlierwindow" <"var" varname | "expr" exprstring | outlierwindow>]
+    ["sigclip" <"var" varname | "expr" exprstring | sigclip>]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, compute the flux-asymmetry statistic `M` of [Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract) (their Equation 7). `M` measures whether a light curve is asymmetric with respect to reflection about the median magnitude:
+
+```
+M = (<d_10%> - d_med) / sigma_d
+```
+
+where `d_med` is the median of the long-term-detrended, outlier-filtered light curve, `sigma_d` is its standard deviation, and `<d_10%>` is the mean of the combined faintest-decile and brightest-decile magnitude values. For magnitude-valued light curves `M` moves in the positive direction for dipping signatures (asymmetric toward faint excursions) and in the negative direction for bursting signatures (asymmetric toward bright excursions); a value close to zero indicates a symmetric magnitude distribution. The sign convention is reversed for flux input.
+
+The statistic is computed as follows. (1) Points with NaN magnitudes, and — when `maskpoints` is given — points whose mask variable is `<= 0`, are rejected. (2) A long-term trend is removed by subtracting a boxcar-mean smooth of full width `trendwindow` (in time-axis units). `M` is only sensitive to asymmetry on timescales shorter than roughly half the light-curve duration, so removing longer trends is necessary. (3) Outliers are rejected at the `sigclip`-sigma level (default `5`).
+
+- **Two-stage scheme (paper-faithful):** when `outlierwindow` is given, outliers are identified on a separate residual formed by subtracting a short-timescale boxcar smooth of full width `outlierwindow` from the light curve. Real variability is largely removed in that residual, so only true glitches exceed the threshold; the genuine dips and bursts that `M` quantifies survive into the `M` calculation.
+- **Single-stage scheme:** when `outlierwindow` is omitted, outliers are identified directly on the trend-detrended curve. Simpler, but a deep dip or burst can clip itself and bias `M` toward zero.
+
+Setting `sigclip = 0` disables outlier rejection entirely.
+
+(4) On the trend-detrended, outlier-filtered curve of `N'` points, `M` is evaluated using deciles of `round(0.1 * N')` points each. `M` and `d_10%` are reported as NaN when fewer than two points survive, when the curve is flat (`sigma_d = 0`), or when the two deciles would overlap; `d_med`, `sigma_d`, and `Npoints` remain meaningful in the flat / overlapping-decile cases.
+
+`trendwindow`, `outlierwindow`, and `sigclip` each accept a fixed value, or `var` followed by the name of a light-curve-list variable, or `expr` followed by an analytic expression evaluated per light curve. Literal numeric values are validated at parse time (`trendwindow > 0`, `outlierwindow > 0`, `sigclip >= 0`); per-LC values from `var` / `expr` are validated at runtime and yield NaN for the affected light curve on a bad value.
+
+Python equivalent: [`CodyM`](../python/commands/statistics.md#codym-flux-asymmetry-statistic-m).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"trendwindow" Wt` | Required. Boxcar full width for the long-term detrend, in the same units as the light-curve time axis. Must satisfy `Wt > 0`. Accepts `var` / `expr` per-LC sourcing. |
+| `"outlierwindow" Wo` | Optional. Short-timescale boxcar full width that enables the two-stage outlier-rejection scheme. Must satisfy `Wo > 0`. Accepts `var` / `expr`. |
+| `"sigclip" S` | Optional. Outlier-rejection threshold in sigma. Defaults to `5.0`; `S = 0` disables rejection. Must satisfy `S >= 0`. Accepts `var` / `expr`. |
+| `"maskpoints" maskvar` | Optional. Name of a light-curve vector; only points with `maskvar > 0` contribute. |
+
+The trailing keywords are parsed in strict order: `trendwindow`, `outlierwindow`, `sigclip`, `maskpoints`.
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `CODYM_M_N` | The statistic `M`. NaN when the curve is flat, the deciles overlap, or `N' < 2`. |
+| `CODYM_d10_N` | Mean of the combined faintest-decile and brightest-decile values. Tracks `CODYM_M_N`'s NaN cases. |
+| `CODYM_dmed_N` | Median of the detrended, outlier-filtered curve. |
+| `CODYM_sigma_d_N` | Standard deviation of the detrended, outlier-filtered curve. |
+| `CODYM_Npoints_N` | Number of points surviving the NaN/mask filter and the sigma-clip. |
+
+`N` is the 0-indexed command position in the pipeline.
+
+**References**
+
+Cite [Cody, A. M. et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract), AJ, 147, 82.
+
+**Examples**
+
+**Example 1.** Dipping signature on a light curve with an injected transit signal. `M` moves in the positive (dipping) direction relative to the baseline `EXAMPLES/3` (try comparing the two to see the shift).
+
+```bash
+vartools -i EXAMPLES/3.transit -oneline -CodyM trendwindow 10
+```
+
+**Example 2.** Bursting signature on a light curve with an injected microlensing event. `M` moves strongly in the negative (bursting) direction. The microlensing event spans many days, so `trendwindow` must be longer than the event timescale to preserve it — a 100-day boxcar on a ~30-day light curve is essentially a constant subtract.
+
+```bash
+vartools -i EXAMPLES/4.microlensinject -oneline \
+    -CodyM trendwindow 100
+```
+
+**Example 3.** Two-stage outlier-rejection scheme on the transit-injected light curve: outliers are identified on a 0.1-day residual smooth rather than on the trend-detrended curve, so the genuine transit dips survive into the `M` calculation.
+
+```bash
+vartools -i EXAMPLES/3.transit -oneline \
+    -CodyM trendwindow 10 outlierwindow 0.1 sigclip 5
+```
+
+---
+
+## `-CodyQ`
+
+**Syntax**
+```
+-CodyQ <"aov" | "ls" | "bls" | "pdm" | "ftp" | "injectharm" |
+    "fix" period | "fixcolumn" <colname | colnum> |
+    "list" ["column" col] | "var" varname | "expr" exprstring>
+    "trendwindow" <"var" varname | "expr" exprstring | trendwindow>
+    ["phasesmooth" <"var" varname | "expr" exprstring | phasesmooth>]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, compute the quasi-periodicity statistic `Q` of [Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract) (their Equation 6). `Q` assesses how close the light curve is to the photometric noise floor before and after a phase-folded periodic model is subtracted:
+
+```
+Q = (rms_resid^2 - sigma^2) / (rms_raw^2 - sigma^2)
+```
+
+where `rms_raw` is the standard deviation of the long-term-detrended light curve, `rms_resid` is the standard deviation of the same curve after subtraction of a boxcar-smoothed phase model at the supplied period, and `sigma^2` is the mean of the per-point squared errors over the surviving points. `Q` approaches 0 for a strictly periodic light curve (the phase model captures essentially all the variance) and approaches 1 for one with no detectable periodicity (the phase model removes nothing; the denominator can collapse to a non-positive value in this regime, yielding NaN); intermediate values indicate quasi-periodic variability.
+
+**Period source.** Exactly one of these forms must come first after `-CodyQ`:
+
+| Keyword | Meaning |
+|---------|---------|
+| `aov` / `ls` / `bls` / `pdm` / `ftp` / `injectharm` | Copy the primary peak period of the most recent corresponding command in the pipeline. |
+| `fix P` | Use the literal value `P` (days). |
+| `fixcolumn <colname \| colnum>` | Read the period from an output column of a prior command. |
+| `list ["column" col]` | Read the period from the input-list file (optionally from a specific column). |
+| `var varname` | Read the period from a per-light-curve variable. |
+| `expr exprstring` | Evaluate an analytic expression for the period per light curve. |
+
+The statistic is computed as follows. (1) Points with NaN magnitudes, points with `sig <= 0`, and — when `maskpoints` is given — points with `maskvar <= 0` are rejected. (2) A long-term trend is removed by subtracting a boxcar-mean smooth of full width `trendwindow` (in time-axis units; Cody used 10 days for CoRoT data). (3) `rms_raw` is computed from the detrended curve. (4) `sigma^2` is the mean of the per-point squared errors over the surviving points. (5) The detrended curve is phase-folded to the supplied period using `t[0]` as the epoch; the circular phase-domain smoother below is invariant under a global phase shift, so the choice of epoch does not affect `Q` and is not exposed. (6) A smoothed phase model is built by boxcar-averaging the detrended values in the phase domain with full width `phasesmooth` as a fraction of the period (default `0.25`, matching the paper); the smoother wraps circularly at phase 0/1. (7) `rms_resid` is the standard deviation of `(detrended - model)`. (8) `Q` is reported per the equation above; the denominator `rms_raw^2 - sigma^2` going to or below zero (the "aperiodic pileup at `Q ~ 1`" regime in the paper's Figure 29) is reported as NaN.
+
+`trendwindow` and `phasesmooth` each accept a fixed value, or `var` followed by the name of a light-curve-list variable, or `expr` followed by an analytic expression evaluated per light curve. The period source itself supports per-LC `var` / `expr` through the same mechanism. Literal numeric values are validated at parse time (`trendwindow > 0`, `phasesmooth ∈ (0, 1]`, `period > 0`); per-LC values from `var` / `expr` / `fixcolumn` are validated at runtime and yield NaN for the affected light curve on a bad value.
+
+Python equivalent: [`CodyQ`](../python/commands/statistics.md#codyq-quasi-periodicity-statistic-q).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| period source | Required. One of `aov`, `ls`, `bls`, `pdm`, `ftp`, `injectharm`, `fix P`, `fixcolumn <colname\|colnum>`, `list ["column" col]`, `var varname`, or `expr exprstring` as described above. |
+| `"trendwindow" Wt` | Required. Boxcar full width for the long-term detrend, in the same units as the light-curve time axis. Must satisfy `Wt > 0`. Accepts `var` / `expr`. |
+| `"phasesmooth" f` | Optional. Phase-domain boxcar full width as a fraction of the period. Defaults to `0.25`. Must satisfy `0 < f <= 1`. Accepts `var` / `expr`. |
+| `"maskpoints" maskvar` | Optional. Name of a light-curve vector; only points with `maskvar > 0` contribute. |
+
+The trailing keywords are parsed in strict order: `trendwindow`, `phasesmooth`, `maskpoints`.
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `CODYQ_Q_N` | The statistic `Q`. NaN when `rms_raw^2 - sigma^2 <= 0`, or when the inputs are invalid. |
+| `CODYQ_Period_N` | The period actually used (the resolved value for `var` / `expr` / back-reference sources). |
+| `CODYQ_RMS_raw_N` | Standard deviation of the trend-detrended light curve. |
+| `CODYQ_RMS_resid_N` | Standard deviation of the residual after subtracting the smoothed phase model. |
+| `CODYQ_Sigma_N` | `sqrt(sigma^2)` = root-mean-square of the per-point errors over the surviving points. |
+| `CODYQ_Npoints_N` | Number of points surviving the NaN/mask/sig filter. |
+
+`N` is the 0-indexed command position in the pipeline. The diagnostic columns remain meaningful when `CODYQ_Q_N` is NaN due to a non-positive denominator.
+
+**References**
+
+Cite [Cody, A. M. et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract), AJ, 147, 82.
+
+**Examples**
+
+**Example 1.** Literal-fix period.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -CodyQ fix 1.234 trendwindow 10
+```
+
+**Example 2.** Period sourced from a prior `-aov` command.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -aov 0.5 4.0 0.1 5 1 0 \
+    -CodyQ aov trendwindow 10
+```

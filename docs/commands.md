@@ -32,6 +32,8 @@ corresponding library (see [Extension Commands](cli/extensions.md)).
 | `-chi2` | Weighted χ² relative to the mean | [CLI](cli/statistics.md#-chi2) | [Python](python/commands/statistics.md#chi2-chi-squared-statistic) |
 | `-chi2bin` | Binned weighted χ² for several bin sizes | [CLI](cli/statistics.md#-chi2bin) | [Python](python/commands/statistics.md#chi2bin-binned-chi-squared) |
 | `-clip` | Sigma-clip outliers from the light curve | [CLI](cli/filtering.md#-clip) | [Python](python/commands/filtering.md#clip-sigma-clipping) |
+| `-CodyM` | Flux-asymmetry statistic *M* ([Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract)) — dipping vs. bursting asymmetry of the long-term-detrended light curve | [CLI](cli/statistics.md#-codym) | [Python](python/commands/statistics.md#codym-flux-asymmetry-statistic-m) |
+| `-CodyQ` | Quasi-periodicity statistic *Q* ([Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract)) — variance retained after subtracting a phase-folded boxcar model at a supplied period | [CLI](cli/statistics.md#-codyq) | [Python](python/commands/statistics.md#codyq-quasi-periodicity-statistic-q) |
 | `-converttime` | Convert between JD / MJD / HJD / BJD time systems | [CLI](cli/manipulation.md#-converttime) | [Python](python/commands/manipulation.md#converttime-time-system-conversion) |
 | `-copylc` | Replicate the in-memory light curve N times | [CLI](cli/simulation.md#-copylc) | [Python](python/commands/simulation.md#copylc-duplicate-the-light-curve-in-memory) |
 | `-decorr` | Polynomial decorrelation against external signals (deprecated; use -linfit) | [CLI](cli/model-fitting.md#-decorr) | [Python](python/commands/model-fitting.md#decorr-decorrelation) |

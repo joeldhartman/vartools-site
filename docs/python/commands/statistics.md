@@ -714,3 +714,166 @@ print(f"frac_above_T1 = {above_1:.4f}  (Gaussian expectation: 0.1587)")
 ```
 
 ---
+
+### `CodyM` — Flux-asymmetry statistic M
+
+**Syntax**
+
+```python
+cmd.CodyM(trendwindow, outlierwindow=None, sigclip=5.0, maskpoints=None)
+```
+
+**Description**
+
+For each light curve, compute the flux-asymmetry statistic `M` of [Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract) (their Equation 7):
+
+```
+M = (<d_10%> - d_med) / sigma_d
+```
+
+where `d_med` is the median of the long-term-detrended, outlier-filtered light curve, `sigma_d` is its standard deviation, and `<d_10%>` is the mean of the combined faintest-decile and brightest-decile values. For magnitude-valued light curves `M` moves in the positive direction for dipping signatures (asymmetric toward faint excursions) and in the negative direction for bursting signatures (asymmetric toward bright excursions); a value close to zero indicates a symmetric magnitude distribution. The sign convention is reversed for flux input.
+
+Two outlier-rejection schemes are supported:
+
+* **Two-stage (paper-faithful):** supply `outlierwindow` to build a short-timescale residual on which the sigma clip operates. Real variability is removed in that residual, so the deep dips and bright bursts `M` measures are not themselves clipped.
+* **Single-stage:** omit `outlierwindow`; the sigma clip operates directly on the trend-detrended curve. Simpler, but a deep dip or burst can clip itself and bias `M` toward zero.
+
+Set `sigclip=0` to disable outlier rejection entirely.
+
+`M`, `d_10%` and `dmed` are reported as NaN when fewer than two points survive, when the curve is flat (`sigma_d = 0`), or when the two deciles would overlap; the remaining diagnostic columns stay meaningful in the flat / overlapping-decile cases.
+
+CLI equivalent: [`-CodyM`](../../cli/statistics.md#-codym).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `trendwindow` | `float` or `str` | Required. Boxcar full width for the long-term detrend, in the same units as the light-curve time axis. Accepts a number, a bare variable name (vartools `var`), or an explicit `"var NAME"` / `"expr EXPR"` string for per-LC sourcing. Literal values must be `> 0`. |
+| `outlierwindow` | `float`, `str`, or `None` | Optional. Short-timescale boxcar full width that enables the two-stage scheme. Same value forms as `trendwindow`. |
+| `sigclip` | `float` or `str` | Outlier-rejection threshold in sigma. Default `5.0`; `0` disables rejection. Same value forms as `trendwindow`. Literal values must be `>= 0`. |
+| `maskpoints` | `str` or `None` | Name of a light-curve vector; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+| Column | Description |
+|--------|-------------|
+| `CODYM_M_N` | The statistic `M`. NaN when the curve is flat, the deciles overlap, or fewer than two points survive. |
+| `CODYM_d10_N` | Mean of the combined faintest-decile and brightest-decile values. |
+| `CODYM_dmed_N` | Median of the detrended, outlier-filtered curve. |
+| `CODYM_sigma_d_N` | Standard deviation of the detrended, outlier-filtered curve. |
+| `CODYM_Npoints_N` | Number of points surviving the NaN/mask filter and the sigma-clip. |
+
+`N` is the 0-indexed command position in the pipeline.
+
+**References**
+
+Cite [Cody, A. M. et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract), AJ, 147, 82.
+
+**Examples**
+
+```python
+# Defaults (single-stage outlier rejection, sigclip = 5) on a real LC.
+# EXAMPLES/2 contains an injected perfectly symmetric sinusoidal
+# signal, so M should in principle approach zero.  In practice the
+# non-uniform ground-based sampling (daily windows, weather gaps)
+# biases the decile statistics and pushes M to ~0.34 here -- a
+# known caveat when applying M to light curves with strong window
+# functions.
+result = lc.CodyM(trendwindow=10)
+print(round(result.vars["CODYM_M_0"], 4))
+print(int(result.vars["CODYM_Npoints_0"]))
+
+# Sign sensitivity on real injected light curves.  EXAMPLES/3.transit
+# adds a transit signal on top of the EXAMPLES/3 baseline -- M moves
+# in the positive (dipping) direction.  EXAMPLES/4.microlensinject
+# adds a microlensing event on top of EXAMPLES/4 -- M moves in the
+# negative (bursting) direction.  trendwindow should be larger than
+# the variability timescale you want to keep, so we use a longer
+# window for the multi-day microlensing event than for the
+# hours-long transits.
+for path, tw in [("EXAMPLES/3",                  10),
+                 ("EXAMPLES/3.transit",          10),
+                 ("EXAMPLES/4",                 100),
+                 ("EXAMPLES/4.microlensinject", 100)]:
+    lc_inj = vt.LightCurve.from_file(path)
+    M = lc_inj.CodyM(trendwindow=tw).vars["CODYM_M_0"]
+    print(f"{path:33s}  trendwindow={tw:<4d}  M = {M:+.3f}")
+```
+
+---
+
+### `CodyQ` — Quasi-periodicity statistic Q
+
+**Syntax**
+
+```python
+cmd.CodyQ(period, trendwindow, phasesmooth=0.25, maskpoints=None)
+```
+
+**Description**
+
+For each light curve, compute the quasi-periodicity statistic `Q` of [Cody et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract) (their Equation 6):
+
+```
+Q = (rms_resid^2 - sigma^2) / (rms_raw^2 - sigma^2)
+```
+
+where `rms_raw` is the standard deviation of the long-term-detrended light curve, `rms_resid` is the standard deviation of the same curve after subtraction of a boxcar-smoothed phase model at the supplied period, and `sigma^2` is the mean of the per-point squared errors. `Q` approaches 0 for a strictly periodic light curve (the phase model captures essentially all the variance) and approaches 1 for one with no detectable periodicity (the phase model removes nothing; the denominator can collapse to a non-positive value in this regime, yielding NaN); intermediate values indicate quasi-periodic variability.
+
+The `period` parameter accepts a literal number, a back-reference keyword (`"ls"`, `"aov"`, `"pdm"`, `"ftp"`, `"bls"`, `"injectharm"`) to the primary peak of the most-recent corresponding command in the pipeline, `"fix P"`, `"fixcolumn NAME"`, `"list ['column' col]"`, a bare variable name (vartools `var`), or `"expr EXPR"`. The phase smoother is invariant under a global phase shift, so the folding epoch is fixed at the first time and is not exposed.
+
+CLI equivalent: [`-CodyQ`](../../cli/statistics.md#-codyq).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | `float` or `str` | Required. Period (days) or one of the keyword forms above. Literal values must be `> 0`. |
+| `trendwindow` | `float` or `str` | Required. Boxcar full width for the long-term detrend, in the same units as the light-curve time axis. Accepts a number, a bare variable name, or an explicit `"var NAME"` / `"expr EXPR"` string. Literal values must be `> 0`. |
+| `phasesmooth` | `float` or `str` | Phase-domain boxcar full width as a fraction of the period. Default `0.25`; literal values must lie in `(0, 1]`. Accepts `var` / `expr`. |
+| `maskpoints` | `str` or `None` | Name of a light-curve vector; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+| Column | Description |
+|--------|-------------|
+| `CODYQ_Q_N` | The statistic `Q`. NaN when `rms_raw^2 - sigma^2 <= 0` or the inputs are invalid. |
+| `CODYQ_Period_N` | The period actually used (the resolved value for `var` / `expr` / back-reference sources). |
+| `CODYQ_RMS_raw_N` | Standard deviation of the trend-detrended light curve. |
+| `CODYQ_RMS_resid_N` | Standard deviation of the residual after subtracting the smoothed phase model. |
+| `CODYQ_Sigma_N` | `sqrt(sigma^2)` = root-mean-square of the per-point errors over the surviving points. |
+| `CODYQ_Npoints_N` | Number of points surviving the NaN / `sig <= 0` / mask filter. |
+
+`N` is the 0-indexed command position in the pipeline.
+
+**References**
+
+Cite [Cody, A. M. et al. 2014](https://ui.adsabs.harvard.edu/abs/2014AJ....147...82C/abstract), AJ, 147, 82.
+
+**Examples**
+
+```python
+# Literal-fix period on a real LC.
+result = lc.CodyQ(period=1.234, trendwindow=10)
+print(round(result.vars["CODYQ_Q_0"], 4))
+print(round(result.vars["CODYQ_Period_0"], 3))
+
+# Period sourced from a prior -aov command (back-reference).
+result = vt.Pipeline([
+    cmd.aov(0.5, 4.0, 0.1, 5, npeaks=1, save_periodogram=False),
+    cmd.CodyQ(period="aov", trendwindow=10),
+]).run(lc)
+print(round(result.vars["CODYQ_Q_1"], 4))
+print(round(result.vars["CODYQ_Period_1"], 4))
+
+# Pure sinusoid evaluated at its true period -> Q ~ 0 (periodic).
+rng = np.random.default_rng(0)
+n = 3000
+t_syn = np.arange(n, dtype=float) * 0.01
+mag_syn = 0.1 * np.sin(2.0 * np.pi * t_syn / 2.0) + rng.normal(0.0, 0.01, n)
+sin_lc = vt.LightCurve.from_arrays(t_syn, mag_syn, np.full(n, 0.01), name="sin")
+result = sin_lc.CodyQ(period=2.0, trendwindow=100)
+print(f"sinusoid Q at true P = {result.vars['CODYQ_Q_0']:.3f}  (expect ~ 0)")
+```
+
+---
