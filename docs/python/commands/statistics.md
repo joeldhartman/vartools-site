@@ -820,7 +820,7 @@ Q = (rms_resid^2 - sigma^2) / (rms_raw^2 - sigma^2)
 
 where `rms_raw` is the standard deviation of the long-term-detrended light curve, `rms_resid` is the standard deviation of the same curve after subtraction of a boxcar-smoothed phase model at the supplied period, and `sigma^2` is the mean of the per-point squared errors. `Q` approaches 0 for a strictly periodic light curve (the phase model captures essentially all the variance) and approaches 1 for one with no detectable periodicity (the phase model removes nothing; the denominator can collapse to a non-positive value in this regime, yielding NaN); intermediate values indicate quasi-periodic variability.
 
-The `period` parameter accepts a literal number, a back-reference keyword (`"ls"`, `"aov"`, `"pdm"`, `"ftp"`, `"bls"`, `"injectharm"`) to the primary peak of the most-recent corresponding command in the pipeline, `"fix P"`, `"fixcolumn NAME"`, `"list ['column' col]"`, a bare variable name (vartools `var`), or `"expr EXPR"`. The phase smoother is invariant under a global phase shift, so the folding epoch is fixed at the first time and is not exposed.
+The `period` parameter accepts a literal number, a back-reference keyword (`"ls"`, `"aov"`, `"pdm"`, `"ftp"`, `"bls"`, `"injectharm"`) to the primary peak of the most-recent corresponding command in the pipeline, `"fix P"`, `"fixcolumn NAME"`, `"list ['column' col]"`, a bare variable name (vartools `var`), or an explicit `"var NAME"` / `"expr EXPR"` string. The phase smoother is invariant under a global phase shift, so the folding epoch is fixed at the first time and is not exposed.
 
 CLI equivalent: [`-CodyQ`](../../cli/statistics.md#-codyq).
 
