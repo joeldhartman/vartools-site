@@ -811,3 +811,129 @@ vartools -i EXAMPLES/2 -oneline \
     -aov 0.5 4.0 0.1 5 1 0 \
     -CodyQ aov trendwindow 10
 ```
+
+---
+
+## `-structurefunction`
+
+**Syntax**
+```
+-structurefunction "bins" <"log" Nbins | "linear" Nbins | "edges" e1,e2,...,en>
+    ["lagrange" <"var" varname | "expr" exprstring | lagmin>
+                <"var" varname | "expr" exprstring | lagmax>]
+    ["estimator" <"squared" | "mad">]
+    ["fitDRW" ["sigma0" <"var" varname | "expr" exprstring | sigma0>]
+              ["tau0"   <"var" varname | "expr" exprstring | tau0>]]
+    ["reportsfvalsintable" e1,e2,...,en]
+    ["save" outdir]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, compute the ensemble structure function (SF) on lag bins constructed from all pairs of observations, and optionally fit a damped-random-walk (DRW) model. Two estimators are supported, selected by `estimator` (default `squared`).
+
+With `estimator squared` the squared-difference form is used with bin-averaged noise subtraction:
+
+```
+SF^2(dt) = <(m_j - m_i)^2>_pairs in bin - <sigma_i^2 + sigma_j^2>_pairs in bin
+SF(dt)   = sqrt(SF^2)
+```
+
+This is the `D^(1)(tau)` of [Simonetti, Cordes & Heeschen 1985](https://ui.adsabs.harvard.edu/abs/1985ApJ...296...46S/abstract) (their Equation A1 with `M = 1`, finite-sample estimator A8), with the noise correction of their Equation A13 generalised from homoscedastic to heteroscedastic measurement uncertainties. Bins where the noise-subtracted variance is non-positive are noise-dominated and reported as NaN.
+
+With `estimator mad` the absolute-deviation form of [Hughes, Aller & Aller 1992](https://ui.adsabs.harvard.edu/abs/1992ApJ...396..469H/abstract) and [Schmidt et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...714.1194S/abstract) (their Equation 2) is used with per-pair noise subtraction:
+
+```
+V(dt) = <(sqrt(pi)/2) * |m_j - m_i| - sqrt(sigma_i^2 + sigma_j^2)>_pairs in bin
+```
+
+The `sqrt(pi)/2` factor converts the mean absolute deviation of a Gaussian into its standard deviation. The MAD form is more robust to outliers and stays real-valued at the noise floor (the per-pair subtraction gives a biased-low real value as `V` approaches the noise level rather than an undefined negative variance), at the cost of a slightly biased response to `V` approaching the noise floor.
+
+The labels "first-order" and "second-order" are deliberately avoided: they label a polynomial-detrending differencing scheme in the Rutman 1978 / Simonetti 1985 time-series literature and the moment power of the difference in the AGN-variability literature, with opposite assignments to the same statistic.
+
+Per-bin error bars are reported as `sigma_SF = SF / sqrt(2 N_eff)` (squared) or `sigma_SF = SF / sqrt(N_eff / (pi/2 - 1))` (mad), where `N_eff = min(N_pairs, N_obs/2)` caps the effective number of independent pairs. The bound recovers the right `~SF / sqrt(N_obs)` precision floor at long lags rather than continuing to shrink as `1 / sqrt(N_pairs)`.
+
+If `fitDRW` is given, a damped-random-walk model is fit to the well-determined SF bins. The DRW is the continuous-time first-order autoregressive (CAR(1)) / Ornstein–Uhlenbeck process introduced for AGN optical variability by [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract) (their Equation 1), with autocovariance `C(dt) = sigma_long^2 * exp(-dt / tau)`. The analytic SF follows as
+
+```
+SF_DRW(dt) = SF_inf * sqrt(1 - exp(-dt / tau)),    SF_inf = sqrt(2) * sigma_long
+```
+
+This `(SF_inf, tau)` parameterisation is the one used by [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract). Note that Kelly et al. themselves fit the CAR(1) likelihood directly via a state-space representation, not the SF. The fit minimises `chi^2 = sum [(SF_obs - SF_model) / sigma_SF]^2` over the bins with a finite SF, using a downhill simplex (Nelder–Mead) on `(log SF_inf, log tau)`. The reported scalar amplitude is the MacLeod 2010 long-term magnitude standard deviation `sigma_long = SF_inf / sqrt(2)`; to convert to Kelly's SDE driving-noise amplitude `sigma_K` (units mag · day^(-1/2)) use `sigma_K = sigma_long * sqrt(2 / tau)`.
+
+If `save outdir` is given, a four-column aux file `<outdir>/<lcname>.sf` (`dt_center  SF  sigma_SF  n_pairs`) is written for each light curve; bins with no pairs or noise-dominated SF appear with `SF = sigma_SF = NaN`. If `reportsfvalsintable e1,e2,...,en` is given, four scalar columns per requested lag are also emitted in the result table.
+
+Python equivalent: [`structurefunction`](../python/commands/statistics.md#structurefunction-ensemble-structure-function).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"bins" "log" Nbins` | Required. Lay out `Nbins` log-spaced lag bins between `lagmin` and `lagmax`. `Nbins >= 2`. |
+| `"bins" "linear" Nbins` | Required. Lay out `Nbins` linearly spaced lag bins between `lagmin` and `lagmax`. `Nbins >= 2`. |
+| `"bins" "edges" e1,...,en` | Required. Use an explicit list of strictly increasing positive bin edges. Produces `n - 1` bins. `n >= 3`. |
+| `"lagrange" lagmin lagmax` | Optional. Fix the lag range for `log` / `linear` binning. Defaults: `lagmin` = smallest consecutive time spacing in the filtered LC; `lagmax` = full baseline. Ignored for `edges`. Each value accepts `var` / `expr`. Literals: `lagmin > 0`, `lagmax > lagmin`. |
+| `"estimator" "squared"`/`"mad"` | Optional. SF estimator family. Default `squared`. |
+| `"fitDRW"` | Optional. Fit a DRW model and emit five scalar columns. |
+| `"sigma0" S` | Optional (only with `fitDRW`). Initial guess for `sigma_long`. Accepts `var` / `expr`. `S > 0`. |
+| `"tau0" T` | Optional (only with `fitDRW`). Initial guess for `tau`. Accepts `var` / `expr`. `T > 0`. |
+| `"reportsfvalsintable" e1,...,en` | Optional. For each requested lag emit four scalar columns. Edges must be strictly increasing and `> 0`. |
+| `"save" outdir` | Optional. Write the full SF curve as `<outdir>/<lcname>.sf`. |
+| `"maskpoints" maskvar` | Optional. Only points with `maskvar > 0` contribute. |
+
+The trailing keywords are parsed in strict order: `lagrange`, `estimator`, `fitDRW` (`sigma0`, `tau0`), `reportsfvalsintable`, `save`, `maskpoints`.
+
+**Output columns**
+
+When `fitDRW` is in effect:
+
+| Column | Meaning |
+|--------|---------|
+| `STRUCTUREFUNCTION_SIGMA_N` | Long-term magnitude standard deviation `sigma_long = SF_inf / sqrt(2)` (MacLeod 2010 convention; mag). NaN on non-convergence. |
+| `STRUCTUREFUNCTION_TAU_N` | Damping time-scale `tau` (time-axis units). NaN on non-convergence. |
+| `STRUCTUREFUNCTION_CHI2_N` | Best-fit `chi^2`. |
+| `STRUCTUREFUNCTION_DOF_N` | Well-determined-bin count minus 2. |
+| `STRUCTUREFUNCTION_CONVERGED_N` | `1` if the simplex converged within tolerance and the fitted parameters are finite and positive, else `0`. |
+
+When `reportsfvalsintable e1,...,en` is in effect, four scalar columns per requested edge `e_k` (`k = 0..n-1`):
+
+| Column | Meaning |
+|--------|---------|
+| `STRUCTUREFUNCTION_DT_k_N` | Actual centre of the SF bin that contains `e_k`. NaN if `e_k` is outside the lag range. |
+| `STRUCTUREFUNCTION_SF_k_N` | SF value at that bin. NaN if the bin is noise-dominated or empty. |
+| `STRUCTUREFUNCTION_SIGMA_SF_k_N` | Per-bin error bar. NaN if `SF_k` is NaN. |
+| `STRUCTUREFUNCTION_NPAIRS_k_N` | Number of pairs in the bin. `0` if `e_k` is out of range. |
+
+`N` is the 0-indexed command position in the pipeline.
+
+**References**
+
+Cite [Simonetti, Cordes & Heeschen 1985](https://ui.adsabs.harvard.edu/abs/1985ApJ...296...46S/abstract), ApJ, 296, 46, if you use `estimator squared`.
+
+Cite [Hughes, Aller & Aller 1992](https://ui.adsabs.harvard.edu/abs/1992ApJ...396..469H/abstract), ApJ, 396, 469 and [Schmidt et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...714.1194S/abstract), ApJ, 714, 1194, if you use `estimator mad`.
+
+Cite [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract), ApJ, 698, 895 and [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract), ApJ, 721, 1014, if you use `fitDRW`.
+
+**Examples**
+
+**Example 1.** Structure function values at three chosen lags.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -structurefunction bins log 20 reportsfvalsintable 0.1,1,10
+```
+
+**Example 2.** SF curve + DRW fit. `EXAMPLES/2` is an injected sinusoid, so the DRW is the wrong model and `chi^2 / dof` is large; this is how the fit flags model misspecification.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -structurefunction bins log 20 fitDRW
+```
+
+**Example 3.** Save the full SF curve as an aux file for offline plotting, with the MAD estimator.
+
+```bash
+vartools -i EXAMPLES/2 -oneline \
+    -structurefunction bins log 30 estimator mad save .
+```
+

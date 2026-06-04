@@ -877,3 +877,134 @@ print(f"sinusoid Q at true P = {result.vars['CODYQ_Q_0']:.3f}  (expect ~ 0)")
 ```
 
 ---
+
+### `structurefunction` — Ensemble structure function
+
+**Syntax**
+
+```python
+cmd.structurefunction(
+    bins,
+    Nbins=None,
+    edges=None,
+    lagrange=None,
+    estimator="squared",
+    fitDRW=False,
+    sigma0=None,
+    tau0=None,
+    reportsfvalsintable=None,
+    save_result=False,
+    maskpoints=None,
+)
+```
+
+**Description**
+
+Compute the ensemble structure function (SF) of a light curve on user-specified lag bins, and optionally fit a damped-random-walk (DRW / Ornstein–Uhlenbeck / CAR(1)) model to it.
+
+Two estimators are supported, selected by `estimator`:
+
+* **`"squared"` (default)** — squared-difference form with bin-averaged noise subtraction (the `D^(1)(tau)` of [Simonetti, Cordes & Heeschen 1985](https://ui.adsabs.harvard.edu/abs/1985ApJ...296...46S/abstract)):
+
+    ```
+    SF^2(dt) = <(m_j - m_i)^2>_pairs - <sigma_i^2 + sigma_j^2>_pairs
+    SF(dt)   = sqrt(SF^2)
+    ```
+
+    Bins where the noise-subtracted variance is non-positive are NaN.
+
+* **`"mad"`** — absolute-deviation form with per-pair noise subtraction ([Hughes, Aller & Aller 1992](https://ui.adsabs.harvard.edu/abs/1992ApJ...396..469H/abstract); [Schmidt et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...714.1194S/abstract), their Equation 2):
+
+    ```
+    V(dt) = <(sqrt(pi)/2) * |m_j - m_i| - sqrt(sigma_i^2 + sigma_j^2)>_pairs
+    ```
+
+    More robust to outliers, biased low when the intrinsic variance approaches the photometric noise floor; bins whose averaged value goes non-positive are NaN.
+
+Per-bin error bars are reported as `sigma_SF = SF / sqrt(2 N_eff)` (squared) or `sigma_SF = SF / sqrt(N_eff / (pi/2 - 1))` (mad), with `N_eff = min(N_pairs, N_obs/2)` capping the effective number of independent pairs.
+
+When `fitDRW=True`, a DRW model is fit to the well-determined SF bins. The DRW analytic SF is
+
+```
+SF_DRW(dt) = SF_inf * sqrt(1 - exp(-dt / tau)),    SF_inf = sqrt(2) * sigma_long
+```
+
+This is the [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract) parameterisation; the underlying CAR(1) model was introduced for AGN optical variability by [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract). The fit minimises `chi^2 = sum [(SF_obs - SF_model) / sigma_SF]^2` via a downhill simplex on `(log SF_inf, log tau)`; the reported scalar amplitude is `sigma_long` (mag). To convert to Kelly's SDE driving-noise amplitude `sigma_K` (mag · day^(-1/2)) use `sigma_K = sigma_long * sqrt(2 / tau)`.
+
+CLI equivalent: [`-structurefunction`](../../cli/statistics.md#-structurefunction).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `bins` | `str` | Required. One of `"log"`, `"linear"`, `"edges"`. |
+| `Nbins` | `int` or `None` | Required for `bins="log"` / `"linear"`. Must be `>= 2`. |
+| `edges` | sequence of `float` or `None` | Required for `bins="edges"`. Strictly increasing positive bin edges; produces `len(edges) - 1` bins. |
+| `lagrange` | tuple `(lagmin, lagmax)` or `None` | Optional. Fixes the lag range for `log` / `linear` binning. Each element accepts a number, a bare variable name (vartools `var`), or an explicit `"var NAME"` / `"expr EXPR"` string. Literals must satisfy `lagmin > 0`, `lagmax > lagmin`. |
+| `estimator` | `"squared"` or `"mad"` | Optional. SF estimator family. Default `"squared"`. |
+| `fitDRW` | `bool` | Optional. Fit a DRW model. Default `False`. |
+| `sigma0` | `float` or `str` or `None` | Optional (only with `fitDRW=True`). Initial guess for `sigma_long`. Accepts `var` / `expr`. Literals must be `> 0`. |
+| `tau0` | `float` or `str` or `None` | Optional (only with `fitDRW=True`). Initial guess for `tau`. Accepts `var` / `expr`. Literals must be `> 0`. |
+| `reportsfvalsintable` | sequence of `float` or `None` | Optional. Strictly increasing list of positive lag values; for each, emit four scalar columns. |
+| `save_result` | `bool`, `str`, or `Output` | Optional. Controls the `.sf` aux file (full SF curve). `False` (default): no file. `True`: write to pipeline temp dir, capture into `result.files["structurefunction_sf_N"]`. Path string: write to that dir, no capture. |
+| `maskpoints` | `str` or `None` | Optional. Mask variable; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position.
+
+When `fitDRW=True`:
+
+| Column | Description |
+|--------|-------------|
+| `STRUCTUREFUNCTION_SIGMA_N` | `sigma_long`, the MacLeod 2010 long-term magnitude standard deviation. NaN on non-convergence. |
+| `STRUCTUREFUNCTION_TAU_N` | DRW damping time-scale. NaN on non-convergence. |
+| `STRUCTUREFUNCTION_CHI2_N` | Best-fit chi^2. |
+| `STRUCTUREFUNCTION_DOF_N` | Well-determined-bin count minus 2. |
+| `STRUCTUREFUNCTION_CONVERGED_N` | `1` if converged, `0` otherwise. |
+
+When `reportsfvalsintable=[e1,...,en]`, for each `e_k` (`k = 0..n-1`):
+
+| Column | Description |
+|--------|-------------|
+| `STRUCTUREFUNCTION_DT_k_N` | Actual bin centre containing `e_k`. NaN if out of range. |
+| `STRUCTUREFUNCTION_SF_k_N` | SF value for that bin. NaN if noise-dominated or empty. |
+| `STRUCTUREFUNCTION_SIGMA_SF_k_N` | Per-bin error bar. NaN if `SF_k` is NaN. |
+| `STRUCTUREFUNCTION_NPAIRS_k_N` | Number of pairs in the bin. `0` if out of range. |
+
+When `save_result=True`, `result.files["structurefunction_sf_N"]` holds the path to a four-column aux file (`dt_center  SF  sigma_SF  n_pairs`); bins with no pairs or noise-dominated SF appear with `SF = sigma_SF = NaN`.
+
+**References**
+
+Cite [Simonetti, Cordes & Heeschen 1985](https://ui.adsabs.harvard.edu/abs/1985ApJ...296...46S/abstract), ApJ, 296, 46, if you use `estimator="squared"`.
+
+Cite [Hughes, Aller & Aller 1992](https://ui.adsabs.harvard.edu/abs/1992ApJ...396..469H/abstract), ApJ, 396, 469 and [Schmidt et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...714.1194S/abstract), ApJ, 714, 1194, if you use `estimator="mad"`.
+
+Cite [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract), ApJ, 698, 895 and [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract), ApJ, 721, 1014, if you use `fitDRW`.
+
+**Examples**
+
+```python
+# Structure function values at three chosen lags on EXAMPLES/2.
+result = lc.structurefunction(
+    bins="log", Nbins=20,
+    reportsfvalsintable=[0.1, 1.0, 10.0],
+)
+print(f"DT_0 = {result.vars['STRUCTUREFUNCTION_DT_0_0']:.4f}")
+print(f"SF_0 = {result.vars['STRUCTUREFUNCTION_SF_0_0']:.4f}")
+print(f"SF_2 = {result.vars['STRUCTUREFUNCTION_SF_2_0']:.4f}")
+print(f"NPAIRS_2 = {int(result.vars['STRUCTUREFUNCTION_NPAIRS_2_0'])}")
+
+# DRW fit on the same LC.  EXAMPLES/2 is an injected sinusoid, so the
+# DRW is the wrong model and chi^2 / dof is large -- this is how the
+# fit flags model misspecification.  Recovered (sigma_long, tau) on
+# real DRW data (e.g. quasar optical light curves with adequate
+# baseline) approach the input values.
+result = lc.structurefunction(bins="log", Nbins=20, fitDRW=True)
+print(f"sigma_long = {result.vars['STRUCTUREFUNCTION_SIGMA_0']:.4f}")
+print(f"tau        = {result.vars['STRUCTUREFUNCTION_TAU_0']:.4f}")
+print(f"chi2/dof   = {result.vars['STRUCTUREFUNCTION_CHI2_0'] / result.vars['STRUCTUREFUNCTION_DOF_0']:.1f}")
+print(f"converged  = {int(result.vars['STRUCTUREFUNCTION_CONVERGED_0'])}")
+```
+
+---
