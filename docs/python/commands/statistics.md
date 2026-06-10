@@ -1008,3 +1008,96 @@ print(f"converged  = {int(result.vars['STRUCTUREFUNCTION_CONVERGED_0'])}")
 ```
 
 ---
+
+### `drwfit` — Direct DRW maximum-likelihood fit
+
+**Syntax**
+
+```python
+cmd.drwfit(
+    mean=None,
+    mean_value=None,
+    sigma0=None,
+    tau0=None,
+    mean0=None,
+    save_result=False,
+    correctlc=None,
+    modelvar=None,
+    maskpoints=None,
+)
+```
+
+**Description**
+
+Fit a damped-random-walk (DRW / Ornstein–Uhlenbeck / CAR(1)) model directly to a light curve by maximum likelihood, using the [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract) state-space recursion (their Equations 6–13). Each likelihood evaluation is `O(N)` with no matrix inversion, and a downhill simplex (Nelder–Mead) minimises `-2 ln L` over `(log sigma_long, log tau)` — jointly with `mu` when the mean is fit.
+
+This direct-likelihood method recovers `tau` substantially more accurately than fitting a DRW to the structure function ([`structurefunction`](#structurefunction-ensemble-structure-function) with `fitDRW=True`), especially on short baselines ([MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract) Section 4.2; Kelly 2009 Section 3.1). The reported amplitude `DRWFIT_SIGMA_N` is `sigma_long` (the MacLeod 2010 long-term magnitude standard deviation, mag) — the same quantity `structurefunction` reports, so the two are directly comparable. To convert to Kelly's SDE driving-noise amplitude `sigma_K` (mag · day^(-1/2)) use `sigma_K = sigma_long * sqrt(2 / tau)`.
+
+The long-term mean is controlled by `mean` (vartools default `"fit"`): `"fit"` fits `mu` jointly; `"fix"` (with `mean_value`) holds it at a fixed value; `"subtract"` removes the weighted mean before fitting, in which case `DRWFIT_MU_N` is NaN. The two `DRWFIT_DLNL_*` columns are likelihood-ratio detection indicators against the pure-noise and `tau -> infinity` limits.
+
+Set `correctlc="smoothed"` (or `"forecast"`) to replace the in-memory light curve with the DRW residuals before passing it downstream: `"smoothed"` subtracts the Rauch–Tung–Striebel smoothed model (past and future points), whitening toward the noise floor; `"forecast"` subtracts the one-step-ahead Kalman forecast (past points only), retaining unexplained variability. Set `modelvar=("smoothed", name)` (or `("forecast", name)`) to instead store the DRW model in a new light-curve variable without altering the curve.
+
+CLI equivalent: [`-drwfit`](../../cli/statistics.md#-drwfit).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mean` | `"fit"`, `"subtract"`, `"fix"`, or `None` | Optional. Long-term-mean handling. `None` (default) uses the vartools default (`"fit"`). |
+| `mean_value` | `float` or `str` or `None` | Required for, and only valid with, `mean="fix"`. The fixed `mu`. Accepts a number, a bare variable name (`var`), or a `"var NAME"` / `"expr EXPR"` string. |
+| `sigma0` | `float` or `str` or `None` | Optional. Simplex initial guess for `sigma_long`. Accepts `var` / `expr`. Literals must be `> 0`. |
+| `tau0` | `float` or `str` or `None` | Optional. Simplex initial guess for `tau`. Accepts `var` / `expr`. Literals must be `> 0`. |
+| `mean0` | `float` or `str` or `None` | Optional. Simplex initial guess for `mu` (when the mean is fit). Accepts `var` / `expr`. |
+| `save_result` | `bool`, `str`, or `Output` | Optional. Controls the `.drwfit` aux file (eight per-point columns). `False` (default): no file. `True`: write to pipeline temp dir, capture into `result.files["drwfit_result_N"]`. Path string: write to that dir, no capture. |
+| `correctlc` | `"smoothed"`, `"forecast"`, or `None` | Optional. Replace the in-memory light curve with the smoothed or forecast DRW residuals. |
+| `modelvar` | `(mode, varname)` or `None` | Optional. Store the DRW model in a new variable. `mode` is `"smoothed"` or `"forecast"`. |
+| `maskpoints` | `str` or `None` | Optional. Mask variable; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position.
+
+| Column | Description |
+|--------|-------------|
+| `DRWFIT_SIGMA_N` | `sigma_long`, the MacLeod 2010 long-term magnitude standard deviation (mag). |
+| `DRWFIT_TAU_N` | DRW damping time-scale (time-axis units). |
+| `DRWFIT_MU_N` | Fitted long-term mean. NaN when `mean="subtract"`. |
+| `DRWFIT_LNL_N` | Best-fit `ln L`. |
+| `DRWFIT_DLNL_NOISE_N` | `ln L_best - ln L` at the `sigma_long -> 0` (pure-noise) limit. |
+| `DRWFIT_DLNL_INF_N` | `ln L_best - ln L` at the `tau -> infinity` limit. |
+| `DRWFIT_CONVERGED_N` | `1` if the simplex converged, `0` otherwise. |
+
+When `save_result=True`, `result.files["drwfit_result_N"]` holds an eight-column per-point table (`t  x  sig_meas  x_hat_fwd  Omega_fwd  chi_fwd  x_smoothed  Omega_smoothed`) from the forward Kalman filter and the RTS backward smoother, with NaN rows preserved for filtered-out points.
+
+**References**
+
+Cite [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract), ApJ, 698, 895 and [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract), ApJ, 721, 1014, if you use this command.
+
+**Examples**
+
+```python
+# Direct maximum-likelihood DRW fit on EXAMPLES/2.  The LC carries an
+# injected sinusoid rather than genuine DRW variability, so the recovered
+# parameters describe the best DRW approximation to that signal; on real
+# DRW data (e.g. quasar optical light curves with adequate baseline) the
+# recovered (sigma_long, tau) approach the input values.
+result = lc.drwfit()
+print(f"sigma_long = {result.vars['DRWFIT_SIGMA_0']:.4f}")
+print(f"tau        = {result.vars['DRWFIT_TAU_0']:.4f}")
+print(f"mu         = {result.vars['DRWFIT_MU_0']:.4f}")
+print(f"converged  = {int(result.vars['DRWFIT_CONVERGED_0'])}")
+
+# Subtract the smoothed DRW model in place, then check the chi^2 of the
+# whitened light curve with a chained -chi2.
+result = lc.drwfit(correctlc="smoothed").chi2()
+chi2_key = next(k for k in result.vars.index if "Chi2" in k)
+print(f"chi2/dof after correction = {result.vars[chi2_key]:.3f}")
+
+# Store the smoothed DRW model in a new variable instead of correcting,
+# then summarise it with -stats.
+result = lc.drwfit(modelvar=("smoothed", "drwmod")).stats("drwmod", "mean,stddev")
+mean_key = next(k for k in result.vars.index if "drwmod" in k and "MEAN" in k)
+print(f"model mean = {result.vars[mean_key]:.4f}")
+```
+
+---

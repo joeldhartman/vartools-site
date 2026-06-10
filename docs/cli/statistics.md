@@ -937,3 +937,102 @@ vartools -i EXAMPLES/2 -oneline \
     -structurefunction bins log 30 estimator mad save .
 ```
 
+## `-drwfit`
+
+**Syntax**
+```
+-drwfit ["mean" <"fit" | "fix" <"var" varname | "expr" exprstring | mu> | "subtract">]
+    ["sigma0" <"var" varname | "expr" exprstring | sigma0>]
+    ["tau0"   <"var" varname | "expr" exprstring | tau0>]
+    ["mean0"  <"var" varname | "expr" exprstring | mean0>]
+    ["save" outdir]
+    ["correctlc" <"smoothed" | "forecast">]
+    ["modelvar"  <"smoothed" | "forecast"> modelvarname]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, fit a damped-random-walk (DRW) model directly by maximum likelihood. The DRW is the continuous-time first-order autoregressive (CAR(1)) / Ornstein–Uhlenbeck process, equivalently a Gaussian process with a Matérn-1/2 (exponential) covariance kernel `C(dt) = sigma_long^2 * exp(-|dt| / tau)`. It was introduced for AGN optical variability by [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract).
+
+The likelihood is evaluated with the Kelly 2009 state-space recursion (their Equations 6–13):
+
+```
+x*_i    = x_i - mu
+x_hat_0 = 0,    Omega_0 = sigma_long^2
+a_i     = exp(-(t_i - t_{i-1}) / tau)
+K_i     = Omega_{i-1} / (Omega_{i-1} + sig_meas_{i-1}^2)
+x_hat_i = a_i * (x_hat_{i-1} + K_i * (x*_{i-1} - x_hat_{i-1}))
+Omega_i = sigma_long^2 * (1 - a_i^2) + a_i^2 * Omega_{i-1} * (1 - K_i)
+-2 ln L = sum_i [ ln(2 pi (Omega_i + sig_meas_i^2)) + (x*_i - x_hat_i)^2 / (Omega_i + sig_meas_i^2) ]
+```
+
+Each evaluation is `O(N)` with no matrix inversion, so the fit is fast even for long light curves. A downhill simplex (Nelder–Mead) minimises `-2 ln L` over `(log sigma_long, log tau)`, or jointly `(log sigma_long, log tau, mu)` when the mean is fit. This direct-likelihood method recovers `tau` substantially more accurately than fitting a DRW to the structure function ([`-structurefunction`](#-structurefunction) `fitDRW`), especially on short baselines (MacLeod 2010 Section 4.2; Kelly 2009 Section 3.1).
+
+The reported amplitude `DRWFIT_SIGMA_N` is the long-term magnitude standard deviation `sigma_long` in the [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract) convention (mag) — the same quantity `-structurefunction` reports, so the two commands are directly comparable on the same light curve. To convert to Kelly's SDE driving-noise amplitude `sigma_K` (units mag · day^(-1/2)) use `sigma_K = sigma_long * sqrt(2 / tau)`.
+
+The long-term mean is controlled by `mean` (default `fit`): `mean fit` fits `mu` jointly (3-parameter simplex); `mean fix <mu>` holds it at a fixed value or per-LC `var` / `expr` source (2-parameter simplex); `mean subtract` removes the weighted mean before fitting, in which case `DRWFIT_MU_N` is meaningless and reported as NaN. The simplex initial guesses are derived from the light curve unless overridden by `sigma0`, `tau0`, and/or `mean0` (default `tau0` = `0.1 * T_baseline`, the central decile of MacLeod 2010's empirical `tau / T_LC` distribution for S82 quasars).
+
+Two likelihood-ratio quality indicators are emitted (see e.g. MacLeod 2010 Section 3.1): `DRWFIT_DLNL_NOISE_N` compares the best-fit DRW to the pure-measurement-noise limit (`sigma_long -> 0`), and `DRWFIT_DLNL_INF_N` compares it to the `tau -> infinity` limit. Both are `ln L_best` minus the limiting `ln L`; large positive values indicate the DRW is strongly preferred over the respective null. The thresholds for a confident detection are left to the user.
+
+If `correctlc smoothed` (or `forecast`) is given, the in-memory light curve is replaced by the DRW residuals before being passed to subsequent commands: `smoothed` subtracts the Rauch–Tung–Striebel smoothed model (a backward pass over the Kalman filter using both past and future points), whitening the curve toward the noise floor; `forecast` subtracts the one-step-ahead Kalman forecast (past points only), which retains the unexplained short-term variability. If `modelvar smoothed modelvarname` (or `forecast`) is given, the DRW model itself is stored in a new light-curve variable for use by later commands, without modifying the light curve.
+
+If `save outdir` is given, an eight-column aux file `<outdir>/<lcname>.drwfit` (`t  x  sig_meas  x_hat_fwd  Omega_fwd  chi_fwd  x_smoothed  Omega_smoothed`) is written, with one row per original light-curve point and NaN rows preserved for filtered-out points. The columns hold the time, magnitude, and measurement error; the forward Kalman state (predicted value, variance, and standardized residual); and the smoothed state (value and variance).
+
+Python equivalent: [`drwfit`](../python/commands/statistics.md#drwfit-direct-drw-maximum-likelihood-fit).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"mean" "fit"` | Optional (default). Fit `mu` jointly with `sigma_long` and `tau`. |
+| `"mean" "fix" mu` | Optional. Hold `mu` at a fixed value. Accepts `var` / `expr` for per-LC sourcing. |
+| `"mean" "subtract"` | Optional. Subtract the weighted mean before fitting; `DRWFIT_MU_N` is then NaN. |
+| `"sigma0" S` | Optional. Initial guess for `sigma_long`. Accepts `var` / `expr`. `S > 0`. |
+| `"tau0" T` | Optional. Initial guess for `tau`. Accepts `var` / `expr`. `T > 0`. |
+| `"mean0" M` | Optional. Initial guess for `mu` (when the mean is fit). Accepts `var` / `expr`. |
+| `"save" outdir` | Optional. Write the per-point aux file `<outdir>/<lcname>.drwfit`. |
+| `"correctlc" "smoothed"`/`"forecast"` | Optional. Replace the in-memory light curve with the smoothed or forecast DRW residuals. |
+| `"modelvar" "smoothed"`/`"forecast" modelvarname` | Optional. Store the smoothed or forecast DRW model in a new light-curve variable. |
+| `"maskpoints" maskvar` | Optional. Only points with `maskvar > 0` contribute to the fit. |
+
+The trailing keywords are parsed in strict order: `mean`, `sigma0`, `tau0`, `mean0`, `save`, `correctlc`, `modelvar`, `maskpoints`.
+
+**Output columns**
+
+| Column | Meaning |
+|--------|---------|
+| `DRWFIT_SIGMA_N` | Long-term magnitude standard deviation `sigma_long` (MacLeod 2010 convention; mag). |
+| `DRWFIT_TAU_N` | Damping time-scale `tau` (time-axis units). |
+| `DRWFIT_MU_N` | Fitted long-term mean `mu`. NaN when `mean subtract`. |
+| `DRWFIT_LNL_N` | Best-fit `ln L`. |
+| `DRWFIT_DLNL_NOISE_N` | `ln L_best - ln L` at the `sigma_long -> 0` (pure-noise) limit. |
+| `DRWFIT_DLNL_INF_N` | `ln L_best - ln L` at the `tau -> infinity` limit. |
+| `DRWFIT_CONVERGED_N` | `1` if the simplex converged, else `0`. |
+
+`N` is the 0-indexed command position in the pipeline.
+
+**References**
+
+Cite [Kelly, Bechtold & Siemiginowska 2009](https://ui.adsabs.harvard.edu/abs/2009ApJ...698..895K/abstract), ApJ, 698, 895 and [MacLeod et al. 2010](https://ui.adsabs.harvard.edu/abs/2010ApJ...721.1014M/abstract), ApJ, 721, 1014, if you use this command.
+
+**Examples**
+
+**Example 1.** Direct maximum-likelihood DRW fit. `EXAMPLES/2` carries an injected sinusoid rather than genuine DRW variability, so the recovered parameters describe the best DRW approximation to that signal.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -drwfit
+```
+
+**Example 2.** Subtract the smoothed DRW model in place, then compute the `chi^2` of the corrected light curve.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -drwfit correctlc smoothed -chi2
+```
+
+**Example 3.** Write the per-point Kalman/smoother aux file for goodness-of-fit diagnostics, holding the mean fixed.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -drwfit mean fix 10.12 save .
+```
+
