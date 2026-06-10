@@ -946,7 +946,7 @@ CLI equivalent: [`-structurefunction`](../../cli/statistics.md#-structurefunctio
 | `sigma0` | `float` or `str` or `None` | Optional (only with `fitDRW=True`). Initial guess for `sigma_long`. Accepts `var` / `expr`. Literals must be `> 0`. |
 | `tau0` | `float` or `str` or `None` | Optional (only with `fitDRW=True`). Initial guess for `tau`. Accepts `var` / `expr`. Literals must be `> 0`. |
 | `reportsfvalsintable` | sequence of `float` or `None` | Optional. Strictly increasing list of positive lag values; for each, emit four scalar columns. |
-| `save_result` | `bool`, `str`, or `Output` | Optional. Controls the `.sf` aux file (full SF curve). `False` (default): no file. `True`: write to pipeline temp dir, capture into `result.files["structurefunction_sf_N"]`. Path string: write to that dir, no capture. |
+| `save_result` | `bool`, `str`, or `Output` | Optional. Controls the `.sf` aux file (full SF curve). `False` (default): no file. `True`: write to pipeline temp dir, capture into `result.files["structurefunction_result_N"]`. Path string: write to that dir, no capture. |
 | `maskpoints` | `str` or `None` | Optional. Mask variable; only points with `maskvar > 0` contribute. |
 
 **Output**
@@ -972,7 +972,7 @@ When `reportsfvalsintable=[e1,...,en]`, for each `e_k` (`k = 0..n-1`):
 | `STRUCTUREFUNCTION_SIGMA_SF_k_N` | Per-bin error bar. NaN if `SF_k` is NaN. |
 | `STRUCTUREFUNCTION_NPAIRS_k_N` | Number of pairs in the bin. `0` if out of range. |
 
-When `save_result=True`, `result.files["structurefunction_sf_N"]` holds the path to a four-column aux file (`dt_center  SF  sigma_SF  n_pairs`); bins with no pairs or noise-dominated SF appear with `SF = sigma_SF = NaN`.
+When `save_result=True`, `result.files["structurefunction_result_N"]` holds a four-column aux file (`dt_center  SF  sigma_SF  n_pairs`); bins with no pairs or noise-dominated SF appear with `SF = sigma_SF = NaN`.
 
 **References**
 
