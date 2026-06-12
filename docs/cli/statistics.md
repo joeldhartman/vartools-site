@@ -1036,3 +1036,75 @@ vartools -i EXAMPLES/2 -oneline -drwfit correctlc smoothed -chi2
 vartools -i EXAMPLES/2 -oneline -drwfit mean fix 10.12 save .
 ```
 
+
+## `-runlength`
+
+**Syntax**
+```
+-runlength ["k" <"var" varname | "expr" exprstring | k>]
+    ["maskpoints" maskvar]
+```
+
+**Description**
+
+For each light curve, characterize runs of consecutive points (in time order) relative to the median magnitude and the median absolute deviation. A *run* is a maximal block of consecutive points that all satisfy one condition. This is a fast, robust descriptor of serial coherence that complements the scatter statistics ([`-rms`](#-rms), [`-chi2`](#-chi2), the MAD reported by [`-stats`](#-stats)) and the asymmetry / quasi-periodicity statistics [`-CodyM`](#-codym) / [`-CodyQ`](#-codyq), none of which capture run structure. Long runs above or below the median flag low-frequency coherent variability or a residual trend; long outlier runs flag sustained excursions (flares, blends, systematics) as opposed to isolated bad points.
+
+Let `m` be the median of the (NaN- and mask-filtered) magnitudes and `D = MAD = 1.483 * median(|x - m|)` their median absolute deviation — the same 1.483-scaled estimator reported by [`-stats`](#-stats), so the band `m ± k*D` corresponds to roughly `±k` Gaussian standard deviations. Four conditions are tracked, each on the points in time order:
+
+```
+above   : x > m
+below   : x < m
+outhigh : x - m >  k*D
+outlow  : x - m < -k*D
+```
+
+The comparisons are strict, so a point exactly at the median is in band and breaks both the above and below runs. The two outlier conditions are sign-specific: a band excursion that crosses from the high side to the low side ends one run and begins another — there is no combined sign-agnostic outlier run. For each condition the command reports the longest run, the number of runs, and the mean run length (`npoints / nruns`, reported as NaN when there are no runs). The light curve is sorted in time before the scan if it is not already in time order.
+
+The run-length scan is a single `O(N)` pass; computing `m` and `D` additionally requires median selection, so the command as a whole is not a single streaming pass.
+
+Python equivalent: [`runlength`](../python/commands/statistics.md#runlength-run-length-statistics-about-the-median-and-mad).
+
+**Parameters**
+
+| Parameter | Description |
+|-----------|-------------|
+| `"k" k` | Optional. Outlier band half-width in MAD units. Default `3.0`; must be `>= 0`. Accepts `var` / `expr` for per-LC sourcing. |
+| `"maskpoints" maskvar` | Optional. Only points with `maskvar > 0` contribute. |
+
+The trailing keywords are parsed in strict order: `k`, `maskpoints`.
+
+**Output columns**
+
+`N` is the 0-indexed command position in the pipeline.
+
+| Column | Meaning |
+|--------|---------|
+| `RUNLENGTH_ABOVE_MAXLEN_N` | Longest run of consecutive points with `x > m`. |
+| `RUNLENGTH_ABOVE_NRUNS_N` | Number of above-median runs. |
+| `RUNLENGTH_ABOVE_MEANLEN_N` | Mean above-median run length (NaN if none). |
+| `RUNLENGTH_BELOW_MAXLEN_N` / `_NRUNS_N` / `_MEANLEN_N` | Same three statistics for `x < m`. |
+| `RUNLENGTH_OUTHIGH_MAXLEN_N` / `_NRUNS_N` / `_MEANLEN_N` | Same three for the high outlier condition `x - m > k*D`. |
+| `RUNLENGTH_OUTLOW_MAXLEN_N` / `_NRUNS_N` / `_MEANLEN_N` | Same three for the low outlier condition `x - m < -k*D`. |
+| `RUNLENGTH_MEDIAN_N` | Median `m`. |
+| `RUNLENGTH_MAD_N` | The 1.483-scaled `D`. |
+| `RUNLENGTH_K_N` | The `k` used. |
+
+When no point survives filtering, the run statistics are reported as `0 / 0 / NaN` and the median and MAD as NaN.
+
+**References**
+
+The count of runs about the median underlies the [Wald–Wolfowitz runs test](https://ui.adsabs.harvard.edu/abs/1940AnMaS..11..147W/abstract) (Wald & Wolfowitz 1940, Ann. Math. Statist., 11, 147); `-runlength` reports the descriptive run statistics themselves rather than that test statistic or an associated p-value. No citation is required to use this command.
+
+**Examples**
+
+**Example 1.** Run-length statistics about the median and MAD. `EXAMPLES/2` carries an injected sinusoid, so it shows long above/below runs (roughly half a period of points each) and, because the `±3*MAD` band is wider than the sinusoid amplitude, no outlier runs.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -runlength
+```
+
+**Example 2.** Narrow the band to `±0.5*MAD` so the sinusoid peaks and troughs fall outside it, producing non-zero `outhigh` and `outlow` runs that trace the coherent excursions.
+
+```bash
+vartools -i EXAMPLES/2 -oneline -runlength k 0.5
+```

@@ -1101,3 +1101,70 @@ print(f"model mean = {result.vars[mean_key]:.4f}")
 ```
 
 ---
+### `runlength` — Run-length statistics about the median and MAD
+
+**Syntax**
+
+```python
+cmd.runlength(
+    k=3.0,
+    maskpoints=None,
+)
+```
+
+**Description**
+
+Characterize runs of consecutive points (in time order) relative to the median magnitude and the median absolute deviation. A *run* is a maximal block of consecutive points that all satisfy one condition. Let `m` be the median of the (NaN- and mask-filtered) magnitudes and `D = MAD = 1.483 * median(|x - m|)` their median absolute deviation — the same 1.483-scaled estimator reported by [`stats`](#stats-generic-statistics), so the band `m ± k*D` is roughly `±k` Gaussian standard deviations. Four conditions are tracked: `above` (`x > m`), `below` (`x < m`), `outhigh` (`x - m > k*D`), and `outlow` (`x - m < -k*D`).
+
+Comparisons are strict, so a point exactly at the median is in band and breaks both the above and below runs. The two outlier conditions are sign-specific: a band excursion that crosses from the high side to the low side ends one run and begins another (there is no combined sign-agnostic outlier run). For each condition the command reports the longest run, the number of runs, and the mean run length (`npoints / nruns`, NaN when there are no runs).
+
+Long runs above or below the median flag low-frequency coherent variability or a residual trend; long outlier runs flag sustained excursions (flares, blends, systematics) as opposed to isolated bad points. This is a fast, robust serial-coherence descriptor that complements the scatter statistics ([`rms`](#rms-root-mean-square), [`chi2`](#chi2-chi-squared-statistic), the MAD of [`stats`](#stats-generic-statistics)) and the asymmetry / quasi-periodicity statistics [`CodyM`](#codym-flux-asymmetry-statistic-m) / [`CodyQ`](#codyq-quasi-periodicity-statistic-q). The light curve is sorted in time before the scan if it is not already in time order.
+
+CLI equivalent: [`-runlength`](../../cli/statistics.md#-runlength).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `k` | `float` or `str` | Optional. Outlier band half-width in MAD units. Default `3.0`; literals must be `>= 0`. Accepts a number, a bare variable name (`var`), or a `"var NAME"` / `"expr EXPR"` string. Emitted on the command line only when it differs from the default. |
+| `maskpoints` | `str` or `None` | Optional. Mask variable; only points with `maskvar > 0` contribute. |
+
+**Output**
+
+Suffix `N` is the 0-indexed pipeline command position. For each of the four conditions `ABOVE`, `BELOW`, `OUTHIGH`, `OUTLOW`:
+
+| Column | Description |
+|--------|-------------|
+| `RUNLENGTH_<COND>_MAXLEN_N` | Longest run satisfying the condition. |
+| `RUNLENGTH_<COND>_NRUNS_N` | Number of runs. |
+| `RUNLENGTH_<COND>_MEANLEN_N` | Mean run length (NaN when there are no runs). |
+
+plus `RUNLENGTH_MEDIAN_N` (the median `m`), `RUNLENGTH_MAD_N` (the 1.483-scaled `D`), and `RUNLENGTH_K_N` (the `k` used). When no point survives filtering, the run statistics are `0 / 0 / NaN` and the median and MAD are NaN.
+
+**References**
+
+The count of runs about the median underlies the [Wald–Wolfowitz runs test](https://ui.adsabs.harvard.edu/abs/1940AnMaS..11..147W/abstract) (Wald & Wolfowitz 1940, Ann. Math. Statist., 11, 147); `runlength` reports the descriptive run statistics themselves rather than that test statistic or its p-value. No citation is required to use this command.
+
+**Examples**
+
+```python
+# Run-length statistics about the median and the +/-k*MAD band on EXAMPLES/2.
+# The injected sinusoid produces long above/below runs and, at the default
+# k=3, no outlier runs (the band is wider than the sinusoid amplitude).
+result = lc.runlength()
+print(f"longest above-median run = {int(result.vars['RUNLENGTH_ABOVE_MAXLEN_0'])}")
+print(f"longest below-median run = {int(result.vars['RUNLENGTH_BELOW_MAXLEN_0'])}")
+print(f"median = {result.vars['RUNLENGTH_MEDIAN_0']:.4f}, "
+      f"MAD = {result.vars['RUNLENGTH_MAD_0']:.4f}")
+
+# Tighten the band to +/-0.5*MAD so the sinusoid peaks and troughs register
+# as sustained outlier runs.  The high and low excursions are tracked
+# separately (sign-specific outlier conditions).
+result = lc.runlength(k=0.5)
+print(f"outhigh: {int(result.vars['RUNLENGTH_OUTHIGH_NRUNS_0'])} runs, "
+      f"longest {int(result.vars['RUNLENGTH_OUTHIGH_MAXLEN_0'])}")
+print(f"outlow:  {int(result.vars['RUNLENGTH_OUTLOW_NRUNS_0'])} runs, "
+      f"longest {int(result.vars['RUNLENGTH_OUTLOW_MAXLEN_0'])}")
+```
+
+---
