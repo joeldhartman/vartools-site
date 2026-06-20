@@ -391,6 +391,7 @@ The four splinedetrend output columns report the median magnitude (which is adde
      "harmseries" period_var Nharm>
     ["groupbytime" time_bin ["start" firstbintime]]
     ["fitonly"]
+    ["noshiftmasked"]
     ["save_fitted_parameters" <outdir ["format" fmt]>]
     ...
 ```
@@ -409,7 +410,7 @@ Required arguments:
 |---|---|
 | `stitch_variable_list` | Comma-separated list of magnitude variables to stitch (typically just `mag`). |
 | `uncertainty_variable_list` | Comma-separated uncertainties for each magnitude variable (typically `err`). |
-| `mask_variable_list` | Comma-separated mask vectors; points with `mask = 0` are *excluded* from the fit (1 = include). |
+| `mask_variable_list` | Comma-separated mask vectors; points with `mask = 0` (or negative) are *excluded* from the fit (`> 0` = include). By default an excluded point still has the fitted per-segment shift applied to it — masking affects only the fit, not the correction (see `"noshiftmasked"`). |
 | `lcnum_var` | Variable identifying which input segment each observation belongs to (typically set by the `lcnumvar` keyword of `combinelcs`). |
 
 Fitting method (choose one):
@@ -429,6 +430,7 @@ Optional keywords:
 | `"refnum_var" varname` | Further subdivide segments by a second grouping variable. |
 | `"groupbytime" time_bin` | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
 | `"fitonly"` | Compute the shifts but do not subtract them. |
+| `"noshiftmasked"` | Leave masked points unshifted, so that masking excludes a point from both the fit *and* the correction. By default masked points are shifted along with their segment. |
 | `"save_fitted_parameters" outdir` | Write per-source shift files (suffix `.stitch`). |
 | `"shifts_file" ...` | Read previously determined shifts and/or write new ones for incremental re-processing of large datasets. |
 

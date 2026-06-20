@@ -404,7 +404,7 @@ result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
 cmd.stitch(stitch_variables, uncertainty_variables, mask_variables,
            lcnum_var, method,
            refnum_var=None, groupbytime=None, groupbytime_start=None,
-           fitonly=False,
+           fitonly=False, noshiftmasked=False,
            save_fitted_parameters=False, fitted_parameters_nameformat=None,
            add_stitchparams_fitsheader=False, add_stitchparams_mode=None,
            add_shifts_fitsheader=None, add_shifts_hdu=None,
@@ -430,13 +430,14 @@ CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
 |-----------|------|-------------|
 | `stitch_variables` | `str` or `list` of `str` | Magnitude variable(s) to stitch (typically `"mag"`). |
 | `uncertainty_variables` | `str` or `list` of `str` | Uncertainties for each magnitude variable (typically `"err"`). |
-| `mask_variables` | `str` or `list` of `str` | Mask vector(s); points with `mask = 0` are *excluded* from the fit (1 = include). |
+| `mask_variables` | `str` or `list` of `str` | Mask vector(s); points with `mask = 0` (or negative) are *excluded* from the fit (`> 0` = include). By default an excluded point still has the fitted per-segment shift applied to it — masking affects only the fit, not the correction (see `noshiftmasked`). |
 | `lcnum_var` | `str` | Variable identifying which input segment each observation belongs to (typically set by the `lcnumvar` keyword of `combinelcs`). |
 | `method` | `str`, required | `"median"`, `"mean"`, `"weightedmean"`, `"poly ORDER"`, or `"harmseries PERIODVAR NHARM"`. |
 | `refnum_var` | `str`, optional | Further subdivide segments by a second grouping variable. |
 | `groupbytime` | `float`, optional | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
 | `groupbytime_start` | `float`, optional | Start time of the first time bin (only meaningful when `groupbytime` is set). |
 | `fitonly` | `bool` | Compute the shifts but do not subtract them. |
+| `noshiftmasked` | `bool` | Leave masked points unshifted, so that masking excludes a point from both the fit *and* the correction. By default masked points are shifted along with their segment. |
 | `save_fitted_parameters` | `bool`, `str`, or `Output` | Write per-source shift files. |
 | `fitted_parameters_nameformat` | `str`, optional | Format string applied to the fitted-parameter filenames (`format` keyword). |
 | `add_stitchparams_fitsheader` | `bool` or `str` | Add stitch parameters to the FITS header. Pass `True`, or `"primary"`/`"extension"` to select the HDU. |
