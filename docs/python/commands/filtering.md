@@ -457,7 +457,7 @@ cmd.TFA(trendlist, dates_file, pixelsep, correct_lc=True,
         clip=None, usemedian=False, useMAD=False,
         readformat=None, trend_coeff_priors=None,
         weight_by_template_stddev=False, fitmask=None,
-        outfitmask=None)
+        outfitmask=None, refmag=None, refmag_usemedian=False)
 ```
 
 **Description**
@@ -485,6 +485,8 @@ CLI equivalent: [`-TFA`](../../cli/filtering.md#-tfa).
 | `weight_by_template_stddev` | `bool` | Weight points by `1/ave_template_stddev` instead of `1/err`. |
 | `fitmask` | `str` or `None` | Mask variable; only points where `fitmask = 1` are included in the trend fit. The model is still evaluated and subtracted at excluded points. |
 | `outfitmask` | `str` or `None` | Variable name to record the post-clipping fit mask. |
+| `refmag` | `float`, `str`, or `None` | Reset the level of the corrected light curve to this reference magnitude (requires `correct_lc=True`). A number sets a fixed value; a bare identifier is read as a per-LC variable (`var`); any other string is evaluated as a per-LC expression (`expr`). |
+| `refmag_usemedian` | `bool` | With `refmag`, set the median rather than the mean of the corrected light curve to the reference magnitude. |
 
 **Output**
 
@@ -520,6 +522,17 @@ batch = (vt.Pipeline()
          ).run_filelist("EXAMPLES/lc_list_tfa")
 ```
 
+**Example 2.** Reset the level of the corrected light curve to a reference magnitude of 12.0. With `refmag` the corrected LC is shifted by a constant so that its mean becomes 12.0; pass `refmag_usemedian=True` to place the median at 12.0 instead. The shift leaves the RMS unchanged.
+
+```python
+batch = (vt.Pipeline()
+         .TFA(trendlist="EXAMPLES/trendlist_tfa",
+              dates_file="EXAMPLES/dates_tfa",
+              pixelsep=25.0, xycol=(2, 3),
+              correct_lc=True, refmag=12.0)
+         ).run_filelist("EXAMPLES/lc_list_tfa")
+```
+
 ---
 
 ### `TFA_SR` — TFA with signal reconstruction
@@ -530,7 +543,8 @@ batch = (vt.Pipeline()
 cmd.TFA_SR(trendlist, dates_file, pixelsep, dotfafirst=1,
            tfathresh=0.001, maxiter=10, signal_mode="bin",
            signal_params=None, signal_period=None,
-           correct_lc=True, decorr_params=None, ...)
+           correct_lc=True, decorr_params=None,
+           refmag=None, refmag_usemedian=False, ...)
 ```
 
 **Description**
@@ -550,6 +564,8 @@ CLI equivalent: [`-TFA_SR`](../../cli/filtering.md#-tfa_sr).
 | `signal_params` | varies | For `"bin"`: `nbins` (`int`). For `"signal"`: filename (`str`). For `"harm"`: `(Nharm, Nsubharm)` tuple. |
 | `signal_period` | `float`, `str`, or `None` | Period sub-option for `"bin"` or `"harm"` signal modes. Float emits `"period" val`; string keyword `"ls"`, `"aov"`, or `"bls"` inherits the best period from the most recent matching prior command. The keyword resolves equally in a single `Pipeline` and across chain steps. Missing prior command → `LookupError`. |
 | `decorr_params` | `str` or `None` | Raw token string for simultaneous EPD decorrelation, e.g. `"0 2 col1 1 col2 2"` (`iterativeflag Nlcterms lccolumn1 lcorder1 ...`). |
+| `refmag` | `float`, `str`, or `None` | Reset the level of the corrected light curve to this reference magnitude (requires `correct_lc=True`), exactly as for `TFA`. Fixed number, per-LC variable (bare identifier → `var`), or per-LC expression (other string → `expr`). |
+| `refmag_usemedian` | `bool` | With `refmag`, set the median rather than the mean of the corrected light curve to the reference magnitude. |
 
 **Output**
 

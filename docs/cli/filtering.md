@@ -674,6 +674,7 @@ vartools -l EXAMPLES/trendlist_tfa -header \
     correctlc ocoeff [coeff_outdir] omodel [model_outdir]
     ["clip" sigclipfactor ["usemedian"] ["useMAD"]]
     ["fitmask" maskvar] ["outfitmask" outmaskvar]
+    ["refmag" < value | "var" varname | "expr" expression > ["usemedian"]]
 ```
 
 **Description**
@@ -700,6 +701,8 @@ Python equivalent: [`TFA`](../python/commands/filtering.md#tfa-trend-filtering-a
 | `"clip" sigclipfactor` | Outlier-clipping threshold before fitting (default: 5σ). Add `"usemedian"` and/or `"useMAD"` to change the reference statistic. |
 | `"fitmask" maskvar` | Restrict points included in the trend fit (1 = include, 0 = exclude). The model is still evaluated and subtracted at excluded points. |
 | `"outfitmask" outmaskvar` | Store the post-clipping fit mask in this variable. |
+| `"refmag" < value \| "var" varname \| "expr" expression >` | Reset the level of the corrected light curve to a reference magnitude (requires `correctlc=1`). A uniform offset is added to every point so the mean of the corrected LC equals the value. The value may be a fixed number, a per-LC variable (`var`), or a per-LC analytic expression (`expr`). |
+| `"usemedian"` (after `refmag`) | Set the median rather than the mean of the corrected LC to the reference magnitude. |
 
 **Output columns**: `TFA_MeanMag_N` (out-of-fit mean magnitude), `TFA_RMS_N` (post-filter RMS).
 
@@ -715,6 +718,14 @@ Cite [Kovács, Bakos and Noyes 2005](https://ui.adsabs.harvard.edu/abs/2005MNRAS
 vartools -l EXAMPLES/lc_list_tfa -oneline -rms \
     -TFA EXAMPLES/trendlist_tfa EXAMPLES/dates_tfa \
         25.0 xycol 2 3 1 0 0
+```
+
+**Example 2.** Same as Example 1, but reset the level of the corrected light curve to a reference magnitude of 12.0. With `refmag` the corrected light curve is shifted by a constant so that its mean becomes 12.0 (`TFA_MeanMag_1` reports 12.00000); adding `usemedian` would instead place the median at 12.0. The shift does not change the RMS.
+
+```bash
+vartools -l EXAMPLES/lc_list_tfa -oneline -rms \
+    -TFA EXAMPLES/trendlist_tfa EXAMPLES/dates_tfa \
+        25.0 xycol 2 3 1 0 0 refmag 12.0
 ```
 
 ---
@@ -736,6 +747,7 @@ vartools -l EXAMPLES/lc_list_tfa -oneline -rms \
             ["period" < "aov" | "ls" | "bls" | "list" ["column" col] | "fix" period >] >
     ["clip" sigclipfactor ["usemedian"] ["useMAD"]]
     ["fitmask" maskvar] ["outfitmask" outmaskvar]
+    ["refmag" < value | "var" varname | "expr" expression > ["usemedian"]]
 ```
 
 **Description**
@@ -755,6 +767,7 @@ Python equivalent: [`TFA_SR`](../python/commands/filtering.md#tfa_sr-tfa-with-si
 | `"bin" nbins` | Signal model = mean binned LC with `nbins` bins. Use optional `"period"` to phase-fold first. |
 | `"signal" filename` | Signal model read from a file (a list of per-LC signal files). Fits `a·signal + b`. |
 | `"harm" Nharm Nsubharm` | Signal model = Fourier series with `Nharm` harmonics + `Nsubharm` sub-harmonics. No iteration is required when using `harm`. Use `"period"` to specify the period source (`aov`, `ls`, `bls`, list, or fixed). |
+| `"refmag" < value \| "var" varname \| "expr" expression > ["usemedian"]` | Reset the level of the corrected light curve to a reference magnitude (requires `correctlc=1`), exactly as for [`-TFA`](#-tfa). With `usemedian` the median rather than the mean is set to the value. |
 
 **Output columns**: `TFA_SR_MeanMag_N`, `TFA_SR_RMS_N`.
 
