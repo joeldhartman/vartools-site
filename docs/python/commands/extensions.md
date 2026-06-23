@@ -532,6 +532,85 @@ The first column of the output shifts file is the star name; the second is a `;`
 
 ---
 
+### `unstitch` — undo a stitch
+
+**Syntax**
+
+```python
+cmd.unstitch(unstitch_variables, source,
+             fieldlabelsvar=None, starnamevar=None, in_shifts_file=None,
+             append_refnum_to_fieldlabel=None,
+             keywordbase=None, lcnum_var=None, refnum_var=None, hdu=None,
+             maskpoints=None, noshiftmasked=False,
+             strip_fitsheader=None, strip_stitchparams=False, strip_hdu=None,
+             lib_path=None)
+```
+
+**Description**
+
+The inverse of [`stitch`](#stitch-stitch-multi-segment-light-curves-at-offsets): it adds the per-segment shifts that `-stitch` determined back to the light curve, recovering the pre-stitch magnitudes.  The shifts come either from a file written by `stitch`'s `out_shifts_file` (`source="in_shifts_file"`) or from the keywords `stitch`'s `add_shifts_fitsheader` wrote into the input FITS header (`source="fitsheader"`).
+
+CLI equivalent: [`-unstitch`](../../cli/extensions.md#-unstitch).
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `unstitch_variables` | `str` or `list` of `str` | Magnitude variable(s) to un-shift (typically `"mag"`).  For the `"in_shifts_file"` source, one input shifts file per variable, in the same order. |
+| `source` | `str`, required | `"in_shifts_file"` or `"fitsheader"`. |
+| `fieldlabelsvar` | `str` | (`in_shifts_file`) Per-point string field identifier used to match points to shifts.  Required for this source. |
+| `starnamevar` | `str` | (`in_shifts_file`) Per-LC string star name selecting the file row.  Required for this source. |
+| `in_shifts_file` | `str` or `list` of `str` | (`in_shifts_file`) Shifts file(s), one per variable.  Required for this source. |
+| `append_refnum_to_fieldlabel` | `str`, optional | (`in_shifts_file`) Refnum variable, if the file's labels had the refnum appended. |
+| `keywordbase` | `str` | (`fitsheader`) Keyword basename `stitch` used (e.g. `"SHFT"`).  Required for this source. |
+| `lcnum_var` | `str` | (`fitsheader`) Variable identifying the segment for each point.  Required for this source. |
+| `refnum_var` | `str`, optional | (`fitsheader`) Refnum variable, if the shifts used one. |
+| `hdu` | `str`, optional | (`fitsheader`) `"primary"` (default) or `"extension"` — which header to read. |
+| `maskpoints` | `str`, optional | Mask variable.  Masked points are exempt from the coverage check; by default a masked point that matches a shift is still un-shifted (see `noshiftmasked`). |
+| `noshiftmasked` | `bool` | Leave masked points completely unchanged.  Requires `maskpoints`.  Use to invert a `stitch` run that used its own `noshiftmasked`. |
+| `strip_fitsheader` | `str`, optional | Keyword basename to remove from the output FITS header (e.g. with `-o ... fits copyheader`). |
+| `strip_stitchparams` | `bool` | Also remove the fixed `STCH*` stitch-parameter keywords. |
+| `strip_hdu` | `str`, optional | `"primary"` (default) or `"extension"` — which header to strip. |
+| `lib_path` | `str`, optional | Path to `unstitch.so` / `unstitch.la`. |
+
+Constructor-time validation enforces the source-specific required parameters, that `noshiftmasked` is given only with `maskpoints`, and that `hdu` / `strip_hdu` are `"primary"` or `"extension"`.
+
+**Output**
+
+Suffix `N` is the pipeline command index:
+
+| Column | Description |
+|--------|-------------|
+| `Unstitch_Npoints_shifted_N` | Number of points that received a shift. |
+
+`-unstitch` requires every unmasked point to be covered by the supplied shifts; if not, the run raises `RunError` (the wrong shifts are being used).
+
+**Examples**
+
+Re-stitch `EXAMPLES/2` + `EXAMPLES/2.shifted` and immediately undo it, reading the shifts from the file shipped in `EXAMPLES/OUTDIR1` (written by an earlier `stitch` run with `out_shifts_file`).  The per-segment field labels `fA`/`fB` and star name `star1` are supplied through `perlcsegment_vars` / `perlc_vars`, matching the labels in that file.  The three `RMS` columns show the scatter inflated by the offset, dropping after stitching, and returning after un-stitching.
+
+```python
+import pyvartools as vt
+
+result = (vt.Pipeline()
+          .expr("mask=mag*0+1")
+          .rms()
+          .stitch("mag", "err", "mask", "lcnum", method="median")
+          .rms()
+          .unstitch("mag", source="in_shifts_file",
+                    fieldlabelsvar="field", starnamevar="star",
+                    in_shifts_file="EXAMPLES/OUTDIR1/shifts.txt")
+          .rms()
+          ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"],
+                          perlcsegment_vars={"field": ["fA", "fB"]},
+                          perlc_vars={"star": "star1"})
+print(result.vars[["RMS_1", "RMS_3", "RMS_5"]])   # inflated / stitched / restored
+```
+
+For the `"fitsheader"` source — recovering the shifts from FITS-header keywords written by `stitch add_shifts_fitsheader`, and optionally removing them again with `strip_fitsheader` — see the [CLI example](../../cli/extensions.md#-unstitch).
+
+---
+
 ### `jktebop` — detached eclipsing-binary model
 
 **Syntax**

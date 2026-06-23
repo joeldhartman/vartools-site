@@ -450,6 +450,95 @@ vartools -l EXAMPLES/lc_list_stitch combinelcs lcnumvar lcnum \
 
 ---
 
+## `-unstitch`
+
+**Undo a previous `-stitch`, restoring the original magnitudes.**
+
+**Syntax**
+```
+-unstitch
+    unstitch_variable_list
+    < "in_shifts_file" fieldlabelsvar starnamevar file1[,file2,...]
+          ["append_refnum_to_fieldlabel" refnum_var]
+      | "fitsheader" keywordbase lcnum_var ["refnum_var" refnum_var]
+          ["primary" | "extension"] >
+    ["maskpoints" maskvar ["noshiftmasked"]]
+    ["strip_fitsheader" keywordbase ["stitchparams"] ["primary" | "extension"]]
+```
+
+**Description**
+
+`-unstitch` is the inverse of [`-stitch`](#-stitch): it adds the per-segment shifts that `-stitch` determined back to the light curve, recovering the pre-stitch magnitudes. The shifts are read either from a file written by `-stitch`'s `out_shifts_file` option (the `"in_shifts_file"` source) or from the keywords `-stitch`'s `add_shifts_fitsheader` option wrote into the input FITS header (the `"fitsheader"` source).
+
+Python equivalent: [`unstitch`](../python/commands/extensions.md#unstitch-undo-a-stitch).
+
+**Parameters**
+
+Required arguments:
+
+| Argument | Description |
+|---|---|
+| `unstitch_variable_list` | Comma-separated list of magnitude variables to un-shift (typically just `mag`). For the `"in_shifts_file"` source, give one input shifts file per variable, in the same order. |
+
+Shift source (choose one):
+
+| Source | Description |
+|---|---|
+| `"in_shifts_file" fieldlabelsvar starnamevar file1[,...]` | Read the shifts from a file written by `-stitch`'s `out_shifts_file`. `fieldlabelsvar` is a per-point string field identifier and `starnamevar` a per-LC string star name, used to match points to shifts (the same machinery `-stitch shifts_file` uses). Add `"append_refnum_to_fieldlabel" refnum_var` if the file was written that way. |
+| `"fitsheader" keywordbase lcnum_var` | Read the shifts from the FITS header keywords `-stitch` wrote with `add_shifts_fitsheader`. `keywordbase` is the keyword basename used (e.g. `SHFT`); `lcnum_var` identifies the segment for each point. Add `"refnum_var" refnum_var` if a refnum was used, and `"primary"` (default) or `"extension"` to select the header. Requires a FITS-format input light curve. |
+
+Optional keywords:
+
+| Keyword | Description |
+|---|---|
+| `"maskpoints" maskvar` | Mask variable (`mask > 0` = in use). Masked points are exempt from the coverage check below. By default a masked point that has a matching shift is still un-shifted; see `"noshiftmasked"`. |
+| `"noshiftmasked"` | Leave masked points completely unchanged (never un-shifted). Requires `"maskpoints"`. Use this to invert a `-stitch` run that used its own `noshiftmasked` option. |
+| `"strip_fitsheader" keywordbase` | Remove every keyword whose name begins with `keywordbase` from the output FITS header (e.g. with `-o ... fits copyheader`). Add `"stitchparams"` to also remove the fixed `STCH*` stitch-parameter keywords, and `"primary"` (default) or `"extension"` to choose the header. A no-op if the output is not FITS. |
+
+**Coverage:** `-unstitch` requires that every unmasked point has a matching shift; if any unmasked point's star/field (file source) or `(lcnum, refnum)` segment (header source) is not covered, it stops with an error, since that indicates the wrong set of shifts is being used. The reference segment (shift 0) is recognised automatically.
+
+**Output columns**: `Unstitch_Npoints_shifted_N` — the number of points that received a shift.
+
+**Examples**
+
+**Example 1.** Stitch two segments together while writing the determined shifts to a file, then undo the stitch by reading those shifts back. The list file `EXAMPLES/lc_list_unstitch` combines `EXAMPLES/2` and `EXAMPLES/2.shifted` (the latter `EXAMPLES/2 + 0.3` mag), assigning per-segment field labels `fA`/`fB` (via the `combinelc` form of `-inlistvars`) and the star name `star1`. The three `-rms` calls show the combined scatter inflated by the offset, dropping after stitching, and returning to the inflated value after un-stitching — confirming restoration. In normal use the two steps are run on separate occasions, with the shifts file carried between them.
+
+```bash
+vartools -l EXAMPLES/lc_list_unstitch combinelcs lcnumvar lcnum \
+    -inlistvars 'field:2:combinelc:string,star:3:string' \
+    -expr 'mask=mag*0+1' \
+    -stitch mag err mask lcnum median shifts_file field star \
+        out_shifts_file EXAMPLES/OUTDIR1/shifts.txt -oneline
+
+vartools -l EXAMPLES/lc_list_unstitch combinelcs lcnumvar lcnum \
+    -inlistvars 'field:2:combinelc:string,star:3:string' \
+    -expr 'mask=mag*0+1' \
+    -rms \
+    -stitch mag err mask lcnum median \
+    -rms \
+    -unstitch mag in_shifts_file field star EXAMPLES/OUTDIR1/shifts.txt \
+    -rms -oneline
+```
+
+**Example 2.** Carry the shifts in the FITS header instead of a separate file. The first command stitches and writes a FITS light curve, logging the shifts into its header under `SHFT*` keywords (`add_shifts_fitsheader`). The second reads that file, recovers the shifts from the header with the `fitsheader` source, adds them back, and removes the now-stale keywords from the output FITS header with `strip_fitsheader`.
+
+```bash
+vartools -l EXAMPLES/lc_list_unstitch combinelcs lcnumvar lcnum \
+    -inlistvars 'field:2:combinelc:string,star:3:string' \
+    -expr 'mask=mag*0+1' \
+    -stitch mag err mask lcnum median add_shifts_fitsheader SHFT \
+    -o EXAMPLES/OUTDIR1 nameformat unstitch.stitched.fits allcols fits -oneline
+
+vartools -i EXAMPLES/OUTDIR1/unstitch.stitched.fits \
+    -inputlcformat 't:t,mag:mag,err:err,lcnum:lcnum:int' \
+    -rms \
+    -unstitch mag fitsheader SHFT lcnum strip_fitsheader SHFT \
+    -rms \
+    -o EXAMPLES/OUTDIR1/unstitch.restored.fits allcols fits copyheader -oneline
+```
+
+---
+
 ## `-macula`
 
 **Kipping's Macula analytic starspot model** ([Kipping 2012](https://ui.adsabs.harvard.edu/abs/2012MNRAS.427.2487K/abstract), MNRAS, 427, 2487).
