@@ -392,6 +392,7 @@ The four splinedetrend output columns report the median magnitude (which is adde
     ["groupbytime" time_bin ["start" firstbintime]]
     ["fitonly"]
     ["noshiftmasked"]
+    ["refmag" <"fix" value | "list" | "fixcolumn" col | "expr" expr>]
     ["save_fitted_parameters" <outdir ["format" fmt]>]
     ...
 ```
@@ -431,6 +432,7 @@ Optional keywords:
 | `"groupbytime" time_bin` | Group segments into time bins; the bin size is automatically widened if necessary so all segments can be inter-calibrated. |
 | `"fitonly"` | Compute the shifts but do not subtract them. |
 | `"noshiftmasked"` | Leave masked points unshifted, so that masking excludes a point from both the fit *and* the correction. By default masked points are shifted along with their segment. |
+| `"refmag" <"fix" value \| "list" \| "fixcolumn" col \| "expr" expr>` | Shift all groups to a reference magnitude rather than adopting one group as the (unshifted) reference. For median/mean/weightedmean without `groupbytime`, every group's statistic is shifted to the value; with `groupbytime`, or for `poly`/`harmseries`, the reference group's level (its median for poly/harmseries) is tied to it. A single segment is normalized too. The shift applied to every group (including the reference) is recorded for `out_shifts_file` / `add_shifts_fitsheader`, so `-unstitch` can undo it. |
 | `"save_fitted_parameters" outdir` | Write per-source shift files (suffix `.stitch`). |
 | `"shifts_file" ...` | Read previously determined shifts and/or write new ones for incremental re-processing of large datasets. |
 

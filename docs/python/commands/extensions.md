@@ -404,7 +404,7 @@ result = lc.ftuneven(output_file="EXAMPLES/OUTDIR1",
 cmd.stitch(stitch_variables, uncertainty_variables, mask_variables,
            lcnum_var, method,
            refnum_var=None, groupbytime=None, groupbytime_start=None,
-           fitonly=False, noshiftmasked=False,
+           fitonly=False, noshiftmasked=False, refmag=None,
            save_fitted_parameters=False, fitted_parameters_nameformat=None,
            add_stitchparams_fitsheader=False, add_stitchparams_mode=None,
            add_shifts_fitsheader=None, add_shifts_hdu=None,
@@ -438,6 +438,7 @@ CLI equivalent: [`-stitch`](../../cli/extensions.md#-stitch).
 | `groupbytime_start` | `float`, optional | Start time of the first time bin (only meaningful when `groupbytime` is set). |
 | `fitonly` | `bool` | Compute the shifts but do not subtract them. |
 | `noshiftmasked` | `bool` | Leave masked points unshifted, so that masking excludes a point from both the fit *and* the correction. By default masked points are shifted along with their segment. |
+| `refmag` | `float` or `str`, optional | Shift all groups to a reference magnitude rather than adopting one group as the (unshifted) reference. A number is passed as `fix value`; a string is `"fix V"` / `"list"` / `"fixcolumn COL"` / `"expr E"`, or a bare expression. For median/mean/weightedmean without `groupbytime` every group's statistic is shifted to the value; with `groupbytime`, or for `poly`/`harmseries`, the reference group's level (its median for poly/harmseries) is tied to it. The shifts (including the reference group's) are recorded so `unstitch` can undo them. |
 | `save_fitted_parameters` | `bool`, `str`, or `Output` | Write per-source shift files. |
 | `fitted_parameters_nameformat` | `str`, optional | Format string applied to the fitted-parameter filenames (`format` keyword). |
 | `add_stitchparams_fitsheader` | `bool` or `str` | Add stitch parameters to the FITS header. Pass `True`, or `"primary"`/`"extension"` to select the HDU. |
@@ -500,6 +501,20 @@ result = (vt.Pipeline()
           .rms()
           ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"])
 print(result.vars[["RMS_1", "RMS_3"]])   # before / after stitching
+```
+
+With `refmag` the segments are shifted onto a common reference magnitude rather than onto one reference segment.  For the median method (no `groupbytime`) every segment's median lands on the value, so the combined median does too:
+
+```python
+import pyvartools as vt
+
+result = (vt.Pipeline()
+          .expr("mask=mag*0+1")
+          .stitch("mag", "err", "mask", "lcnum", method="median", refmag=12.0)
+          .stats("mag", "median")
+          ).run_combinelc(["EXAMPLES/2", "EXAMPLES/2.shifted"])
+medkey = [k for k in result.vars.index if "MEDIAN" in k][0]
+print(result.vars[medkey])   # ~ 12.0
 ```
 
 #### Per-segment field labels and per-LC star names with `shifts_file`
