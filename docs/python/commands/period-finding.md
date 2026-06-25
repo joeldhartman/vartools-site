@@ -655,7 +655,7 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
         min_exp_dur_frac=0.5, max_exp_dur_frac=1.5,
         df=None, extraparams=False, nobinnedrms=True,
         freq_grid=None, adjust_qmin=False, reduce_nbins=False,
-        reportharmonics=False,
+        reportharmonics=False, mergepeakdf=None, mergepeakdf_transit=None,
         save_periodogram=False, save_model=False,
         save_phcurve=False, save_jdcurve=False,
         ophcurve_phmin=0, ophcurve_phmax=1, ophcurve_phstep=0.005,
@@ -705,6 +705,8 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `adjust_qmin` | `bool` | Adaptively increase `qmin` at each frequency to `max(qmin, mindt·f)`. |
 | `reduce_nbins` | `bool` | (With `adjust_qmin=True`) adaptively reduce `nbins` at each frequency. |
 | `reportharmonics` | `bool` | Report period harmonics (½, ⅓, …) as additional candidates. |
+| `mergepeakdf` | `float` or `None` | Fixed factor for the peak-merge frequency resolution `Df = mergepeakdf / T` (`T` = time baseline). Default (`None`) uses `Df = 1/T`, the Rayleigh resolution; `mergepeakdf=1.0` is equivalent. Mutually exclusive with `mergepeakdf_transit`. |
+| `mergepeakdf_transit` | `float` or `None` | Transit-aware multiplier: `Df = mergepeakdf_transit · q / T` with `q` the per-candidate fitted transit width. Resolves peaks on the finer scale a box transit smears over; a value of order a few is recommended. Mutually exclusive with `mergepeakdf`. |
 | `save_periodogram` | `bool`, `str`, or `Output` | BLS spectrum file. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `save_model` | `bool`, `str`, or `Output` | Best-fit transit model. `True` captures as `result.files["BLS_model_N"]`. |
 | `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["BLS_phcurve_N"]`. |
@@ -898,6 +900,7 @@ cmd.BLSFixDurTc(duration, Tc,
                 save_phcurve=False, ophcurve_phmin=0.0,
                 ophcurve_phmax=1.0, ophcurve_phstep=0.005,
                 save_jdcurve=False, ojdcurve_jdstep=0.02,
+                mergepeakdf=None, mergepeakdf_transit=None,
                 maskpoints=None)
 ```
 
@@ -926,6 +929,7 @@ CLI equivalent: [`-BLSFixDurTc`](../../cli/period-finding.md#-blsfixdurtc-bls-wi
 | `ojdcurve_jdstep` | `float` | Time step (days) for the JD-curve output. Default `0.02`. |
 | `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
 | `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
+| `mergepeakdf`, `mergepeakdf_transit` | `float` or `None` | Control the peak-merge frequency resolution `Df`, exactly as for [`BLS`](#bls-box-fitting-least-squares): `mergepeakdf` sets `Df = factor/T` (default `Df = 1/T`); `mergepeakdf_transit` sets `Df = mult·q/T`. Mutually exclusive. |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
 
 **Output**

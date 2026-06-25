@@ -607,7 +607,9 @@ vartools -i EXAMPLES/2 -oneline \
     ["ojdcurve" outdir jdstep]
     ["stepP" | "steplogP"]
     ["adjust-qmin-by-mindt" ["reduce-nbins"]]
-    ["reportharmonics"] ["maskpoints" maskvar]
+    ["reportharmonics"]
+    ["mergepeakdf" < "transit" mult | factor >]
+    ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -645,6 +647,7 @@ Three ways to specify the allowed range of transit durations:
 | `"adjust-qmin-by-mindt"` | Adaptively increase `qmin` at each frequency to `max(qmin, mindt·f)`. |
 | `"reduce-nbins"` | (With `adjust-qmin-by-mindt`) adaptively reduce `nbins` at each frequency. |
 | `"reportharmonics"` | Report period harmonics even if a higher-power peak at a multiple of that frequency exists. |
+| `"mergepeakdf" < "transit" mult \| factor >` | Set the frequency resolution `Df` used to decide whether two spectrum peaks are the same detection. By default `Df = 1/T` (the Rayleigh resolution, `T` = time baseline), which is appropriate for a sinusoid but tends to over-merge transit peaks (a box transit of fractional width `q` is resolved on the finer scale `q/T`). `"transit" mult` sets `Df = mult·q/T` using the per-candidate fitted transit width `q` (a `mult` of order a few is recommended); a bare number sets `Df = factor/T` (`mergepeakdf 1.0` reproduces the default). |
 | `"maskpoints" maskvar` | Exclude points with `maskvar ≤ 0` from the BLS spectrum. |
 
 **Output columns** (per peak `k`, command index `i`)
@@ -824,7 +827,9 @@ Npoints_2                        =  3417
     Npeak outperiodogram [outdir] omodel [model_outdir]
     correctlc ["fittrap"]
     ["ophcurve" outdir phmin phmax phstep]
-    ["ojdcurve" outdir jdstep] ["maskpoints" maskvar]
+    ["ojdcurve" outdir jdstep]
+    ["mergepeakdf" < "transit" mult | factor >]
+    ["maskpoints" maskvar]
 ```
 
 **Description**
