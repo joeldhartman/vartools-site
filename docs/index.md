@@ -34,11 +34,11 @@ VARTOOLS is a collection of tools for analyzing astronomical photometric time se
 
 ## Download
 
-!!! note "Current release: vartools 1.6"
+!!! note "Current release: vartools 1.6.1"
 
     | Format | Link |
     |--------|------|
-    | Source tarball | [vartools-1.6.tar.gz](http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.tar.gz) |
+    | Source tarball | [vartools-1.6.1.tar.gz](http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.1.tar.gz) |
     | GitHub | [github.com/joeldhartman/vartools](https://github.com/joeldhartman/vartools) |
 
 See the [Installation](install.md) page for build instructions, optional dependencies, and platform-specific notes.

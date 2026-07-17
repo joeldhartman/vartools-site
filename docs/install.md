@@ -13,7 +13,7 @@ Full per-platform detail is in the [`README.linux`](#readme-linux), [`README.mac
 
 | Format | Link |
 |--------|------|
-| Source tarball | [vartools-1.6.tar.gz](http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.tar.gz) |
+| Source tarball | [vartools-1.6.1.tar.gz](http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.1.tar.gz) |
 | GitHub | [github.com/joeldhartman/vartools](https://github.com/joeldhartman/vartools) |
 
 ---
@@ -81,8 +81,8 @@ Python package.
 
     ```bash
     cd ~/src
-    wget http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.tar.gz
-    tar xzf vartools-1.6.tar.gz
+    wget http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.1.tar.gz
+    tar xzf vartools-1.6.1.tar.gz
     cd vartools-1.6
 
     ./configure \
@@ -171,8 +171,8 @@ Python package.
 
     ```bash
     cd ~/src
-    curl -O http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.tar.gz
-    tar xzf vartools-1.6.tar.gz
+    curl -O http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.1.tar.gz
+    tar xzf vartools-1.6.1.tar.gz
     cd vartools-1.6
 
     HOMEBREW_PREFIX=$(brew --prefix)
@@ -296,8 +296,8 @@ Python package.
 
     ```bash
     cd ~/src
-    curl -O http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.tar.gz
-    tar xzf vartools-1.6.tar.gz
+    curl -O http://www.astro.princeton.edu/~jhartman/vartools/vartools-1.6.1.tar.gz
+    tar xzf vartools-1.6.1.tar.gz
     cd vartools-1.6
 
     ./configure \
