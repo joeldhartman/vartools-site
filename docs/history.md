@@ -1,5 +1,35 @@
 # Version History
 
+### Version 1.6.1 — July 15, 2026
+
+Changes include:
+
+1. Added `-PDM`, a Phase Dispersion Minimization period-search command (Stellingwerf 1978), with multi-cover and binless top-hat/Gaussian variants and `whiten`, `bootstrap`, `fixperiodSNR`, and `maskpoints` keywords.
+2. Added `-FTP`, the Fast Template Periodogram (Hoffman et al. 2021), searching arbitrary periodic templates with optional NFFT-accelerated summations (`--with-nfft`), analytic and bootstrap false-alarm probabilities, and `whiten`/`clip`/`maskpoints` keywords.
+3. Added `-matchedfilter`, an inverse-variance matched filter with NFFT-batched evaluation and templates from a two-column file or an analytic expression.
+4. Added `-vonNeumann`, computing the von Neumann η ratio in unweighted and error-weighted forms.
+5. Added `-CodyM` and `-CodyQ`, the Cody et al. (2014) flux-asymmetry (M) and quasi-periodicity (Q) variability statistics.
+6. Added `-structurefunction`, computing the ensemble structure function with an optional damped-random-walk fit.
+7. Added `-drwfit`, a direct maximum-likelihood damped-random-walk / CAR(1) fit (Kelly et al. 2009) with an RTS smoother and `save`, `correctlc`, and `modelvar` options.
+8. Added `-runlength`, run-length statistics of points above, below, and within a median ± k·MAD band.
+9. Added `-percentileratios`, `-beyondNsigma`, and `-slopestats` variability statistics.
+10. Added `-magtoflux`, the inverse of `-fluxtomag`, with an optional `normalize` mode.
+11. Added `-unstitch`, the inverse of `-stitch`, restoring per-segment shifts from a shifts file or FITS-header keywords, with an option to strip the stitch keywords from the output.
+12. Added `refmag` option to `-stitch` and to `-TFA`/`-TFA_SR` to reset the corrected light-curve level to a reference magnitude (mean, or median with `usemedian`).
+13. Added `mergepeakdf` option to `-BLS` and `-BLSFixDurTc` to control the frequency resolution used when merging periodogram peaks.
+14. Added `noshiftmasked` option to `-stitch`, and applied the fitted per-segment shift to masked points rather than only fit-included ones.
+15. Added `skipnormalize` keyword to `-Jstet` for Stetson's original J and L statistics.
+16. Added `binshift` keyword to `-binlc` for a multiplicative bin-edge shift.
+17. Fixed `-BLS density` bug where the maximum expected-duration fraction was silently overwritten with the minimum, collapsing the searched duration range.
+18. Fixed `-BLSFixPerDurTc fixdepth` duplicate `Depth` output-column registration.
+19. Fixed `-BLS` to write the periodogram on the zero-clip inverse-transit branch.
+20. Fixed inverted `mask_variable_list` help text in `-stitch` (a mask value > 0 includes a point).
+21. Pinned `-std=gnu17` so C23-default compilers build the legacy K&R code, and included `src/vt_param_macros.h` and all `-example` input light curves in `make dist`.
+22. Added the `VARTOOLS_Delete_Keyword_From_OutputLC_FitsHeader` library function, and apply queued output FITS-header additions and deletions in command order.
+23. `pyvartools` 1.0: added wrappers for all of the new commands above, corrected and expanded command docstrings with CLI cross-references and citations, added macOS shared-library discovery, and fixed chained `Result` capture of per-segment output files.
+
+---
+
 ### Version 1.6 — May 12, 2026
 
 Changes include:
