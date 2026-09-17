@@ -609,6 +609,7 @@ vartools -i EXAMPLES/2 -oneline \
     ["adjust-qmin-by-mindt" ["reduce-nbins"]]
     ["reportharmonics"]
     ["mergepeakdf" < "transit" mult | factor >]
+    ["medsn" ["medwindow" window] ["innerN" N] ["outerN" N] ["useforpeaks"]]
     ["maskpoints" maskvar]
 ```
 
@@ -648,6 +649,7 @@ Three ways to specify the allowed range of transit durations:
 | `"reduce-nbins"` | (With `adjust-qmin-by-mindt`) adaptively reduce `nbins` at each frequency. |
 | `"reportharmonics"` | Report period harmonics even if a higher-power peak at a multiple of that frequency exists. |
 | `"mergepeakdf" < "transit" mult \| factor >` | Set the frequency resolution `Df` used to decide whether two spectrum peaks are the same detection. By default `Df = 1/T` (the Rayleigh resolution, `T` = time baseline), which is appropriate for a sinusoid but tends to over-merge transit peaks (a box transit of fractional width `q` is resolved on the finer scale `q/T`). `"transit" mult` sets `Df = mult·q/T` using the per-candidate fitted transit width `q` (a `mult` of order a few is recommended); a bare number sets `Df = factor/T` (`mergepeakdf 1.0` reproduces the default). |
+| `"medsn" ["medwindow" window] ["innerN" N] ["outerN" N] ["useforpeaks"]` | Replace the `BLS_SN` statistic with a robust median-filter-based signal-to-noise. The SR spectrum is detrended by subtracting a moving median over a `medwindow` cycles/day window (default `0.5`); for each peak `BLS_SN = (peak − local_mean)/(1.4826·MAD)`, where `local_mean` is the mean of the detrended spectrum over the side-bands `N/T` inner to outer (`innerN` default `5`, `outerN` default `100`, in units of `1/T`) on either side of the peak. `BLS_SR` and the peak selection are unchanged (unless `"useforpeaks"` is given); the components are output as `BLS_MedFiltPeakHeight`, `BLS_MedFiltLocalMean`, `BLS_MedFiltNoise`, and the output periodogram's S/N column is also the median-filter S/N. `"useforpeaks"` selects and orders the peaks by this S/N instead of the default statistic. |
 | `"maskpoints" maskvar` | Exclude points with `maskvar ≤ 0` from the BLS spectrum. |
 
 **Output columns** (per peak `k`, command index `i`)
@@ -668,8 +670,11 @@ Three ways to specify the allowed range of transit durations:
 | `BLS_fraconenight_k_i` | Fraction of Δχ² from a single night. |
 | `BLS_Rednoise_k_i` | Estimated red noise level. |
 | `BLS_Whitenoise_k_i` | Estimated white noise level. |
+| `BLS_MedFiltPeakHeight_k_i` | (only with `"medsn"`) Height of the detrended SR spectrum at the peak (SR minus its local moving median). |
+| `BLS_MedFiltLocalMean_k_i` | (only with `"medsn"`) Mean of the detrended SR spectrum over the local side-bands. |
+| `BLS_MedFiltNoise_k_i` | (only with `"medsn"`) Robust noise `1.4826·MAD` of the detrended SR spectrum. The reported `BLS_SN` is (`MedFiltPeakHeight` − `MedFiltLocalMean`) / `MedFiltNoise`. |
 
-When `"fittrap"` is given, `BLS_Qingress_k_i` and `BLS_OOTmag_k_i` are also included.
+When `"fittrap"` is given, `BLS_Qingress_k_i` and `BLS_OOTmag_k_i` are also included. With `"medsn"` the three `BLS_MedFilt*` columns are appended at the end of each peak's block (after any `"extraparams"` columns).
 
 **References**
 
@@ -829,6 +834,7 @@ Npoints_2                        =  3417
     ["ophcurve" outdir phmin phmax phstep]
     ["ojdcurve" outdir jdstep]
     ["mergepeakdf" < "transit" mult | factor >]
+    ["medsn" ["medwindow" window] ["innerN" N] ["outerN" N] ["useforpeaks"]]
     ["maskpoints" maskvar]
 ```
 
@@ -847,6 +853,7 @@ Python equivalent: [`BLSFixDurTc`](../python/commands/period-finding.md#blsfixdu
 | `"fixdepth"` | Optionally fix the transit depth. |
 | `"qgress"` | Optionally fix the ingress fraction. |
 | `minper` / `maxper` / `nfreq` | Period range and number of trial frequencies. |
+| `"medsn" …` | Replace `BLSFixDurTc_SN` with a robust median-filter-based signal-to-noise, exactly as for [`-BLS`](#-bls-box-fitting-least-squares) (with `BLSFixDurTc_MedFiltPeakHeight`/`LocalMean`/`Noise` components and `"useforpeaks"`). |
 | All others | Same as `-BLS`. |
 
 **Examples**

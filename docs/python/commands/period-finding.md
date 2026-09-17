@@ -656,6 +656,8 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
         df=None, extraparams=False, nobinnedrms=True,
         freq_grid=None, adjust_qmin=False, reduce_nbins=False,
         reportharmonics=False, mergepeakdf=None, mergepeakdf_transit=None,
+        medsn=False, medsn_window=0.5, medsn_innerN=5, medsn_outerN=100,
+        medsn_useforpeaks=False,
         save_periodogram=False, save_model=False,
         save_phcurve=False, save_jdcurve=False,
         ophcurve_phmin=0, ophcurve_phmax=1, ophcurve_phstep=0.005,
@@ -707,6 +709,10 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `reportharmonics` | `bool` | Report period harmonics (½, ⅓, …) as additional candidates. |
 | `mergepeakdf` | `float` or `None` | Fixed factor for the peak-merge frequency resolution `Df = mergepeakdf / T` (`T` = time baseline). Default (`None`) uses `Df = 1/T`, the Rayleigh resolution; `mergepeakdf=1.0` is equivalent. Mutually exclusive with `mergepeakdf_transit`. |
 | `mergepeakdf_transit` | `float` or `None` | Transit-aware multiplier: `Df = mergepeakdf_transit · q / T` with `q` the per-candidate fitted transit width. Resolves peaks on the finer scale a box transit smears over; a value of order a few is recommended. Mutually exclusive with `mergepeakdf`. |
+| `medsn` | `bool` | Replace the `BLS_SN` statistic with a robust median-filter-based signal-to-noise. The SR spectrum is detrended by a moving median (window `medsn_window` c/d); each peak's `BLS_SN = (peak − local_mean)/(1.4826·MAD)`, where `local_mean` is the mean of the detrended spectrum over the side-bands `medsn_innerN/T < |f−f_peak| < medsn_outerN/T`. `BLS_SR` and the peak selection are unchanged (unless `medsn_useforpeaks=True`); the S/N components are output as `BLS_MedFiltPeakHeight`, `BLS_MedFiltLocalMean`, `BLS_MedFiltNoise`, and the output periodogram's S/N column also becomes the median-filter S/N. |
+| `medsn_window` | `float` | Moving-median window in cycles/day (default `0.5`), used only when `medsn=True`. |
+| `medsn_innerN`, `medsn_outerN` | `float` | Inner/outer local-mean side-band half-widths in units of `1/T` (defaults `5`, `100`); `medsn_outerN` must exceed `medsn_innerN`. |
+| `medsn_useforpeaks` | `bool` | Select and order the reported peaks by the median-filter S/N instead of the default BLS statistic. |
 | `save_periodogram` | `bool`, `str`, or `Output` | BLS spectrum file. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
 | `save_model` | `bool`, `str`, or `Output` | Best-fit transit model. `True` captures as `result.files["BLS_model_N"]`. |
 | `save_phcurve` | `bool`, `str`, or `Output` | Phase-folded model curve. `True` captures as `result.files["BLS_phcurve_N"]`. |
@@ -740,11 +746,14 @@ Per peak `k` (1 to `npeaks`) and command index `N`:
 | `BLS_Whitenoise_k_N` | Estimated white noise level. |
 | `BLS_SignaltoPinknoise_k_N` | Signal-to-pink-noise ratio. |
 | `BLS_Qingress_k_N`, `BLS_OOTmag_k_N` | Ingress fraction and out-of-transit magnitude. Only when `fittrap=True`. |
+| `BLS_MedFiltPeakHeight_k_N` | Only when `medsn=True`. Height of the detrended SR spectrum at the peak (SR minus its local moving median). |
+| `BLS_MedFiltLocalMean_k_N` | Only when `medsn=True`. Mean of the detrended SR spectrum over the local side-bands. |
+| `BLS_MedFiltNoise_k_N` | Only when `medsn=True`. Robust noise `1.4826·MAD` of the detrended SR spectrum. The reported `BLS_SN` is (`MedFiltPeakHeight` − `MedFiltLocalMean`) / `MedFiltNoise`. |
 | `BLS_Period_invtransit_N` | Period of the largest *inverted* (anti-transit) Δχ² peak — diagnostic for symmetric systematics. |
 | `BLS_deltaChi2_invtransit_N` | Δχ² of the inverse-transit peak. |
 | `BLS_MeanMag_N` | Out-of-transit mean magnitude. |
 
-When `extraparams=True` is set, the following additional per-peak columns are appended: `BLS_SRSum_k_N`, `BLS_ResSig_k_N`, `BLS_DipSig_k_N`, `BLS_SRShift_k_N`, `BLS_SRSig_k_N`, `BLS_SRShiftSNR_k_N`, `BLS_DSP_k_N`, `BLS_DSPG_k_N`, `BLS_FreqLow_k_N`, `BLS_FreqHigh_k_N`, `BLS_LogProb_k_N`, `BLS_PeakArea_k_N`, `BLS_PeakMean_k_N`, `BLS_PeakDev_k_N`, `BLS_LombLog_k_N`, `BLS_NTV_k_N`, `BLS_GDSP_k_N`, `BLS_OOTSig_k_N`, `BLS_TRSig_k_N`, `BLS_OOTDFTF_k_N`, `BLS_OOTDFTA_k_N`, `BLS_BinSN_k_N`, `BLS_MaxPhaseGap_k_N`, `BLS_Dip1DblPeriod_k_N`, `BLS_Dip2DblPeriod_k_N`, `BLS_DelChi2DblPeriod_k_N`, `BLS_SRSecondary_k_N`, `BLS_SRSumSecondary_k_N`, `BLS_QSecondary_k_N`, `BLS_EpochSecondary_k_N`, `BLS_HSecondary_k_N`, `BLS_LSecondary_k_N`, `BLS_DepthSecondary_k_N`, `BLS_NPointsInTransitSecondary_k_N`, `BLS_NTransitsSecondary_k_N`, `BLS_SignaltoPinknoiseSecondary_k_N`, `BLS_DeltaChi2TransitSecondary_k_N`, `BLS_BinSNSecondary_k_N`, `BLS_PhaseOffsetSecondary_k_N`, `BLS_HarmMean_k_N`, `BLS_fundA_k_N`, `BLS_fundB_k_N`, `BLS_harmA_k_N`, `BLS_harmB_k_N`, `BLS_HarmAmp_k_N`, `BLS_HarmDeltaChi2_k_N`.
+When `extraparams=True` is set, the following additional per-peak columns are appended: `BLS_SRSum_k_N`, `BLS_ResSig_k_N`, `BLS_DipSig_k_N`, `BLS_SRShift_k_N`, `BLS_SRSig_k_N`, `BLS_SRShiftSNR_k_N`, `BLS_DSP_k_N`, `BLS_DSPG_k_N`, `BLS_FreqLow_k_N`, `BLS_FreqHigh_k_N`, `BLS_LogProb_k_N`, `BLS_PeakArea_k_N`, `BLS_PeakMean_k_N`, `BLS_PeakDev_k_N`, `BLS_LombLog_k_N`, `BLS_NTV_k_N`, `BLS_GDSP_k_N`, `BLS_OOTSig_k_N`, `BLS_TRSig_k_N`, `BLS_OOTDFTF_k_N`, `BLS_OOTDFTA_k_N`, `BLS_BinSN_k_N`, `BLS_MaxPhaseGap_k_N`, `BLS_Dip1DblPeriod_k_N`, `BLS_Dip2DblPeriod_k_N`, `BLS_DelChi2DblPeriod_k_N`, `BLS_SRSecondary_k_N`, `BLS_SRSumSecondary_k_N`, `BLS_QSecondary_k_N`, `BLS_EpochSecondary_k_N`, `BLS_HSecondary_k_N`, `BLS_LSecondary_k_N`, `BLS_DepthSecondary_k_N`, `BLS_NPointsInTransitSecondary_k_N`, `BLS_NTransitsSecondary_k_N`, `BLS_SignaltoPinknoiseSecondary_k_N`, `BLS_DeltaChi2TransitSecondary_k_N`, `BLS_BinSNSecondary_k_N`, `BLS_PhaseOffsetSecondary_k_N`, `BLS_HarmMean_k_N`, `BLS_fundA_k_N`, `BLS_fundB_k_N`, `BLS_harmA_k_N`, `BLS_harmB_k_N`, `BLS_HarmAmp_k_N`, `BLS_HarmDeltaChi2_k_N`. When `medsn=True` is also set, the three `BLS_MedFilt*` columns follow this `extraparams` block at the end of each peak.
 
 When the corresponding `save_*` keyword is set:
 
@@ -901,6 +910,8 @@ cmd.BLSFixDurTc(duration, Tc,
                 ophcurve_phmax=1.0, ophcurve_phstep=0.005,
                 save_jdcurve=False, ojdcurve_jdstep=0.02,
                 mergepeakdf=None, mergepeakdf_transit=None,
+                medsn=False, medsn_window=0.5, medsn_innerN=5,
+                medsn_outerN=100, medsn_useforpeaks=False,
                 maskpoints=None)
 ```
 
@@ -930,6 +941,7 @@ CLI equivalent: [`-BLSFixDurTc`](../../cli/period-finding.md#-blsfixdurtc-bls-wi
 | `correct_lc` | `bool` | Subtract the best-fit transit from the LC before passing to the next command. |
 | `fittrap` | `bool` | Fit a trapezoidal transit instead of a box. |
 | `mergepeakdf`, `mergepeakdf_transit` | `float` or `None` | Control the peak-merge frequency resolution `Df`, exactly as for [`BLS`](#bls-box-fitting-least-squares): `mergepeakdf` sets `Df = factor/T` (default `Df = 1/T`); `mergepeakdf_transit` sets `Df = mult·q/T`. Mutually exclusive. |
+| `medsn`, `medsn_window`, `medsn_innerN`, `medsn_outerN`, `medsn_useforpeaks` | `bool` / `float` | Replace `BLSFixDurTc_SN` with a robust median-filter-based signal-to-noise, exactly as for [`BLS`](#bls-box-fitting-least-squares) (components output as `BLSFixDurTc_MedFiltPeakHeight`/`LocalMean`/`Noise`; `medsn_useforpeaks` selects peaks by it). |
 | `maskpoints` | `str` or `None` | Mask variable; points with `maskvar ≤ 0` are excluded. |
 
 **Output**
@@ -945,6 +957,9 @@ Suffix `N` is the pipeline command index. Per-peak quantities use suffix `k_N` (
 | `BLSFixDurTc_Period_k_N` | Best-fit period of peak `k`. |
 | `BLSFixDurTc_SN_k_N` | Signal-to-noise of peak `k`. |
 | `BLSFixDurTc_SR_k_N` | BLS spectral residual. |
+| `BLSFixDurTc_MedFiltPeakHeight_k_N` | Only when `medsn=True`. Height of the detrended SR spectrum at the peak (SR minus its local moving median). |
+| `BLSFixDurTc_MedFiltLocalMean_k_N` | Only when `medsn=True`. Mean of the detrended SR spectrum over the local side-bands. |
+| `BLSFixDurTc_MedFiltNoise_k_N` | Only when `medsn=True`. Robust noise `1.4826·MAD` of the detrended SR spectrum. The reported `BLSFixDurTc_SN` is (`MedFiltPeakHeight` − `MedFiltLocalMean`) / `MedFiltNoise`. |
 | `BLSFixDurTc_SDE_k_N` | Signal detection efficiency. |
 | `BLSFixDurTc_Depth_k_N` | Best-fit transit depth. |
 | `BLSFixDurTc_Qtran_k_N` | Fractional transit duration. |
