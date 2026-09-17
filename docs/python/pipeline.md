@@ -102,7 +102,7 @@ Run the pipeline on a light curve file already on disk. vartools reads the file 
 | `capture_lc` | `bool` | Capture the output light curve as `result.lc`. |
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
-| `columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve file (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns) below. |
+| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve file (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns) below. |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
 | `randseed` | `int` or `None` | Seed for the random-number generator. Pass an `int` to make stochastic commands (e.g. MCMC) reproducible. |
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
@@ -190,9 +190,20 @@ print(batch.vars)   # one row per line in the list file
 
 ---
 
-### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result` { #run_combinelc }
 
 Single-group convenience wrapper around `run_combinelcs()`. Combines *files* into one in-memory light curve, runs the pipeline, and returns a single [`Result`](results.md) (not a `BatchResult`).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `files` | list of `str`/`Path` | The files to combine into one light curve. Joined by `delimiter` to form a single line in the vartools list file. |
+| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column layout of the input files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns). |
+| `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. See [Initialised LC variables](#initialised-lc-variables-perpoint_vars). |
+| `perlc_vars` | `dict` or `None` | Per-LC variables for this single combined light curve. Each entry is **one value** (or a `(value, type)` tuple to override the auto-detected type), or a schema entry (`int` / `PerLCColumn`) referencing a list-file column. The singular value is auto-wrapped to the one-group shape `run_combinelcs()` expects. |
+| `perlcsegment_vars` | `dict` or `None` | Per-segment variables. Each entry is a **flat list of length `len(files)`** (one value per segment), or a `(values, type)` tuple. Auto-wrapped to the nested per-group shape. Used by commands like `stitch` that tag each segment (e.g. a per-telescope field label). |
+| `lcnumvar` | `str` or `None` | Per-observation integer variable recording which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
+| `delimiter` | `str` | Delimiter joining the file paths in the list file. Default `","` (the vartools `combinelcs` default). |
+| `nthreads`, `capture_lc`, `outdir`, `timeout`, `raise_on_error`, `randseed`, `skipmissing`, `jdtol`, `matchstringid` | — | Same meaning as in [`run_combinelcs()`](#run_combinelcs). |
 
 ```python
 # Combine two segments of the same star and run an LS period search on the
@@ -211,7 +222,7 @@ All other keyword arguments forward to `run_combinelcs()`.
 
 ---
 
-### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult`
+### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult` { #run_combinelcs }
 
 Run the pipeline using vartools `-l … combinelcs` mode. Each entry in *groups* is a list of file paths that vartools combines into a single in-memory light curve before passing it to the command chain. The result contains one row in `batch.vars` per group.
 
@@ -225,7 +236,7 @@ This mode of processing can be used to merge light curve files from multiple tel
 | `outdir` | `str` or `None` | Directory for command output files. |
 | `timeout` | `int` or `None` | Timeout in seconds. |
 | `raise_on_error` | `bool` | If `False`, errors are stored in `result.error` rather than raised. |
-| `columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns). |
+| `perpoint_columns` | `list[str]`, `dict`, or `None` | Column layout of the input light-curve files (which column is `t`, which is `mag`, etc.). See [Additional columns](#additional-columns). |
 | `perpoint_vars` | `dict[str, PerPointVar]` or `None` | Per-observation variables to create and initialise. |
 | `perlc_vars` | `dict` or `None` | Per-LC variables, one value per group (length `len(groups)`). Accepts a sequence of values, a `(values, type)` tuple to override the auto-detected type, or schema entries (`int` or `PerLCColumn`) that reference a column in an existing list file. See [Per-LC variables](#per-lc-variables-perlc_vars). |
 | `perlcsegment_vars` | `dict` or `None` | Per-segment variables, with a value for each segment within each group. Each entry is a sequence of length `len(groups)` whose *i*-th element is itself a sequence of length `len(groups[i])`. The type is inferred from the values (`int`, `float`, `str`); pass a `(values, type)` tuple to override. Used by commands like `stitch` that need a per-segment label. |
@@ -274,6 +285,52 @@ groups = [
 batch = vt.Pipeline().rms().run_combinelcs(groups)
 print(batch.vars)   # one row per group
 ```
+
+#### Example — mixed-type extra columns via `perpoint_columns`
+
+Per-observation columns beyond `t`/`mag`/`err` work in combine mode too. Declare the layout once with `perpoint_columns` — it applies to every file in every group. A numeric column needs only its name (its type defaults to `double`); use a [`PerPointColumn`](#non-default-column-types-perpointcolumn) to declare a non-double type such as `int` or `string`.
+
+Here each input file has six columns — `t`, `mag`, `err`, `airmass` (double), `intflag` (int), and `obsid` (a string naming the image each observation came from):
+
+```python
+import numpy as np, tempfile, os
+import pyvartools as vt
+from pyvartools import PerPointColumn
+
+# Two segments on disk, each with columns:
+#   t  mag  err  airmass(double)  intflag(int)  obsid(string image name)
+# In practice these are your own light-curve files; we synthesise two here.
+d = tempfile.mkdtemp()
+segs = []
+for s in (1, 2):
+    n = 300
+    t = 4000.0 + s + np.linspace(0, 20, n)
+    airmass = 1 + 0.4 * np.abs(np.sin(t / 3))
+    mag = 10 + 0.05 * airmass + 0.01 * np.sin(t)     # airmass-correlated
+    intflag = (np.arange(n) % 7 == 0).astype(int)
+    path = os.path.join(d, f"seg{s}.txt")
+    with open(path, "w") as fh:
+        for i in range(n):
+            fh.write(f"{t[i]:.6f} {mag[i]:.5f} 0.01000 "
+                     f"{airmass[i]:.4f} {int(intflag[i])} img{s}_{i:04d}\n")
+    segs.append(path)
+
+batch = (vt.Pipeline()
+         .expr("mcorr = mag - 0.05*airmass")     # uses the double airmass column
+         .rms("mcorr")
+         ).run_combinelcs(
+    groups=[segs],
+    perpoint_columns={
+        "t": 1, "mag": 2, "err": 3,
+        "airmass": 4,                                # double is the default type
+        "intflag": PerPointColumn(col=5, type="int"),
+        "obsid":   PerPointColumn(col=6, type="string"),
+    },
+)
+print(batch.vars[["Name", "RMS_1"]])
+```
+
+Only `intflag` and `obsid` need a `PerPointColumn`, because they are not doubles; `airmass` is loaded with a bare column number since `double` is the default. `obsid` is read as a string and is available to any command (e.g. for grouping or per-image bookkeeping) even though this example does not consume it.
 
 #### Example — opt out of the per-point file index
 
@@ -572,7 +629,7 @@ A light curve file is treated as having three default columns — time, magnitud
 pyvartools handles this automatically:
 
 - **`run()` and `run_batch()`** — when the input `LightCurve` carries extra columns (e.g. via `LightCurve.from_arrays(..., aux={"airmass": ...})`), pyvartools propagates them by name so commands can reference them directly.
-- **`run_file()` and `run_filelist()`** — the file is read directly from disk, so you tell pyvartools its column layout through the `columns` / `perpoint_columns` parameter.
+- **`run_file()` and `run_filelist()`** — the file is read directly from disk, so you tell pyvartools its column layout through the `perpoint_columns` parameter.
 
 ### Specifying columns for disk-based runs
 
@@ -603,6 +660,49 @@ result = pipe.run_file(
     perpoint_columns={"t": "BJD", "mag": "Mag", "err": "Err"},
 )
 ```
+
+**Extra columns beyond `t`/`mag`/`err`** — list them too; each becomes a per-observation variable of the same name that any command can reference. A numeric extra column needs **only its name** — its type defaults to `double`, so you do *not* have to declare a type:
+
+```python
+import pyvartools as vt
+
+# EXAMPLES/2.hatpiflag has t, mag, err in columns 1-3 and integer status
+# flags in columns 5-7.  Load column 5 as a numeric variable "flag" — no
+# type needed — and reference it downstream.
+result = (vt.Pipeline()
+          .expr("bright = mag - 0.001*flag")
+          .rms("bright")
+          ).run_file(
+    "EXAMPLES/2.hatpiflag",
+    perpoint_columns={"t": 1, "mag": 2, "err": 3, "flag": 5},
+)
+```
+
+The list form works the same way when the extra columns are contiguous: `perpoint_columns=["t", "mag", "err", "flag"]` maps them to columns 1–4 in order.
+
+### Non-default column types — `PerPointColumn`
+
+A column that is **not** a plain double — a string ID, a one-character grade, a UTC timestamp — needs its type declared. Wrap that one column's spec in a `PerPointColumn`. `type` defaults to `"double"`, so you only reach for this when the type is something else; `format` is used only for `"utc"`. Bare `int` (ASCII column number) and `str` (FITS column name) still work for default-type columns, and you can mix them with `PerPointColumn` in the same dict.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `col` | `int` or `str` | — | 1-based column number (ASCII) or column name (FITS binary table). |
+| `type` | `str` | `"double"` | `"double"`, `"float"`, `"int"`, `"long"`, `"short"`, `"string"`, `"char"`, or `"utc"`. |
+| `format` | `str` or `None` | `None` | Required for `type="utc"` (e.g. `"%Y-%M-%DT%h:%m:%s"`); ignored otherwise. |
+
+```python
+from pyvartools import PerPointColumn
+
+# Column 4 of EXAMPLES/2.hatpiflag is a one-character quality grade ("G").
+# Declare it as a string column; t/mag/err stay as plain column numbers.
+result = (vt.Pipeline().rms()).run_file(
+    "EXAMPLES/2.hatpiflag",
+    perpoint_columns={"t": 1, "mag": 2, "err": 3,
+                      "grade": PerPointColumn(col=4, type="string")},
+)
+```
+
+If the first column is not JD but a UTC timestamp string, declare it as `PerPointColumn(col=1, type="utc", format="%Y-%M-%DT%h:%m:%s")`.
 
 ### Automatic discovery in memory-based runs
 
@@ -658,7 +758,7 @@ PerPointVar(type="double", init="0")
 Pass a `dict[str, PerPointVar]` as `perpoint_vars` to any run method. The dictionary key is the variable name used inside vartools commands.
 
 !!! note
-    `perpoint_vars` is for **creating new** per-observation variables. If your light curve has a non-standard layout of the actual data columns (e.g. time is not in column 1), use `columns` / `perpoint_columns` on `run_file()` / `run_filelist()` (or pass a `LightCurve` with the correct column names for `run()` / `run_batch()`) to declare the layout — the standard columns continue to work alongside any `perpoint_vars` entries you add.
+    `perpoint_vars` is for **creating new** per-observation variables. If your light curve has a non-standard layout of the actual data columns (e.g. time is not in column 1), use `perpoint_columns` on `run_file()` / `run_filelist()` (or pass a `LightCurve` with the correct column names for `run()` / `run_batch()`) to declare the layout — the standard columns continue to work alongside any `perpoint_vars` entries you add.
 
 ### Examples
 
