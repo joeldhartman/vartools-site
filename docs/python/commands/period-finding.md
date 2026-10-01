@@ -136,7 +136,8 @@ After pre-whitening peak 1 the periodogram looks like this — the dominant 1.23
 ```python
 cmd.aov(minp, maxp, subsample, finetune, npeaks=5, nbin=None,
         save_periodogram=False, whiten=False, clip=None,
-        clipiter=None, uselog=False, maskpoints=None, fixperiod_snr=None)
+        clipiter=None, uselog=False, reportharmonics=False,
+        maskpoints=None, fixperiod_snr=None)
 ```
 
 **Description**
@@ -159,6 +160,7 @@ CLI equivalent: [`-aov`](../../cli/period-finding.md#-aov-phase-binned-analysis-
 | `whiten` | `bool` | Whiten the light curve at each peak before searching for the next. |
 | `clip`, `clipiter` | `float`, `int` | Sigma-clipping parameters for the SNR calculation (default: iterative 5σ). |
 | `uselog` | `bool` | Use `−ln(θ_aov)` for the SNR statistic; also outputs the mean and RMS of `−ln(θ_aov)`. |
+| `reportharmonics` | `bool` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `maskpoints` | `str` or `None` | Name of a mask variable; points where the variable is `≤ 0` are excluded. |
 | `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the AoV periodogram at a known period and report its significance. See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 
@@ -219,7 +221,8 @@ print(result.vars["AOV_SNR_PeriodFix_1"])
 ```python
 cmd.aov_harm(nharm, minp, maxp, subsample, finetune, npeaks=5,
              save_periodogram=False, whiten=False, clip=None,
-             clipiter=None, maskpoints=None, fixperiod_snr=None)
+             clipiter=None, reportharmonics=False,
+             maskpoints=None, fixperiod_snr=None)
 ```
 
 **Description**
@@ -238,7 +241,7 @@ CLI equivalent: [`-aov_harm`](../../cli/period-finding.md#-aov_harm-multi-harmon
 | `minp`, `maxp`, `subsample`, `finetune` | `float`, `str`, numpy array, `PerLC`, or `pd.Series` | Same as `aov`. |
 | `npeaks` | `int` | Number of peaks to report. |
 | `save_periodogram` | `bool`, `str`, or `Output` | Auxiliary file output. `True` captures as `result.files["aov_harm_periodogram_N"]`. |
-| `whiten`, `clip`, `clipiter`, `maskpoints` | — | Same as `aov`. |
+| `whiten`, `clip`, `clipiter`, `reportharmonics`, `maskpoints` | — | Same as `aov`. |
 | `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the multi-harmonic AoV periodogram at a known period. See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 
 **Output**
@@ -297,7 +300,8 @@ cmd.PDM(variant, minp, maxp, subsample, finetune, *,
         npeaks=5, nbin=None, nc=None, dphi=None,
         save_periodogram=False, clip=None, clipiter=None,
         noerr=False, whiten=False,
-        fixperiod_snr=None, bootstrap=None, maskpoints=None)
+        fixperiod_snr=None, bootstrap=None, reportharmonics=False,
+        maskpoints=None)
 ```
 
 **Description**
@@ -333,6 +337,7 @@ CLI equivalent: [`-PDM`](../../cli/period-finding.md#-pdm-phase-dispersion-minim
 | `whiten` | `bool` | Subtract the step-bin phase model at each peak before searching for the next. |
 | `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the PDM periodogram at a known period. Accepts numeric values; `"aov"` / `"ls"` / `"pdm"` / `"injectharm"` back-references to the most recent prior period-finder of that type; `"fixcolumn <name>"`; or `"list"` (with optional `"column N"`). See [`fixperiod_snr` — fixed-period significance](#fixperiod_snr-fixed-period-significance). |
 | `bootstrap` | `int` or `None` | If set, recalibrate the FAP empirically from this many shuffled-light-curve trials. Bootstrap can be used to calibrate the FAP; in practice it may be too slow for large analysis projects. |
+| `reportharmonics` | `bool` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `maskpoints` | `str` or `None` | Name of a mask vector; points where the variable is `≤ 0` are excluded. |
 
 Constructor-time validation rejects unknown `variant` values and the variant/parameter mismatches above; misuse fails at pipeline-build time rather than at vartools-invocation time.
@@ -406,8 +411,8 @@ cmd.FTP(template_source, minp, maxp, subsample, finetune, *,
         npeaks=5, save_periodogram=False,
         clip=None, clipiter=None,
         noerr=False, posamponly=False, whiten=False,
-        fixperiod_snr=None, bootstrap=None, maskpoints=None,
-        method=None, sums=None)
+        fixperiod_snr=None, bootstrap=None, reportharmonics=False,
+        maskpoints=None, method=None, sums=None)
 ```
 
 **Description**
@@ -451,6 +456,7 @@ CLI equivalent: [`-FTP`](../../cli/period-finding.md#-ftp-fast-template-periodog
 | `whiten` | `bool` | After each peak, subtract `θ₁·M(ω t − θ₂) + θ₃` from the LC and recompute the periodogram for the next peak. |
 | `fixperiod_snr` | `float`, `int`, `str`, or `None` | Evaluate the FTP statistic at a known period. Accepts numeric values; `"aov"` / `"ls"` / `"pdm"` / `"ftp"` / `"injectharm"` back-references; `"fixcolumn <name>"`; or `"list"` (with optional `"column N"`). Evaluation is against the **original** light curve even when `whiten=True`. |
 | `bootstrap` | `int` or `None` | If set, calibrate the FAP empirically from this many shuffled-LC trials. Adds `FTP_NEG_LN_FAP_k_N` to the output. |
+| `reportharmonics` | `bool` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `maskpoints` | `str` or `None` | Name of a mask vector; points where the variable is `≤ 0` are excluded. |
 | `method` | `"auto"`, `"brute"`, `"poly"`, `"verify"`, or `None` | Per-frequency optimisation strategy. `auto` (the default) picks `poly` for H ≤ 2, else `brute`. `verify` runs both and emits a stderr comparison summary. |
 | `sums` | `"auto"`, `"direct"`, `"nfft"`, or `None` | Per-LC summation strategy. `auto` (the default) picks `nfft` when vartools was built with `--with-nfft`. |

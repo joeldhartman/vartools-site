@@ -106,7 +106,7 @@ After pre-whitening peak 1 the periodogram looks like this — the dominant 1.23
     ["fixperiodSNR" < "aov" | "ls" | "injectharm" | "fix" period
                     | "list" ["column" col]
                     | "fixcolumn" <colname | colnum> >]
-    ["maskpoints" maskvar]
+    ["reportharmonics"] ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -131,6 +131,7 @@ Python equivalent: [`aov`](../python/commands/period-finding.md#aov-phase-binned
 | `"clip" clip clipiter` | Clipping parameters for the SNR calculation. |
 | `"uselog"` | Output `ln(θ_aov)` SNR: `(<-ln(θ_aov)> - ln(θ_aov)) / RMS(-ln(θ_aov))`. Also outputs the mean and RMS of `-ln(θ_aov)`. |
 | `"fixperiodSNR" ...` | Output AoV statistic and SNR at a specified period. Syntax identical to `-LS`. |
+| `"reportharmonics"` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `"maskpoints" maskvar` | Exclude points with `maskvar ≤ 0`. |
 
 **Output columns** (per peak `k`, command index `i`)
@@ -176,7 +177,7 @@ Output: Five detected periods with `Period_1_0 = 1.23583047` (`AOV_1_0 = 18330.5
     ["fixperiodSNR" < "aov" | "ls" | "injectharm" | "fix" period
                     | "list" ["column" col]
                     | "fixcolumn" <colname | colnum> >]
-    ["maskpoints" maskvar]
+    ["reportharmonics"] ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -232,7 +233,7 @@ Output: Period values and AOV_HARM, SNR, and logarithmic FAP values for 2 identi
     ["fixperiodSNR" < "aov" | "ls" | "pdm" | "injectharm" | "fix" period
                     | "list" ["column" col]
                     | "fixcolumn" <colname | colnum> >]
-    ["bootstrap" Nboot] ["maskpoints" maskvar]
+    ["bootstrap" Nboot] ["reportharmonics"] ["maskpoints" maskvar]
 ```
 
 **Description**
@@ -269,6 +270,7 @@ Python equivalent: [`PDM`](../python/commands/period-finding.md#pdm-phase-disper
 | `"whiten"` | Subtract the step-bin phase model at each peak before searching for the next. Adds per-cycle `Mean_PDM_Theta_k_N` and `RMS_PDM_Theta_k_N` output columns; the periodogram dump gains one column per cycle. |
 | `"fixperiodSNR" ...` | Report θ/SNR/FAP at a specified period in addition to the peak search. Sources: `aov` / `ls` / `pdm` (the most recent prior period-finder of that type), `injectharm`, `fix` *period*, `list` (with optional `column N`), or `fixcolumn` *name*. |
 | `"bootstrap" Nboot` | Replace the analytic Schwarzenberg-Czerny FAP with an empirical FAP calibrated from `Nboot` shuffled-light-curve trials. Bootstrap can be used to calibrate the FAP; in practice it may be too slow for large analysis projects. |
+| `"reportharmonics"` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `"maskpoints" maskvar` | Exclude points where `maskvar ≤ 0`. |
 
 The trailing keyword block is parsed in a strict order matching the syntax shown above; mis-ordering or duplicating these keywords produces a command-syntax error.
@@ -346,7 +348,7 @@ vartools -i EXAMPLES/2 -oneline -randseed 1 \
     ["fixperiodSNR" < "aov" | "ls" | "pdm" | "ftp" | "injectharm" | "fix" period
                     | "list" ["column" col]
                     | "fixcolumn" <colname | colnum> >]
-    ["bootstrap" Nboot] ["maskpoints" maskvar]
+    ["bootstrap" Nboot] ["reportharmonics"] ["maskpoints" maskvar]
     ["method" < "auto" | "brute" | "poly" | "verify" >]
     ["sums"   < "auto" | "direct" | "nfft" >]
 ```
@@ -397,6 +399,7 @@ Python equivalent: [`FTP`](../python/commands/period-finding.md#ftp-fast-templat
 | `"whiten"` | After each peak, subtract `θ₁ · M(ω t − θ₂) + θ₃` from the LC and recompute the periodogram for the next peak. Adds per-cycle `Mean_FTP_Power_k_N` / `RMS_FTP_Power_k_N` columns (one pair per peak instead of the per-LC pair). |
 | `"fixperiodSNR" …` | Additionally report FTP power / SNR / θ₂ / NegAmp at a specified period. Sources: `aov` / `ls` / `pdm` / `ftp` (the most recent prior period-finder of that type), `injectharm`, `fix` *period*, `list` (with optional `column N`), or `fixcolumn` *name*. Evaluation is against the **original** light curve even when `whiten` is set. |
 | `"bootstrap" Nboot` | Enable empirical-CDF FAP via `Nboot` shuffled-LC trials. |
+| `"reportharmonics"` | Report peaks at a frequency that is a lower-order rational multiple (harmonic) of a stronger peak's frequency. By default such harmonics are collapsed onto the stronger peak and not reported separately. |
 | `"maskpoints" maskvar` | Exclude points where `maskvar ≤ 0`. |
 | `"method" mode` | Per-frequency optimisation: `auto` (default; poly for H ≤ 2, brute otherwise), `brute` (720-sample θ₂ scan + golden refinement; correct to ~1e-12), `poly` (root-finding via the Hoffman et al. polynomial), or `verify` (run both methods and emit a per-LC stderr comparison summary; returns the brute result). |
 | `"sums" mode` | Per-LC summation strategy: `auto` (NFFT if built with `--with-nfft`, else `direct`), `direct`, or `nfft`. |
