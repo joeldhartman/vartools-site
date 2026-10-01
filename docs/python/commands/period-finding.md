@@ -662,7 +662,8 @@ cmd.BLS(minper, maxper, rmin=0.01, rmax=0.1, nbins=200,
         df=None, extraparams=False, nobinnedrms=True,
         freq_grid=None, adjust_qmin=False, reduce_nbins=False,
         reportharmonics=False, mergepeakdf=None, mergepeakdf_transit=None,
-        medsn=False, medsn_window=0.5, medsn_innerN=5, medsn_outerN=100,
+        medsn=False, medsn_window=0.5, medsn_fixedsteps=False,
+        medsn_innerN=5, medsn_outerN=100,
         medsn_useforpeaks=False,
         save_periodogram=False, save_model=False,
         save_phcurve=False, save_jdcurve=False,
@@ -717,6 +718,7 @@ CLI equivalent: [`-BLS`](../../cli/period-finding.md#-bls-box-fitting-least-squa
 | `mergepeakdf_transit` | `float` or `None` | Transit-aware multiplier: `Df = mergepeakdf_transit · q / T` with `q` the per-candidate fitted transit width. Resolves peaks on the finer scale a box transit smears over; a value of order a few is recommended. Mutually exclusive with `mergepeakdf`. The reported peaks are guaranteed to be separated by at least `Df` (duplicates are dropped and back-filled with the next distinct peak). Because `q` is the fitted *box* width (typically well below 1), whenever `mergepeakdf_transit · q < 1` the resolution is **finer** than the default `1/T`, so closely-spaced peaks that a `1/T` merge would combine are reported separately — use the default merge (or `mergepeakdf` ≥ 1) for at-least-Rayleigh (`1/T`) separation. |
 | `medsn` | `bool` | Replace the `BLS_SN` statistic with a robust median-filter-based signal-to-noise. The SR spectrum is detrended by a moving median (window `medsn_window` c/d); each peak's `BLS_SN = (peak − local_mean)/(1.4826·MAD)`, where `local_mean` is the mean of the detrended spectrum over the side-bands `medsn_innerN/T < |f−f_peak| < medsn_outerN/T`. `BLS_SR` and the peak selection are unchanged (unless `medsn_useforpeaks=True`); the S/N components are output as `BLS_MedFiltPeakHeight`, `BLS_MedFiltLocalMean`, `BLS_MedFiltNoise`, and the output periodogram's S/N column also becomes the median-filter S/N. |
 | `medsn_window` | `float` | Moving-median window in cycles/day (default `0.5`), used only when `medsn=True`. |
+| `medsn_fixedsteps` | `bool` | When `True`, interpret `medsn_window` as a window size at a reference frequency of 1 c/d and use a fixed number of frequency bins (`N = medsn_window / df(1)`) for the moving median instead of a fixed frequency range. Matters only under non-uniform frequency sampling (`optimal` / `stepP` / `steplogP`). |
 | `medsn_innerN`, `medsn_outerN` | `float` | Inner/outer local-mean side-band half-widths in units of `1/T` (defaults `5`, `100`); `medsn_outerN` must exceed `medsn_innerN`. |
 | `medsn_useforpeaks` | `bool` | Select and order the reported peaks by the median-filter S/N instead of the default BLS statistic. |
 | `save_periodogram` | `bool`, `str`, or `Output` | BLS spectrum file. `True` captures as `result.files["BLS_periodogram_N"]`. See [Auxiliary output files](index.md#auxiliary-output-files). |
@@ -916,7 +918,8 @@ cmd.BLSFixDurTc(duration, Tc,
                 ophcurve_phmax=1.0, ophcurve_phstep=0.005,
                 save_jdcurve=False, ojdcurve_jdstep=0.02,
                 mergepeakdf=None, mergepeakdf_transit=None,
-                medsn=False, medsn_window=0.5, medsn_innerN=5,
+                medsn=False, medsn_window=0.5, medsn_fixedsteps=False,
+                medsn_innerN=5,
                 medsn_outerN=100, medsn_useforpeaks=False,
                 maskpoints=None)
 ```
