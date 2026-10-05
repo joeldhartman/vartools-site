@@ -243,5 +243,5 @@ print(result.vars["LS_Period_1_long"])
 
 All run methods accept `capture_lc=True` to include the output light curve in
 the result, and the global vartools options `randseed`, `skipmissing`, `jdtol`,
-and `matchstringid`.  Batch methods also accept `nthreads=N` to run vartools
+`matchstringid`, and `fitsdropnan`.  Batch methods also accept `nthreads=N` to run vartools
 with `-parallel N`.

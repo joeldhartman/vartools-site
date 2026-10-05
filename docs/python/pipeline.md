@@ -70,7 +70,7 @@ pipe = (vt.Pipeline()
 
 ## Run methods
 
-### `run(lc, capture_lc=False, outdir=None, timeout=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run(lc, capture_lc=False, outdir=None, timeout=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False) → Result`
 
 Run the pipeline on a single light curve held in memory.
 
@@ -85,6 +85,7 @@ Run the pipeline on a single light curve held in memory.
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
 | `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
 | `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
+| `fitsdropnan` | `bool` | If `True`, drop rows of a FITS light curve that are NULL/NaN in a read column. By default such rows are kept, with NULL/NaN cells read in as NaN (floating-point columns). Default `False`. |
 
 If the `LightCurve` contains columns beyond the default three (`t`, `mag`, `err`), pyvartools automatically makes the extra columns available to commands by name. See [Additional columns](#additional-columns).
 
@@ -92,7 +93,7 @@ Returns a [`Result`](results.md) object.
 
 ---
 
-### `run_file(path, capture_lc=False, outdir=None, timeout=None, perpoint_columns=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result`
+### `run_file(path, capture_lc=False, outdir=None, timeout=None, perpoint_columns=None, perpoint_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False) → Result`
 
 Run the pipeline on a light curve file already on disk. vartools reads the file directly — no Python I/O is performed.
 
@@ -108,6 +109,7 @@ Run the pipeline on a light curve file already on disk. vartools reads the file 
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
 | `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
 | `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
+| `fitsdropnan` | `bool` | If `True`, drop rows of a FITS light curve that are NULL/NaN in a read column. By default such rows are kept, with NULL/NaN cells read in as NaN (floating-point columns). Default `False`. |
 
 The light curve name reported in `result.vars["Name"]` is taken from the file stem (i.e. the filename without directory or extension).
 
@@ -115,13 +117,13 @@ Returns a [`Result`](results.md) object.
 
 ---
 
-### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_vars=None, perlc_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
+### `run_batch(lcs, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_vars=None, perlc_vars=None, randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a list of light curves in memory. All light curves are written to temporary files and processed in a single vartools invocation using `-l`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `lcs` | list of `LightCurve`, `str` / `os.PathLike`, `DataFrame`, or `TimeSeries` | The light curves to process. Path entries are loaded via [`LightCurve.from_file()`](lightcurve.md#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name); mixed types are allowed. For path-only inputs, [`run_filelist()`](#run_filelistpaths-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-perpoint_columnsnone-perpoint_varsnone-perlc_varsnone-combinelcsfalse-lcnumvarlcnum-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse-stats_filenone-stats_file_modeoverwrite-stats_file_buffer_linesnone-resumefalse--batchresult) is more efficient — vartools reads the files directly with no Python I/O. |
+| `lcs` | list of `LightCurve`, `str` / `os.PathLike`, `DataFrame`, or `TimeSeries` | The light curves to process. Path entries are loaded via [`LightCurve.from_file()`](lightcurve.md#lightcurvefrom_filepath-formatnone-t_colunset-mag_colunset-err_colunset-hdu1-name); mixed types are allowed. For path-only inputs, [`run_filelist()`](#run_filelistpaths-nthreads1-capture_lcfalse-outdirnone-timeoutnone-raise_on_errortrue-perpoint_columnsnone-perpoint_varsnone-perlc_varsnone-combinelcsfalse-lcnumvarlcnum-randseednone-skipmissingfalse-jdtolnone-matchstringidfalse-fitsdropnanfalse-stats_filenone-stats_file_modeoverwrite-stats_file_buffer_linesnone-resumefalse--batchresult) is more efficient — vartools reads the files directly with no Python I/O. |
 | `nthreads` | `int` | Number of parallel threads to use. Default `1`. |
 | `capture_lc` | `bool` | If `True`, capture the modified output LC for each light curve and return them as `result.lcs`. |
 | `outdir` | `str` or `None` | Directory for command output files. |
@@ -133,6 +135,7 @@ Run the pipeline on a list of light curves in memory. All light curves are writt
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
 | `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
 | `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
+| `fitsdropnan` | `bool` | If `True`, drop rows of a FITS light curve that are NULL/NaN in a read column. By default such rows are kept, with NULL/NaN cells read in as NaN (floating-point columns). Default `False`. |
 | `stats_file` | `str` or `None` | If set, also stream the stats table to this file as each light curve completes. The file content matches `result.vars` and can be reloaded by a subsequent `resume=True` call. See [Streaming output and resume](#streaming-output-and-resume). |
 | `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. With `"append"` the existing file is preserved and only new rows are added; `resume=True` sets this automatically when an existing file is detected. |
 | `stats_file_buffer_lines` | `int` or `None` | Maximum number of light curves whose results are queued in memory before flushing to `stats_file` in parallel runs. Default `None` → auto-scales to a safe value for the given thread count.  Setting it below `nthreads` caps effective parallelism (threads beyond it stall waiting for a free slot).  Has no effect when `nthreads=1`.  See [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
@@ -144,7 +147,7 @@ Returns a [`BatchResult`](results.md) object.
 
 ---
 
-### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
+### `run_filelist(paths, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, combinelcs=False, lcnumvar="lcnum", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False, stats_file=None, stats_file_mode="overwrite", stats_file_buffer_lines=None, resume=False) → BatchResult`
 
 Run the pipeline on a collection of light curve files on disk. No Python I/O is performed — vartools reads the files directly. This is the most efficient method for large surveys.
 
@@ -165,6 +168,7 @@ Run the pipeline on a collection of light curve files on disk. No Python I/O is 
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
 | `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
 | `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
+| `fitsdropnan` | `bool` | If `True`, drop rows of a FITS light curve that are NULL/NaN in a read column. By default such rows are kept, with NULL/NaN cells read in as NaN (floating-point columns). Default `False`. |
 | `stats_file` | `str` or `None` | Stream the stats table to this file as each row is produced. See [Streaming output and resume](#streaming-output-and-resume). |
 | `stats_file_mode` | `"overwrite"` or `"append"` | Default `"overwrite"`. |
 | `stats_file_buffer_lines` | `int` or `None` | Maximum number of light curves queued before flushing to `stats_file` in parallel runs. Should be `>= nthreads`; see the `run_batch` entry and [Flush cadence in parallel runs](#flush-cadence-in-parallel-runs). |
@@ -190,7 +194,7 @@ print(batch.vars)   # one row per line in the list file
 
 ---
 
-### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → Result` { #run_combinelc }
+### `run_combinelc(files, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False) → Result` { #run_combinelc }
 
 Single-group convenience wrapper around `run_combinelcs()`. Combines *files* into one in-memory light curve, runs the pipeline, and returns a single [`Result`](results.md) (not a `BatchResult`).
 
@@ -203,7 +207,7 @@ Single-group convenience wrapper around `run_combinelcs()`. Combines *files* int
 | `perlcsegment_vars` | `dict` or `None` | Per-segment variables. Each entry is a **flat list of length `len(files)`** (one value per segment), or a `(values, type)` tuple. Auto-wrapped to the nested per-group shape. Used by commands like `stitch` that tag each segment (e.g. a per-telescope field label). |
 | `lcnumvar` | `str` or `None` | Per-observation integer variable recording which file each point came from. Defaults to `"lcnum"`; pass `None` to opt out. |
 | `delimiter` | `str` | Delimiter joining the file paths in the list file. Default `","` (the vartools `combinelcs` default). |
-| `nthreads`, `capture_lc`, `outdir`, `timeout`, `raise_on_error`, `randseed`, `skipmissing`, `jdtol`, `matchstringid` | — | Same meaning as in [`run_combinelcs()`](#run_combinelcs). |
+| `nthreads`, `capture_lc`, `outdir`, `timeout`, `raise_on_error`, `randseed`, `skipmissing`, `jdtol`, `matchstringid`, `fitsdropnan` | — | Same meaning as in [`run_combinelcs()`](#run_combinelcs). |
 
 ```python
 # Combine two segments of the same star and run an LS period search on the
@@ -222,7 +226,7 @@ All other keyword arguments forward to `run_combinelcs()`.
 
 ---
 
-### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False) → BatchResult` { #run_combinelcs }
+### `run_combinelcs(groups, nthreads=1, capture_lc=False, outdir=None, timeout=None, raise_on_error=True, perpoint_columns=None, perpoint_vars=None, perlc_vars=None, perlcsegment_vars=None, lcnumvar="lcnum", delimiter=",", randseed=None, skipmissing=False, jdtol=None, matchstringid=False, fitsdropnan=False) → BatchResult` { #run_combinelcs }
 
 Run the pipeline using vartools `-l … combinelcs` mode. Each entry in *groups* is a list of file paths that vartools combines into a single in-memory light curve before passing it to the command chain. The result contains one row in `batch.vars` per group.
 
@@ -246,6 +250,7 @@ This mode of processing can be used to merge light curve files from multiple tel
 | `skipmissing` | `bool` | If `True`, silently skip light curves that fail to load (e.g. missing files) rather than aborting the run. Default `False`. |
 | `jdtol` | `float` or `None` | Tolerance (in days) for matching observations across light curves by time. Used by commands that join external data on time. |
 | `matchstringid` | `bool` | If `True`, match light curves to external data by their string `id` attribute rather than by time. Default `False`. |
+| `fitsdropnan` | `bool` | If `True`, drop rows of a FITS light curve that are NULL/NaN in a read column. By default such rows are kept, with NULL/NaN cells read in as NaN (floating-point columns). Default `False`. |
 
 PerLC array parameters are supported: each PerLC must have one value per group (`len(groups)`). The values are appended as additional columns to the temporary list file and wired up via `-inlistvars`, exactly as in `run_batch()`/`run_filelist()`. A length mismatch raises `ValueError`.
 
@@ -402,7 +407,7 @@ keys off the input filename.
 
 ```text
 validate(nthreads=1, randseed=None, skipmissing=False, jdtol=None,
-         matchstringid=False, timeout=30, perlc_vars=None) → list[str]
+         matchstringid=False, fitsdropnan=False, timeout=30, perlc_vars=None) → list[str]
 ```
 
 Check that the pipeline is well-formed without processing any data, and return the list of expected output column names. Useful for catching errors during pipeline construction, and for inspecting the exact column layout the run will produce.

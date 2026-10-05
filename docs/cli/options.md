@@ -335,3 +335,18 @@ than by time. When this option is set you must declare the `id` column with
 Continue processing when a light curve file cannot be found or read, skipping
 that entry, rather than aborting. Useful in large batch runs where a small
 number of files may be missing.
+
+### `-fitsdropnan`
+
+When reading a binary FITS table light curve, drop any row that is NULL (or
+NaN) in one or more of the columns being read.
+
+By default such rows are **kept**: NULL/NaN entries in floating-point columns
+are read in as NaN (non-NaN entries keep their true values), matching how NaN
+values are handled when reading ASCII light curves. Each column is tested
+independently, so a NULL in one column does not blank out the other columns of
+that same row. NULL entries in integer or string columns cannot be represented
+as NaN; for those columns the raw value returned by cfitsio is used. Give
+`-fitsdropnan` to instead discard any row that has a NULL/NaN in a read column —
+the behavior of earlier VARTOOLS versions, which always dropped such rows. This
+option has no effect on ASCII light curve input.

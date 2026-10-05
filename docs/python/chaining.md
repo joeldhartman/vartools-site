@@ -25,7 +25,7 @@ print(result.varobjs.LS.Period_1)   # top LS period
 ```
 
 Run-time options (`capture_lc`, `timeout`, `randseed`, `skipmissing`, `jdtol`,
-`matchstringid`) can be passed as keyword arguments alongside command parameters:
+`matchstringid`, `fitsdropnan`) can be passed as keyword arguments alongside command parameters:
 
 ```python
 result = lc.LS(0.5, 10.0, 0.1, capture_lc=True, randseed=42)
